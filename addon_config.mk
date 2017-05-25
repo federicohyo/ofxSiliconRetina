@@ -15,11 +15,11 @@
 # and the PG will write to the console the kind of error and in which line it is
 
 meta:
-	ADDON_NAME = ofxAddonTemplate
-	ADDON_DESCRIPTION = ofxAddonTemplate is amazing!
-	ADDON_AUTHOR = @yournamehere
-	ADDON_TAGS = "addon" "template"
-	ADDON_URL = http://github.com/yournamehere/ofxAddonTemplate
+	ADDON_NAME = ofxSiliconRetina
+	ADDON_DESCRIPTION = ofxSiliconRetina is an interface to all Dynamic Vision Sensors developed by inilabs.com
+	ADDON_AUTHOR = @federicocorradi
+	ADDON_TAGS = "addon" "neuromorphic" "camera" "retina" "frameless"
+	ADDON_URL = http://github.com/federicohyo/ofxSiliconRetina
 
 common:
 	# dependencies with other addons, a list of them separated by spaces 
@@ -29,7 +29,7 @@ common:
 	# include search paths, this will be usually parsed from the file system
 	# but if the addon or addon libraries need special search paths they can be
 	# specified here separated by spaces or one per line using +=
-	# ADDON_INCLUDES =
+	# ADDON_INCLUDES = /usr/local/include/libcaer/
 	
 	# any special flag that should be passed to the compiler when using this
 	# addon
@@ -37,7 +37,7 @@ common:
 	
 	# any special flag that should be passed to the linker when using this
 	# addon, also used for system libraries with -lname
-	# ADDON_LDFLAGS =
+	# ADDON_LDFLAGS = -lcaer
 	
 	# linux only, any library that should be included in the project using
 	# pkg-config
@@ -66,7 +66,7 @@ linux64:
 	# 
 	# For example in the ofxOpenCV addon we do something like this:
 	#
-	# ADDON_LIBS =
+	ADDON_LIBS += /usr/local/lib/libcaer.dylib 
 	# ADDON_LIBS += libs/opencv/lib/linuxarmv6l/libopencv_legacy.a
 	# ADDON_LIBS += libs/opencv/lib/linuxarmv6l/libopencv_calib3d.a
 	# ...
