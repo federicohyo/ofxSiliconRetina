@@ -24,16 +24,14 @@ libusb can be obtained here: https://github.com/libusb/libusb
 
 Compatibility
 ------------
-Tested on OF release e.9.3 
+Tested on OF release 0.9.3 
 
 Known issues
 ------------
 
 Please select the correct device by changing the definition line in ofxSiliconRetina/src/ofxDVS.hpp
-"---- START ---"
 /// PLEASE SELECT SENSOR  DVS128 / DAVIS240 / DAVIS346
 #define DAVIS240
-"---- END  ----"
 
 Version history
 ------------
