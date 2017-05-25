@@ -39,16 +39,24 @@ void ofxDVS::setup() {
     // No configuration is sent automatically!
     caerDeviceSendDefaultConfig(camera_handle);
     
+    // Let's turn on blocking data-get mode to avoid wasting resources.
+    caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+    
     // Now let's get start getting some data from the device. We just loop, no notification needed.
     caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
     
-    fbo.allocate(SIZEX*MUL, SIZEY*MUL, GL_RGBA32F);
-    outImg.allocate(SIZEX*MUL, SIZEY*MUL, OF_IMAGE_COLOR);
+    fbo.allocate(SIZEX, SIZEY, GL_RGBA32F);
+    outImg.allocate(SIZEX, SIZEY, OF_IMAGE_COLOR);
     tex = &fbo.getTexture();
     
     
 }
 
+
+//--------------------------------------------------------------
+vector<polarity> ofxDVS::getPackets() {
+    return packets;
+}
 
 //--------------------------------------------------------------
 void ofxDVS::update() {
@@ -66,10 +74,12 @@ void ofxDVS::update() {
     }
     
     packets.clear();
+    packetsFrames.clear();
     
     for (int32_t i = 0; i < packetNum; i++) {
         
         polarity nuPack;
+        frame nuPackFrames;
         
         caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
         if (packetHeader == NULL) {
@@ -84,9 +94,8 @@ void ofxDVS::update() {
                    caerEventPacketHeaderGetEventNumber(packetHeader));
         }
         
-        caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
-        
         if (i == POLARITY_EVENT) {
+            caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
             
             CAER_POLARITY_ITERATOR_VALID_START(polarity)
             nuPack.timestamp = caerPolarityEventGetTimestamp64(caerPolarityIteratorElement, polarity);
@@ -100,6 +109,54 @@ void ofxDVS::update() {
             
             CAER_POLARITY_ITERATOR_VALID_END
             
+        }
+        if (i == FRAME_EVENT){
+            caerFrameEventPacket frame = (caerFrameEventPacket) packetHeader;
+            
+            CAER_FRAME_ITERATOR_VALID_START(frame)
+            nuPackFrames.exposureStart = caerFrameEventGetTSStartOfExposure(caerFrameIteratorElement);
+            nuPackFrames.exposureEnd = caerFrameEventGetTSEndOfExposure(caerFrameIteratorElement);
+            // Use frame sizes to correctly support small ROI frames.
+            nuPackFrames.lenghtX = caerFrameEventGetLengthX(caerFrameIteratorElement);
+            nuPackFrames.lenghtY = caerFrameEventGetLengthY(caerFrameIteratorElement);
+            nuPackFrames.positionX = caerFrameEventGetPositionX(caerFrameIteratorElement);
+            nuPackFrames.positionY = caerFrameEventGetPositionY(caerFrameIteratorElement);
+            nuPackFrames.frameChannels = caerFrameEventGetChannelNumber(caerFrameIteratorElement);
+            
+            
+            for (int32_t y = 0; y < nuPackFrames.lenghtY; y++) {
+                for (int32_t x = 0; x < nuPackFrames.lenghtX; x++) {
+                    
+                    switch (nuPackFrames.frameChannels) {
+                    
+                        case GRAYSCALE: {
+                            nuPackFrames.pixels[x][y] = U8T(caerFrameEventGetPixelUnsafe(caerFrameIteratorElement, x, y) >> 8);
+                            break;
+                        }
+                        case RGB: {
+                            nuPackFrames.pixelsR[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 0) >> 8);
+                            nuPackFrames.pixelsG[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 1) >> 8);
+                            nuPackFrames.pixelsB[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 2) >> 8);
+                            break;
+                        }
+                        case RGBA:
+                        default: {
+                            nuPackFrames.pixelsR[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 0) >> 8);
+                            nuPackFrames.pixelsG[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 1) >> 8);
+                            nuPackFrames.pixelsB[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 2) >> 8);
+                            nuPackFrames.pixelsA[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 3) >> 8);
+                            break;
+                        }
+                            
+                    }
+                    
+                }
+            }
+
+            packetsFrames.push_back(nuPackFrames);
+
+            CAER_FRAME_ITERATOR_VALID_END
+
         }
         
     }
@@ -126,13 +183,14 @@ void ofxDVS::draw() {
             ofSetColor(0, 0, 0, 255);
         }
         ofPopStyle();
-        ofDrawCircle(packets[i].pos.x*MUL, packets[i].pos.y*MUL, 1);
+        ofDrawCircle(packets[i].pos.x, packets[i].pos.y, 1);
     }
     fbo.end();
-    
-    
     fbo.draw(0,0,ofGetWidth(),ofGetHeight());
     //   outImg.draw(0,0,ofGetWidth(),ofGetHeight());
+    
+    
+    
 }
 
 //--------------------------------------------------------------

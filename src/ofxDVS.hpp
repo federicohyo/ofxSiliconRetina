@@ -17,7 +17,6 @@
 /// PLEASE SELECT SENSOR DAVIS240 or DVS128
 #define DAVIS240
 // and decide on parameters
-#define MUL 1
 #define DEBUG 0
 
 #ifdef DAVIS346
@@ -43,6 +42,41 @@ struct polarity {
     bool pol;
 };
 
+struct frame {
+    /// Event information (ROI region, color channels, color filter). First because of valid mark.
+    int info;
+    /// Start of Frame (SOF) timestamp.
+    int frameStart;
+    /// End of Frame (EOF) timestamp.
+    int frameEnd;
+    /// Start of Exposure (SOE) timestamp.
+    int exposureStart;
+    /// End of Exposure (EOE) timestamp.
+    int exposureEnd;
+    /// X axis length in pixels.
+    int lenghtX;
+    /// Y axis length in pixels.
+    int lenghtY;
+    /// X axis position (upper left offset) in pixels.
+    int positionX;
+    /// Y axis position (upper left offset) in pixels.
+    int positionY;
+    
+    enum caer_frame_event_color_channels frameChannels;
+    
+    /// Pixel array, 16 bit unsigned integers, normalized to 16 bit depth.
+    /// The pixel array is laid out row by row (increasing X axis), going
+    /// from top to bottom (increasing Y axis).
+    int pixels[SIZEX][SIZEY]; // size 1 here for C++ compatibility.
+    int pixelsR[SIZEX][SIZEY];
+    int pixelsG[SIZEX][SIZEY];
+    int pixelsB[SIZEX][SIZEY];
+    int pixelsA[SIZEX][SIZEY];
+    
+    //ofPixels ofxpixels;
+    
+};
+
 class ofxDVS {
 public:
     ofxDVS();
@@ -57,6 +91,7 @@ public:
     
     ofImage* getImage();
     ofTexture* getTextureRef();
+    vector<polarity> getPackets();
     
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
@@ -64,6 +99,7 @@ public:
     caerDeviceHandle camera_handle;
     
     vector<polarity> packets;
+    vector<frame> packetsFrames;
     
 };
 

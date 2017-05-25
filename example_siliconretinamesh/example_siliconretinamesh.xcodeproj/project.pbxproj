@@ -117,7 +117,7 @@
 		D0310B3B3AA2AFDC3A18BD71 /* point3d.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point3d.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point3d.hpp; sourceTree = SOURCE_ROOT; };
 		D419A64ABB608B507ED1B5D3 /* dynapse.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dynapse.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/dynapse.h; sourceTree = SOURCE_ROOT; };
 		E4328143138ABC890047C5CB /* openFrameworksLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = openFrameworksLib.xcodeproj; path = ../../../libs/openFrameworksCompiled/project/osx/openFrameworksLib.xcodeproj; sourceTree = SOURCE_ROOT; };
-		E4B69B5B0A3A1756003C02F2 /* example_siliconretinaDebug.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_siliconretinaDebug.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E4B69B5B0A3A1756003C02F2 /* example_siliconretinameshDebug.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_siliconretinameshDebug.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E4B69E1D0A3A1BDC003C02F2 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = SOURCE_ROOT; };
 		E4B69E1E0A3A1BDC003C02F2 /* ofApp.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 30; name = ofApp.cpp; path = src/ofApp.cpp; sourceTree = SOURCE_ROOT; };
 		E4B69E1F0A3A1BDC003C02F2 /* ofApp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ofApp.h; path = src/ofApp.h; sourceTree = SOURCE_ROOT; };
@@ -287,8 +287,8 @@
 		C24EAFEA5F387DDCE4534137 /* libs */ = {
 			isa = PBXGroup;
 			children = (
-				C3518AABF7FB59ADA0538CFD /* libcaer */,
 				C8C62617C126D6112E2A0CB0 /* libusb-1.0 */,
+				C3518AABF7FB59ADA0538CFD /* libcaer */,
 			);
 			name = libs;
 			sourceTree = "<group>";
@@ -353,7 +353,7 @@
 				E4EEC9E9138DF44700A80321 /* openFrameworks */,
 				BB4B014C10F69532006C3DED /* addons */,
 				6948EE371B920CB800B5AC1A /* local_addons */,
-				E4B69B5B0A3A1756003C02F2 /* example_siliconretinaDebug.app */,
+				E4B69B5B0A3A1756003C02F2 /* example_siliconretinameshDebug.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -388,9 +388,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E4B69B5A0A3A1756003C02F2 /* example_siliconretina */ = {
+		E4B69B5A0A3A1756003C02F2 /* example_siliconretinamesh */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E4B69B5F0A3A1757003C02F2 /* Build configuration list for PBXNativeTarget "example_siliconretina" */;
+			buildConfigurationList = E4B69B5F0A3A1757003C02F2 /* Build configuration list for PBXNativeTarget "example_siliconretinamesh" */;
 			buildPhases = (
 				E4B69B580A3A1756003C02F2 /* Sources */,
 				E4B69B590A3A1756003C02F2 /* Frameworks */,
@@ -402,9 +402,9 @@
 			dependencies = (
 				E4EEB9AC138B136A00A80321 /* PBXTargetDependency */,
 			);
-			name = example_siliconretina;
+			name = example_siliconretinamesh;
 			productName = myOFApp;
-			productReference = E4B69B5B0A3A1756003C02F2 /* example_siliconretinaDebug.app */;
+			productReference = E4B69B5B0A3A1756003C02F2 /* example_siliconretinameshDebug.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -415,7 +415,7 @@
 			attributes = {
 				LastUpgradeCheck = 0600;
 			};
-			buildConfigurationList = E4B69B4D0A3A1720003C02F2 /* Build configuration list for PBXProject "example_siliconretina" */;
+			buildConfigurationList = E4B69B4D0A3A1720003C02F2 /* Build configuration list for PBXProject "example_siliconretinamesh" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -436,7 +436,7 @@
 			);
 			projectRoot = "";
 			targets = (
-				E4B69B5A0A3A1756003C02F2 /* example_siliconretina */,
+				E4B69B5A0A3A1756003C02F2 /* example_siliconretinamesh */,
 			);
 		};
 /* End PBXProject section */
@@ -522,8 +522,24 @@
 				GCC_WARN_UNUSED_VARIABLE = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(OF_CORE_HEADERS)",
-					src,
-					/usr/local/include/libcaer/,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				ONLY_ACTIVE_ARCH = YES;
@@ -534,10 +550,9 @@
 				OTHER_LDFLAGS = (
 					"$(OF_CORE_FRAMEWORKS)",
 					"$(OF_CORE_LIBS)",
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a",
-					"-lcaer",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 				);
 				SDKROOT = macosx;
 			};
@@ -565,8 +580,24 @@
 				GCC_WARN_UNUSED_VARIABLE = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(OF_CORE_HEADERS)",
-					src,
-					/usr/local/include/libcaer/,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				OTHER_CPLUSPLUSFLAGS = (
@@ -576,10 +607,9 @@
 				OTHER_LDFLAGS = (
 					"$(OF_CORE_FRAMEWORKS)",
 					"$(OF_CORE_LIBS)",
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a",
-					"-lcaer",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 				);
 				SDKROOT = macosx;
 			};
@@ -601,8 +631,24 @@
 				GCC_MODEL_TUNING = NONE;
 				HEADER_SEARCH_PATHS = (
 					"$(OF_CORE_HEADERS)",
-					src,
-					/usr/local/include/libcaer/,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
 				);
 				ICON = "$(ICON_NAME_DEBUG)";
 				ICON_FILE = "$(ICON_FILE_PATH)$(ICON)";
@@ -612,9 +658,9 @@
 				OTHER_LDFLAGS = (
 					"$(OF_CORE_FRAMEWORKS)",
 					"$(OF_CORE_LIBS)",
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)Debug";
 				WRAPPER_EXTENSION = app;
@@ -636,8 +682,24 @@
 				GCC_MODEL_TUNING = NONE;
 				HEADER_SEARCH_PATHS = (
 					"$(OF_CORE_HEADERS)",
-					src,
-					/usr/local/include/libcaer/,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
 				);
 				ICON = "$(ICON_NAME_RELEASE)";
 				ICON_FILE = "$(ICON_FILE_PATH)$(ICON)";
@@ -647,9 +709,9 @@
 				OTHER_LDFLAGS = (
 					"$(OF_CORE_FRAMEWORKS)",
 					"$(OF_CORE_LIBS)",
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
-					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.2.dylib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -660,7 +722,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E4B69B4D0A3A1720003C02F2 /* Build configuration list for PBXProject "example_siliconretina" */ = {
+		E4B69B4D0A3A1720003C02F2 /* Build configuration list for PBXProject "example_siliconretinamesh" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E4B69B4E0A3A1720003C02F2 /* Debug */,
@@ -669,7 +731,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E4B69B5F0A3A1757003C02F2 /* Build configuration list for PBXNativeTarget "example_siliconretina" */ = {
+		E4B69B5F0A3A1757003C02F2 /* Build configuration list for PBXNativeTarget "example_siliconretinamesh" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E4B69B600A3A1757003C02F2 /* Debug */,
