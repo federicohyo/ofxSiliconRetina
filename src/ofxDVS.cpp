@@ -46,16 +46,19 @@ void ofxDVS::setup() {
     caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
     
     fbo.allocate(SIZEX, SIZEY, GL_RGBA32F);
-    outImg.allocate(SIZEX, SIZEY, OF_IMAGE_COLOR);
     tex = &fbo.getTexture();
-    
     
 }
 
 
 //--------------------------------------------------------------
-vector<polarity> ofxDVS::getPackets() {
-    return packets;
+vector<polarity> ofxDVS::getPolarity() {
+    return packetsPolarity;
+}
+
+//--------------------------------------------------------------
+vector<frame> ofxDVS::getFrames() {
+    return packetsFrames;
 }
 
 //--------------------------------------------------------------
@@ -73,13 +76,15 @@ void ofxDVS::update() {
         printf("\nGot event container with %d packets (allocated).\n", packetNum);
     }
     
-    packets.clear();
+    packetsPolarity.clear();
     packetsFrames.clear();
+    packetsImu6.clear();
     
     for (int32_t i = 0; i < packetNum; i++) {
         
         polarity nuPack;
         frame nuPackFrames;
+        imu6 nuPackImu6;
         
         caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
         if (packetHeader == NULL) {
@@ -94,6 +99,29 @@ void ofxDVS::update() {
                    caerEventPacketHeaderGetEventNumber(packetHeader));
         }
         
+        if (i == IMU6_EVENT) {
+            
+            caerIMU6EventPacket imu6 = (caerIMU6EventPacket) packetHeader;
+            
+            float accelX = 0, accelY = 0, accelZ = 0;
+            float gyroX = 0, gyroY = 0, gyroZ = 0;
+            
+            CAER_IMU6_ITERATOR_VALID_START((caerIMU6EventPacket) imu6)
+            accelX = caerIMU6EventGetAccelX(caerIMU6IteratorElement);
+            accelY = caerIMU6EventGetAccelY(caerIMU6IteratorElement);
+            accelZ = caerIMU6EventGetAccelZ(caerIMU6IteratorElement);
+            gyroX = caerIMU6EventGetGyroX(caerIMU6IteratorElement);
+            gyroY = caerIMU6EventGetGyroY(caerIMU6IteratorElement);
+            gyroZ = caerIMU6EventGetGyroZ(caerIMU6IteratorElement);
+            
+            nuPackImu6.accel.set(accelX,accelY,accelZ);
+            nuPackImu6.gyro.set(gyroX,gyroY,gyroZ);
+            nuPackImu6.timestamp = caerIMU6EventGetTimestamp(caerIMU6IteratorElement);
+            
+            packetsImu6.push_back(nuPackImu6);
+            CAER_IMU6_ITERATOR_VALID_END            
+            
+        }
         if (i == POLARITY_EVENT) {
             caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
             
@@ -105,7 +133,7 @@ void ofxDVS::update() {
             
             nuPack.pol = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
             
-            packets.push_back(nuPack);
+            packetsPolarity.push_back(nuPack);
             
             CAER_POLARITY_ITERATOR_VALID_END
             
@@ -124,27 +152,40 @@ void ofxDVS::update() {
             nuPackFrames.frameChannels = caerFrameEventGetChannelNumber(caerFrameIteratorElement);
             
             
+            nuPackFrames.singleFrame.allocate(nuPackFrames.lenghtX, nuPackFrames.lenghtY, OF_IMAGE_COLOR);
             for (int32_t y = 0; y < nuPackFrames.lenghtY; y++) {
                 for (int32_t x = 0; x < nuPackFrames.lenghtX; x++) {
                     
                     switch (nuPackFrames.frameChannels) {
                     
                         case GRAYSCALE: {
-                            nuPackFrames.pixels[x][y] = U8T(caerFrameEventGetPixelUnsafe(caerFrameIteratorElement, x, y) >> 8);
+                            int nuCol = U8T(caerFrameEventGetPixelUnsafe(caerFrameIteratorElement, x, y) >> 8);
+                            
+                            ofColor color= ofColor(nuCol,nuCol,nuCol);
+                            nuPackFrames.singleFrame.setColor(x, y, color);
+                            
                             break;
                         }
                         case RGB: {
-                            nuPackFrames.pixelsR[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 0) >> 8);
-                            nuPackFrames.pixelsG[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 1) >> 8);
-                            nuPackFrames.pixelsB[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 2) >> 8);
+                            int nuColR = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 0) >> 8);
+                            int nuColG = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 1) >> 8);
+                            int nuColB = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 2) >> 8);
+                            
+                            ofColor color= ofColor(nuColR,nuColB,nuColB);
+                            nuPackFrames.singleFrame.setColor(x, y, color);
+                            
                             break;
                         }
                         case RGBA:
                         default: {
-                            nuPackFrames.pixelsR[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 0) >> 8);
-                            nuPackFrames.pixelsG[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 1) >> 8);
-                            nuPackFrames.pixelsB[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 2) >> 8);
-                            nuPackFrames.pixelsA[x][y] = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 3) >> 8);
+                            int nuColR = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 0) >> 8);
+                            int nuColG = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 1) >> 8);
+                            int nuColB = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 2) >> 8);
+                            int nuColA = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 3) >> 8);
+                        
+                            ofColor color= ofColor(nuColR,nuColB,nuColB,nuColA);
+                            nuPackFrames.singleFrame.setColor(x, y, color);
+
                             break;
                         }
                             
@@ -166,30 +207,43 @@ void ofxDVS::update() {
     
 }
 
-
 //--------------------------------------------------------------
 void ofxDVS::draw() {
+    drawSpikes();
+}
+
+//--------------------------------------------------------------
+void ofxDVS::drawSpikes() {
+    
     fbo.begin();
     ofClear(0,255);
     ofFill();
     //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
     
-    for (int i = 0; i < packets.size(); i++) {
+    for (int i = 0; i < packetsPolarity.size(); i++) {
         ofPushStyle();
-        if(packets[i].pol) {
+        if(packetsPolarity[i].pol) {
             ofSetColor(255, 255, 255, 255);
         }
         else {
             ofSetColor(0, 0, 0, 255);
         }
         ofPopStyle();
-        ofDrawCircle(packets[i].pos.x, packets[i].pos.y, 1);
+        ofDrawCircle(packetsPolarity[i].pos.x, packetsPolarity[i].pos.y, 1);
     }
+
     fbo.end();
     fbo.draw(0,0,ofGetWidth(),ofGetHeight());
-    //   outImg.draw(0,0,ofGetWidth(),ofGetHeight());
     
-    
+}
+
+//--------------------------------------------------------------
+void ofxDVS::drawFrames() {
+
+    // draw last frame in packets
+    if(packetsFrames.size() > 0){
+        packetsFrames[packetsFrames.size()-1].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
+    }
     
 }
 
@@ -198,6 +252,4 @@ ofTexture* ofxDVS::getTextureRef() {
     return tex;
 }
 
-//--------------------------------------------------------------
 
-//--------------------------------------------------------------

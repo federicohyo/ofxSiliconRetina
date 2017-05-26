@@ -37,6 +37,7 @@
 #include "ofMain.h"
 
 struct polarity {
+    int info;
     ofPoint pos;
     int timestamp;
     bool pol;
@@ -64,17 +65,18 @@ struct frame {
     
     enum caer_frame_event_color_channels frameChannels;
     
-    /// Pixel array, 16 bit unsigned integers, normalized to 16 bit depth.
+    /// Pixel array
     /// The pixel array is laid out row by row (increasing X axis), going
     /// from top to bottom (increasing Y axis).
-    int pixels[SIZEX][SIZEY]; // size 1 here for C++ compatibility.
-    int pixelsR[SIZEX][SIZEY];
-    int pixelsG[SIZEX][SIZEY];
-    int pixelsB[SIZEX][SIZEY];
-    int pixelsA[SIZEX][SIZEY];
+    ofImage singleFrame;
     
-    //ofPixels ofxpixels;
-    
+};
+
+struct imu6 {
+    int info;
+    int timestamp;
+    ofVec3f accel;
+    ofVec3f gyro;
 };
 
 class ofxDVS {
@@ -84,22 +86,25 @@ public:
     void setup();
     void update();
     void draw();
-    
-    ofImage outImg;
-    ofFbo fbo;
-    ofTexture* tex;
-    
-    ofImage* getImage();
-    ofTexture* getTextureRef();
-    vector<polarity> getPackets();
+    void drawSpikes();
+    void drawFrames();
     
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
     void globalShutdownSignalHandler(int signal);
     caerDeviceHandle camera_handle;
     
-    vector<polarity> packets;
+
+    ofFbo fbo;
+    ofTexture* tex;
+    
+    vector<polarity> packetsPolarity;
     vector<frame> packetsFrames;
+    vector<imu6> packetsImu6;
+    
+    ofTexture* getTextureRef();
+    vector<polarity> getPolarity();
+    vector<frame> getFrames();
     
 };
 
