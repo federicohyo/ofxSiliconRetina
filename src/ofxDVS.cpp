@@ -11,7 +11,6 @@
 //--------------------------------------------------------------
 ofxDVS::ofxDVS() {
     
-    
 }
 
 //--------------------------------------------------------------
@@ -42,12 +41,48 @@ void ofxDVS::setup() {
     // Let's turn on blocking data-get mode to avoid wasting resources.
     caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
     
+    // Turn on Autoexposure if device has APS
+#if defined(DAVIS346) || defined(DAVIS240)
+    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, true);
+#endif
+    
     // Now let's get start getting some data from the device. We just loop, no notification needed.
     caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
     
     fbo.allocate(SIZEX, SIZEY, GL_RGBA32F);
     tex = &fbo.getTexture();
     
+    initSpikeColors();
+    
+}
+
+//--------------------------------------------------------------
+void ofxDVS::initSpikeColors() {
+    
+    paletteSpike = 0;
+    
+    // set colors for spikes
+    spkOnR[0] = 255;
+    spkOnG[0] = 0;
+    spkOnB[0] = 0;
+    spkOffR[0] = 0;
+    spkOffG[0] = 255;
+    spkOffB[0] = 0;
+    spkOnR[1] = 255;
+    spkOnG[1] = 255;
+    spkOnB[1] = 255;
+    spkOffR[1] = 0;
+    spkOffG[1] = 0;
+    spkOffB[1] = 0;
+    spkOnR[2] = 0;
+    spkOnG[2] = 255;
+    spkOnB[2] = 255;
+    spkOffR[2] = 255;
+    spkOffG[2] = 255;
+    spkOffB[2] = 0;
+    
+    spkOnA = 255;
+    spkOffA = 255;
 }
 
 
@@ -77,8 +112,8 @@ void ofxDVS::update() {
     }
     
     packetsPolarity.clear();
-    packetsFrames.clear();
     packetsImu6.clear();
+    bool hasFrames = false;
     
     for (int32_t i = 0; i < packetNum; i++) {
         
@@ -139,6 +174,14 @@ void ofxDVS::update() {
             
         }
         if (i == FRAME_EVENT){
+            // first time we get in here
+            // otherwise we do not clear packetframes
+            // and we keep the last one
+            if(hasFrames == false){
+                packetsFrames.clear();
+                hasFrames = true;
+            }
+        
             caerFrameEventPacket frame = (caerFrameEventPacket) packetHeader;
             
             CAER_FRAME_ITERATOR_VALID_START(frame)
@@ -203,8 +246,7 @@ void ofxDVS::update() {
     }
     
     caerEventPacketContainerFree(packetContainer);
-    
-    
+
 }
 
 //--------------------------------------------------------------
@@ -215,26 +257,23 @@ void ofxDVS::draw() {
 //--------------------------------------------------------------
 void ofxDVS::drawSpikes() {
     
-    fbo.begin();
-    ofClear(0,255);
-    ofFill();
-    //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
-    
+    float scalex = (float) ofGetWidth();
+    float scaley = (float) ofGetHeight();
+    float scaleFx,scaleFy;
+    scaleFx = scalex/SIZEX;
+    scaleFy = scaley/SIZEY;
     for (int i = 0; i < packetsPolarity.size(); i++) {
         ofPushStyle();
         if(packetsPolarity[i].pol) {
-            ofSetColor(255, 255, 255, 255);
+            ofSetColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],spkOnA);
         }
         else {
-            ofSetColor(0, 0, 0, 255);
+            ofSetColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],spkOffA);
         }
+        ofDrawCircle((int) packetsPolarity[i].pos.x*scaleFx, (int)packetsPolarity[i].pos.y*scaleFy, 1);
         ofPopStyle();
-        ofDrawCircle(packetsPolarity[i].pos.x, packetsPolarity[i].pos.y, 1);
     }
 
-    fbo.end();
-    fbo.draw(0,0,ofGetWidth(),ofGetHeight());
-    
 }
 
 //--------------------------------------------------------------
@@ -244,9 +283,14 @@ void ofxDVS::drawFrames() {
     if(packetsFrames.size() > 0){
         packetsFrames[packetsFrames.size()-1].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
     }
+
     
 }
 
+//--------------------------------------------------------------
+void ofxDVS::drawImu6() {
+    
+}
 //--------------------------------------------------------------
 ofTexture* ofxDVS::getTextureRef() {
     return tex;

@@ -83,28 +83,44 @@ class ofxDVS {
 public:
     ofxDVS();
     
+    // Methods
     void setup();
     void update();
     void draw();
     void drawSpikes();
     void drawFrames();
+    void drawImu6();
+    void initSpikeColors();
     
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
     void globalShutdownSignalHandler(int signal);
     caerDeviceHandle camera_handle;
     
-
+    // Textures and framebuffer
     ofFbo fbo;
     ofTexture* tex;
     
+    // Data containers
     vector<polarity> packetsPolarity;
     vector<frame> packetsFrames;
     vector<imu6> packetsImu6;
     
+    // Data functions
     ofTexture* getTextureRef();
     vector<polarity> getPolarity();
     vector<frame> getFrames();
+    
+    // color palette for spikes
+    int spkOnR[3];
+    int spkOnG[3];
+    int spkOnB[3];
+    int spkOnA;
+    int spkOffR[3];
+    int spkOffG[3];
+    int spkOffB[3];
+    int spkOffA;
+    int paletteSpike;
     
 };
 
