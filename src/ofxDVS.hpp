@@ -79,10 +79,81 @@ struct imu6 {
     ofVec3f gyro;
 };
 
+class usbThread: public ofThread
+{
+public:
+ 
+    void threadedFunction()
+    {
+        
+        // start the camera
+#ifdef DAVIS346
+        // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX3, 0, 0, NULL);
+#endif
+#ifdef DAVIS240
+        // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX2, 0, 0, NULL);
+#endif
+#ifdef DVS128
+        // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
+#endif
+        
+        if (camera_handle == NULL) {
+            printf("error opening the device\n");
+            return (EXIT_FAILURE);
+        }
+        
+        // USB options
+        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_USB, CAER_HOST_CONFIG_USB_BUFFER_NUMBER,8);
+        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_USB, CAER_HOST_CONFIG_USB_BUFFER_SIZE,8192);
+        caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_EARLY_PACKET_DELAY,8);
+        caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
+        
+        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_PACKETS,
+                            CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE, 8192);
+        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_PACKETS,
+                            CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL, 10000);
+        
+        // Changes only take effect on module start!
+        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE,
+                            CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE, 64);
+        
+        // Send the default configuration before using the device.
+        // No configuration is sent automatically!
+        caerDeviceSendDefaultConfig(camera_handle);
+        
+        // Let's turn on blocking data-get mode to avoid wasting resources.
+        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+        
+        // Turn on Autoexposure if device has APS
+#if defined(DAVIS346) || defined(DAVIS240)
+        caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, true);
+#endif
+        
+        // Now let's get start getting some data from the device. We just loop, no notification needed.
+        caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
+
+        
+        while(isThreadRunning())
+        {
+            packetContainer = caerDeviceDataGet(camera_handle);
+            lock();
+            container.push_back(packetContainer);
+            unlock();
+        }
+    }
+    
+    caerDeviceHandle camera_handle;
+    vector<caerEventPacketContainer> container;
+    caerEventPacketContainer packetContainer;
+};
+
 class ofxDVS {
 public:
     ofxDVS();
-    
+
     // Methods
     void setup();
     void update();
@@ -91,11 +162,13 @@ public:
     void drawFrames();
     void drawImu6();
     void initSpikeColors();
-    
+    void loopColor();
+    void exit();
+    bool organizeData(caerEventPacketContainer packetContainer);
+
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
     void globalShutdownSignalHandler(int signal);
-    caerDeviceHandle camera_handle;
     
     // Textures and framebuffer
     ofFbo fbo;
@@ -121,7 +194,11 @@ public:
     int spkOffB[3];
     int spkOffA;
     int paletteSpike;
+    int maxContainerQueued;
     
+    // thread usb
+    usbThread thread;
 };
+
 
 #endif /* ofxDVS_hpp */

@@ -8,6 +8,8 @@
 
 #include "ofxDVS.hpp"
 
+using namespace std::placeholders;
+
 //--------------------------------------------------------------
 ofxDVS::ofxDVS() {
     
@@ -15,45 +17,17 @@ ofxDVS::ofxDVS() {
 
 //--------------------------------------------------------------
 void ofxDVS::setup() {
-    // start the camera
-#ifdef DAVIS346
-    // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-    camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX3, 0, 0, NULL);
-#endif
-#ifdef DAVIS240
-    // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-    camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX2, 0, 0, NULL);
-#endif
-#ifdef DVS128
-    // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-    camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
-#endif
-    
-    if (camera_handle == NULL) {
-        printf("error opening the device\n");
-        return (EXIT_FAILURE);
-    }
-    
-    // Send the default configuration before using the device.
-    // No configuration is sent automatically!
-    caerDeviceSendDefaultConfig(camera_handle);
-    
-    // Let's turn on blocking data-get mode to avoid wasting resources.
-    caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
-    
-    // Turn on Autoexposure if device has APS
-#if defined(DAVIS346) || defined(DAVIS240)
-    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, true);
-#endif
-    
-    // Now let's get start getting some data from the device. We just loop, no notification needed.
-    caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
-    
+        
     fbo.allocate(SIZEX, SIZEY, GL_RGBA32F);
     tex = &fbo.getTexture();
     
+    // render spike colored
     initSpikeColors();
+
+    // start the thread
+    thread.startThread(); // blocking, non verbose
     
+    maxContainerQueued = 100; // at most accumulates 100 packaetcontainers before dropping
 }
 
 //--------------------------------------------------------------
@@ -97,19 +71,13 @@ vector<frame> ofxDVS::getFrames() {
 }
 
 //--------------------------------------------------------------
-void ofxDVS::update() {
-    
-    //sensor
-    caerEventPacketContainer packetContainer = caerDeviceDataGet(camera_handle);
-    if (packetContainer == NULL) {
-        return; // Skip if nothing there.
+bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
+
+    if (packetContainer == NULL || thread.container.size() == 0) {
+        return(false); // Skip if nothing there.
     }
     
     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-    
-    if(DEBUG){
-        printf("\nGot event container with %d packets (allocated).\n", packetNum);
-    }
     
     packetsPolarity.clear();
     packetsImu6.clear();
@@ -123,16 +91,12 @@ void ofxDVS::update() {
         
         caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
         if (packetHeader == NULL) {
-            if(DEBUG){
-                printf("Packet %d is empty (not present).\n", i);
-            }
+            //ofLog(OF_LOG_WARNING,"Packet %d is empty (not present).\n", i);
             continue; // Skip if nothing there.
         }
         
-        if(DEBUG){
-            printf("Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
-                   caerEventPacketHeaderGetEventNumber(packetHeader));
-        }
+        //ofLog(OF_LOG_WARNING,"Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
+        //           caerEventPacketHeaderGetEventNumber(packetHeader));
         
         if (i == IMU6_EVENT) {
             
@@ -154,7 +118,7 @@ void ofxDVS::update() {
             nuPackImu6.timestamp = caerIMU6EventGetTimestamp(caerIMU6IteratorElement);
             
             packetsImu6.push_back(nuPackImu6);
-            CAER_IMU6_ITERATOR_VALID_END            
+            CAER_IMU6_ITERATOR_VALID_END
             
         }
         if (i == POLARITY_EVENT) {
@@ -181,7 +145,7 @@ void ofxDVS::update() {
                 packetsFrames.clear();
                 hasFrames = true;
             }
-        
+            
             caerFrameEventPacket frame = (caerFrameEventPacket) packetHeader;
             
             CAER_FRAME_ITERATOR_VALID_START(frame)
@@ -200,7 +164,7 @@ void ofxDVS::update() {
                 for (int32_t x = 0; x < nuPackFrames.lenghtX; x++) {
                     
                     switch (nuPackFrames.frameChannels) {
-                    
+                            
                         case GRAYSCALE: {
                             int nuCol = U8T(caerFrameEventGetPixelUnsafe(caerFrameIteratorElement, x, y) >> 8);
                             
@@ -225,10 +189,10 @@ void ofxDVS::update() {
                             int nuColG = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 1) >> 8);
                             int nuColB = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 2) >> 8);
                             int nuColA = U8T(caerFrameEventGetPixelForChannelUnsafe(caerFrameIteratorElement, x, y, 3) >> 8);
-                        
+                            
                             ofColor color= ofColor(nuColR,nuColB,nuColB,nuColA);
                             nuPackFrames.singleFrame.setColor(x, y, color);
-
+                            
                             break;
                         }
                             
@@ -236,17 +200,55 @@ void ofxDVS::update() {
                     
                 }
             }
-
+            
             packetsFrames.push_back(nuPackFrames);
-
+            
             CAER_FRAME_ITERATOR_VALID_END
-
+            
         }
         
     }
     
-    caerEventPacketContainerFree(packetContainer);
+    return(true);
 
+}
+
+//--------------------------------------------------------------
+void ofxDVS::update() {
+    
+    // Copy data from usbThread
+    thread.lock();
+    caerEventPacketContainer packetContainer;
+    if(thread.container.size() > 0){
+        packetContainer = thread.container.back();
+        thread.container.pop_back();
+    }
+    // done with the resource
+    thread.unlock();
+
+    // organize data in arrays
+    bool done = organizeData(packetContainer);
+    if(done){
+        caerEventPacketContainerFree(packetContainer);
+    }
+    
+    // check how fast we are going, if we are too slow, drop some data
+    thread.lock();
+    if(thread.container.size() > maxContainerQueued){
+        ofLog(OF_LOG_WARNING, "Visualization is too slow, dropping events to keep real-time.");
+        thread.container.clear();
+    }
+    thread.unlock();
+
+}
+
+//--------------------------------------------------------------
+void ofxDVS::loopColor() {
+    if(paletteSpike < 2){
+        paletteSpike += 1;
+    }else{
+        paletteSpike = 0;
+    }
 }
 
 //--------------------------------------------------------------
@@ -284,16 +286,20 @@ void ofxDVS::drawFrames() {
         packetsFrames[packetsFrames.size()-1].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
     }
 
-    
 }
 
 //--------------------------------------------------------------
 void ofxDVS::drawImu6() {
     
 }
+
 //--------------------------------------------------------------
 ofTexture* ofxDVS::getTextureRef() {
     return tex;
 }
 
-
+//--------------------------------------------------------------
+void ofxDVS::exit() {
+    // stop the thread
+    thread.stopThread();
+}
