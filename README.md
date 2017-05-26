@@ -36,6 +36,10 @@ Please select the correct device by changing the definition line in ofxSiliconRe
 Version history
 ------------
 
+### Version 0.11 (25 May 2017):
+
+Implemented frames, imu6 events 
+
 ### Version 0.1 (25 May 2017):
 
 Implemented polarity events for DVS128, DAVIS240, DAVIS346B 
