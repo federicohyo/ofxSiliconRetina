@@ -4,6 +4,8 @@
 #include "ofxDVS.hpp"
 #include "ofxEvents.h"
 
+#define mulSize 4
+
 class ofApp : public ofBaseApp{
 
 	public:
