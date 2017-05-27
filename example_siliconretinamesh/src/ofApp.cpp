@@ -18,7 +18,7 @@ void ofApp::update(){
     dvs.update();
     
     mesh.clear();
-    vector<polarity> packets = dvs.getPackets();
+    vector<polarity> packets = dvs.getPolarity();
     for(int i=0;i < packets.size();i++) {
         mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,SIZEX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,SIZEY,0,fbo.getHeight()), 0));
         mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
