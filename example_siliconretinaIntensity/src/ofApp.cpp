@@ -5,9 +5,9 @@ void ofApp::setup(){
     // shader
     ofSetFrameRate(60);
     ofEnableAlphaBlending();
-    ofSetWindowShape(SIZEX, SIZEY);
+    ofSetWindowShape(SIZEX*4, SIZEY*4);
     ofSetWindowPosition(1, 1);
-    events.allocate(SIZEX,SIZEY);
+    events.allocate(SIZEX*4,SIZEY*4);
     // dvs
     dvs.setup();
 }
