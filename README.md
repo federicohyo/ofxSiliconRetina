@@ -30,11 +30,17 @@ Known issues
 ------------
 
 Please select the correct device by changing the definition line in ofxSiliconRetina/src/ofxDVS.hpp
+--
 /// PLEASE SELECT SENSOR  DVS128 / DAVIS240 / DAVIS346
 #define DAVIS240
+--
 
 Version history
 ------------
+
+### Version 0.12 (27 May 2017):
+
+Added shader example, added keyboards shortcuts, and reduced usb latency (now it uses threads)
 
 ### Version 0.11 (25 May 2017):
 
