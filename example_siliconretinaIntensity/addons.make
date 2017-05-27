@@ -1,0 +1,4 @@
+ofxFX
+ofxSiliconRetina
+ofxUI
+ofxXmlSettings
