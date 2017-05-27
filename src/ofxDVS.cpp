@@ -25,9 +25,14 @@ void ofxDVS::setup() {
     initSpikeColors();
 
     // start the thread
-    thread.startThread(); // blocking, non verbose
-    
+    apsStatus = true;       // enable aps
+    dvsStatus = true;       // enable dvs
+    imuStatus = true;       // enable imu
+    thread.startThread();   // start usb thread    
     maxContainerQueued = 100; // at most accumulates 100 packaetcontainers before dropping
+
+    packetContainer = NULL;
+
 }
 
 //--------------------------------------------------------------
@@ -73,15 +78,13 @@ vector<frame> ofxDVS::getFrames() {
 //--------------------------------------------------------------
 bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
-    if (packetContainer == NULL || thread.container.size() == 0) {
+    if (packetContainer == NULL) {
         return(false); // Skip if nothing there.
     }
     
+    
     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
     
-    packetsPolarity.clear();
-    packetsImu6.clear();
-    bool hasFrames = false;
     
     for (int32_t i = 0; i < packetNum; i++) {
         
@@ -99,6 +102,9 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
         //           caerEventPacketHeaderGetEventNumber(packetHeader));
         
         if (i == IMU6_EVENT) {
+            
+            packetsImu6.clear();
+            packetsImu6.shrink_to_fit();
             
             caerIMU6EventPacket imu6 = (caerIMU6EventPacket) packetHeader;
             
@@ -119,9 +125,12 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             
             packetsImu6.push_back(nuPackImu6);
             CAER_IMU6_ITERATOR_VALID_END
-            
         }
         if (i == POLARITY_EVENT) {
+            
+            packetsPolarity.clear();
+            packetsPolarity.shrink_to_fit();
+            
             caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
             
             CAER_POLARITY_ITERATOR_VALID_START(polarity)
@@ -135,17 +144,15 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             packetsPolarity.push_back(nuPack);
             
             CAER_POLARITY_ITERATOR_VALID_END
-            
         }
         if (i == FRAME_EVENT){
             // first time we get in here
             // otherwise we do not clear packetframes
             // and we keep the last one
-            if(hasFrames == false){
-                packetsFrames.clear();
-                hasFrames = true;
-            }
             
+            packetsFrames.clear();
+            packetsFrames.shrink_to_fit();
+
             caerFrameEventPacket frame = (caerFrameEventPacket) packetHeader;
             
             CAER_FRAME_ITERATOR_VALID_START(frame)
@@ -192,7 +199,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
                             
                             ofColor color= ofColor(nuColR,nuColB,nuColB,nuColA);
                             nuPackFrames.singleFrame.setColor(x, y, color);
-                            
                             break;
                         }
                             
@@ -204,7 +210,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             packetsFrames.push_back(nuPackFrames);
             
             CAER_FRAME_ITERATOR_VALID_END
-            
         }
         
     }
@@ -218,19 +223,14 @@ void ofxDVS::update() {
     
     // Copy data from usbThread
     thread.lock();
-    caerEventPacketContainer packetContainer;
-    if(thread.container.size() > 0){
-        packetContainer = thread.container.back();
+    for(int i=0; i<thread.container.size(); i++){
+        packetContainer = thread.container.back(); // apparently this is a pointer
         thread.container.pop_back();
+        organizeData(packetContainer);
+        caerEventPacketContainerFree(packetContainer);  // free all packet containers here
     }
     // done with the resource
     thread.unlock();
-
-    // organize data in arrays
-    bool done = organizeData(packetContainer);
-    if(done){
-        caerEventPacketContainerFree(packetContainer);
-    }
     
     // check how fast we are going, if we are too slow, drop some data
     thread.lock();
@@ -257,8 +257,55 @@ void ofxDVS::draw() {
 }
 
 //--------------------------------------------------------------
+void ofxDVS::changeAps() {
+    thread.lock();
+    bool current_status = thread.apsStatus;
+    if(current_status){
+        thread.apsStatus = false;
+        ofLog(OF_LOG_NOTICE,"Aps Disabled\n");
+    }else{
+        thread.apsStatus = true;
+        ofLog(OF_LOG_NOTICE,"Aps Enabled\n");
+    }
+    thread.unlock();
+}
+
+//--------------------------------------------------------------
+void ofxDVS::changeDvs() {
+    thread.lock();
+    bool current_status = thread.dvsStatus;
+    if(current_status){
+        thread.dvsStatus = false;
+        ofLog(OF_LOG_NOTICE,"Dvs Disabled\n");
+    }else{
+        thread.dvsStatus = true;
+        ofLog(OF_LOG_NOTICE,"Dvs Enabled\n");
+    }
+    thread.unlock();
+}
+
+//--------------------------------------------------------------
+void ofxDVS::changeImu() {
+    thread.lock();
+    bool current_status = thread.imuStatus;
+    if(current_status){
+        thread.imuStatus = false;
+        ofLog(OF_LOG_NOTICE,"Imu Disabled\n");
+    }else{
+        thread.imuStatus = true;
+        ofLog(OF_LOG_NOTICE,"Imu Enabled\n");
+    }
+    thread.unlock();
+}
+
+
+//--------------------------------------------------------------
 void ofxDVS::drawSpikes() {
-    
+    //fbo.begin();
+    //ofClear(0,255);
+    //ofFill();
+    //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
+
     float scalex = (float) ofGetWidth();
     float scaley = (float) ofGetHeight();
     float scaleFx,scaleFy;
@@ -276,6 +323,8 @@ void ofxDVS::drawSpikes() {
         ofPopStyle();
     }
 
+    //fbo.end();
+    //fbo.draw(0,0,ofGetWidth(),ofGetHeight());
 }
 
 //--------------------------------------------------------------
@@ -290,8 +339,9 @@ void ofxDVS::drawFrames() {
 
 //--------------------------------------------------------------
 void ofxDVS::drawImu6() {
-    
+
 }
+
 
 //--------------------------------------------------------------
 ofTexture* ofxDVS::getTextureRef() {

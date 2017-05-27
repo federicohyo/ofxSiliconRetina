@@ -19,7 +19,16 @@ void ofApp::draw(){
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
     if (key == 'c') {
-        dvs.loopColor();
+        dvs.loopColor(); //change color for dvs events
+    }
+    if (key == 'a') {
+        dvs.changeAps(); //enable/disable aps
+    }
+    if (key == 'd') {
+        dvs.changeDvs(); //enable/disable dvs
+    }
+    if (key == 'i') {
+        dvs.changeImu(); //enable/disable imu
     }
 }
 

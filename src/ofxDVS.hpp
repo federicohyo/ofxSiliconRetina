@@ -79,6 +79,7 @@ struct imu6 {
     ofVec3f gyro;
 };
 
+
 class usbThread: public ofThread
 {
 public:
@@ -105,27 +106,9 @@ public:
             return (EXIT_FAILURE);
         }
         
-        // USB options
-        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_USB, CAER_HOST_CONFIG_USB_BUFFER_NUMBER,8);
-        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_USB, CAER_HOST_CONFIG_USB_BUFFER_SIZE,8192);
-        caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_EARLY_PACKET_DELAY,8);
-        caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_USB, DAVIS_CONFIG_USB_RUN, true);
-        
-        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_PACKETS,
-                            CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_PACKET_SIZE, 8192);
-        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_PACKETS,
-                            CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL, 10000);
-        
-        // Changes only take effect on module start!
-        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE,
-                            CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE, 64);
-        
         // Send the default configuration before using the device.
         // No configuration is sent automatically!
         caerDeviceSendDefaultConfig(camera_handle);
-        
-        // Let's turn on blocking data-get mode to avoid wasting resources.
-        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
         
         // Turn on Autoexposure if device has APS
 #if defined(DAVIS346) || defined(DAVIS240)
@@ -135,19 +118,69 @@ public:
         // Now let's get start getting some data from the device. We just loop, no notification needed.
         caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
 
+        // Let's turn on blocking data-get mode to avoid wasting resources.
+        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+        
+        // get current frame status
+        apsStatus = true;
+        apsStatusLocal = true;
+        dvsStatus = true;
+        dvsStatusLocal = true;
+        imuStatus = true;
+        imuStatusLocal = true;
         
         while(isThreadRunning())
         {
-            packetContainer = caerDeviceDataGet(camera_handle);
             lock();
-            container.push_back(packetContainer);
+            packetContainerT = NULL;
+            packetContainerT = caerDeviceDataGet(camera_handle);
+            if (packetContainerT != NULL){
+                container.push_back(packetContainerT);
+            }
             unlock();
+
+            //check aps status
+            if( apsStatus != apsStatusLocal){
+                apsStatusLocal = apsStatus;
+                //enable disable frames
+#if defined(DAVIS346) || defined(DAVIS240)
+                caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, apsStatusLocal);
+#endif
+            }
+            //check dvs status
+            if( dvsStatus != dvsStatusLocal){
+                dvsStatusLocal = dvsStatus;
+                //enable disable frames
+#if defined(DAVIS346) || defined(DAVIS240)
+                caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, dvsStatusLocal);
+#elif defined(DVS128)
+                caerDeviceConfigSet(camera_handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, dvsStatusLocal);
+#endif
+            }
+            //check imu status
+            if( imuStatus != imuStatusLocal){
+                imuStatusLocal = imuStatus;
+                //enable disable frames
+#if defined(DAVIS346) || defined(DAVIS240)
+                caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
+#endif
+            }
+
         }
     }
     
     caerDeviceHandle camera_handle;
     vector<caerEventPacketContainer> container;
-    caerEventPacketContainer packetContainer;
+    caerEventPacketContainer packetContainerT;
+    
+    // enable disable aps / dvs /imu
+    bool apsStatus;
+    bool apsStatusLocal;
+    bool dvsStatus;
+    bool dvsStatusLocal;
+    bool imuStatus;
+    bool imuStatusLocal;
+    
 };
 
 class ofxDVS {
@@ -165,6 +198,9 @@ public:
     void loopColor();
     void exit();
     bool organizeData(caerEventPacketContainer packetContainer);
+    void changeAps(); // enable / disable aps
+    void changeDvs(); // enable / disable dvs
+    void changeImu(); // enable / disable imu
 
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
@@ -173,14 +209,15 @@ public:
     // Textures and framebuffer
     ofFbo fbo;
     ofTexture* tex;
+    ofTexture* getTextureRef();
     
     // Data containers
     vector<polarity> packetsPolarity;
     vector<frame> packetsFrames;
     vector<imu6> packetsImu6;
+    caerEventPacketContainer packetContainer;
     
     // Data functions
-    ofTexture* getTextureRef();
     vector<polarity> getPolarity();
     vector<frame> getFrames();
     
@@ -198,6 +235,9 @@ public:
     
     // thread usb
     usbThread thread;
+    bool apsStatus; // enable/disable aps
+    bool dvsStatus; // enable/disable dvs
+    bool imuStatus; // enable/disable imu
 };
 
 
