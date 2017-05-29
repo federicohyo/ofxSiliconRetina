@@ -8,14 +8,14 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
     dvs.update();
-    //stats.update();
+    stats.update();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     dvs.drawFrames();
     dvs.drawSpikes();
-    //stats.draw();
+    stats.draw();
 }
 
 //--------------------------------------------------------------

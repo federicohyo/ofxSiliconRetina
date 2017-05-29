@@ -14,25 +14,12 @@
 #include "devices/dvs128.h"
 #include <atomic>
 
-/// PLEASE SELECT SENSOR DAVIS240 or DVS128
-#define DAVIS240
+/// PLEASE SELECT SENSOR DAVIS or DVS128
+#define DAVIS  1
+#define DVS128 0
+
 // and decide on parameters
 #define DEBUG 0
-
-#ifdef DAVIS346
-#define SIZEX 346
-#define SIZEY 280
-#endif
-
-#ifdef DAVIS240
-#define SIZEX 240
-#define SIZEY 180
-#endif
-
-#ifdef DVS128
-#define SIZEX 128
-#define SIZEY 128
-#endif
 
 #include "ofMain.h"
 
@@ -87,16 +74,14 @@ public:
     void threadedFunction()
     {
         
+    	deviceReady = false;
+
         // start the camera
-#ifdef DAVIS346
+#if DAVIS == 1
         // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX3, 0, 0, NULL);
+        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
 #endif
-#ifdef DAVIS240
-        // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX2, 0, 0, NULL);
-#endif
-#ifdef DVS128
+#if DVS128 == 1
         // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
         camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
 #endif
@@ -111,10 +96,21 @@ public:
         caerDeviceSendDefaultConfig(camera_handle);
         
         // Turn on Autoexposure if device has APS
-#if defined(DAVIS346) || defined(DAVIS240)
+#if DAVIS == 1
         caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, true);
 #endif
         
+        // get device size
+#if DAVIS == 1
+        caer_davis_info infocam = caerDavisInfoGet(camera_handle);
+#endif
+#if DVS128 == 1
+        caer_dvs128_info infocam = caerDVS128InfoGet(camera_handle);
+#endif
+
+        sizeX = infocam.dvsSizeX;
+        sizeY = infocam.dvsSizeY;
+
         // Now let's get start getting some data from the device. We just loop, no notification needed.
         caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
 
@@ -129,6 +125,8 @@ public:
         imuStatus = true;
         imuStatusLocal = true;
         
+        deviceReady = true;
+
         while(isThreadRunning())
         {
             lock();
@@ -139,13 +137,13 @@ public:
             }
             unlock();
 
-            nanosleep((const struct timespec[]){{0, 50000L}}, NULL);
+            nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
 
             //check aps status
             if( apsStatus != apsStatusLocal){
                 apsStatusLocal = apsStatus;
                 //enable disable frames
-#if defined(DAVIS346) || defined(DAVIS240)
+#if DAVIS == 1
                 caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, apsStatusLocal);
 #endif
             }
@@ -153,9 +151,9 @@ public:
             if( dvsStatus != dvsStatusLocal){
                 dvsStatusLocal = dvsStatus;
                 //enable disable frames
-#if defined(DAVIS346) || defined(DAVIS240)
+#if DAVIS == 1
                 caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, dvsStatusLocal);
-#elif defined(DVS128)
+#elif DVS128 == 1
                 caerDeviceConfigSet(camera_handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, dvsStatusLocal);
 #endif
             }
@@ -163,7 +161,7 @@ public:
             if( imuStatus != imuStatusLocal){
                 imuStatusLocal = imuStatus;
                 //enable disable frames
-#if defined(DAVIS346) || defined(DAVIS240)
+#if DAVIS == 1
                 caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
 #endif
             }
@@ -183,6 +181,10 @@ public:
     bool imuStatus;
     bool imuStatusLocal;
 
+    //size device
+    int sizeX;
+    int sizeY;
+    bool deviceReady;
 };
 
 class ofxDVS {
@@ -240,6 +242,10 @@ public:
     bool apsStatus; // enable/disable aps
     bool dvsStatus; // enable/disable dvs
     bool imuStatus; // enable/disable imu
+
+    //size
+    int sizeX;
+    int sizeY;
 };
 
 

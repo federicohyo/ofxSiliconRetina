@@ -18,9 +18,23 @@ ofxDVS::ofxDVS() {
 //--------------------------------------------------------------
 void ofxDVS::setup() {
         
-    fbo.allocate(SIZEX, SIZEY, GL_RGBA32F);
+    thread.startThread();   // start usb thread
+
+    // get camera size after ready
+    LOCK_CHECK:
+    thread.lock();
+    if(thread.deviceReady!=true){
+    	thread.unlock();
+    	goto LOCK_CHECK;
+    }
+	sizeX = thread.sizeX;
+	sizeY = thread.sizeY;
+	thread.unlock();
+
+	// init framebuffer
+    fbo.allocate(sizeX, sizeY, GL_RGBA32F);
     tex = &fbo.getTexture();
-    
+
     // render spike colored
     initSpikeColors();
 
@@ -28,9 +42,7 @@ void ofxDVS::setup() {
     apsStatus = true;       // enable aps
     dvsStatus = true;       // enable dvs
     imuStatus = true;       // enable imu
-    thread.startThread();   // start usb thread    
     maxContainerQueued = 100; // at most accumulates 100 packaetcontainers before dropping
-
     packetContainer = NULL;
 
 }
@@ -309,8 +321,8 @@ void ofxDVS::drawSpikes() {
     float scalex = (float) ofGetWidth();
     float scaley = (float) ofGetHeight();
     float scaleFx,scaleFy;
-    scaleFx = scalex/SIZEX;
-    scaleFy = scaley/SIZEY;
+    scaleFx = scalex/sizeX;
+    scaleFy = scaley/sizeY;
     for (int i = 0; i < packetsPolarity.size(); i++) {
         ofPushStyle();
         if(packetsPolarity[i].pol) {
@@ -331,8 +343,8 @@ void ofxDVS::drawSpikes() {
 void ofxDVS::drawFrames() {
 
     // draw last frame in packets
-    if(packetsFrames.size() > 0){
-        packetsFrames[packetsFrames.size()-1].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
+    for (int i = 0; i < packetsFrames.size(); i++) {
+        packetsFrames[i].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
     }
 
 }
