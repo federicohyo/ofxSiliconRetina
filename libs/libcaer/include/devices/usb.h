@@ -124,7 +124,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * @param deviceID a unique ID to identify the device from others. Will be used as the
  *                 source for EventPackets being generate from its data.
  * @param deviceType type of the device to open. Currently supported are:
- *                   CAER_DEVICE_DVS128, CAER_DEVICE_DAVIS_FX2, CAER_DEVICE_DAVIS_FX3
+ *                   CAER_DEVICE_DVS128, CAER_DEVICE_DAVIS, CAER_DEVICE_DYNAPSE
  * @param busNumberRestrict restrict the search for viable devices to only this USB bus number.
  * @param devAddressRestrict restrict the search for viable devices to only this USB device address.
  * @param serialNumberRestrict restrict the search for viable devices to only devices which do

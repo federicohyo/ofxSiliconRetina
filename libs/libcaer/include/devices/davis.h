@@ -20,12 +20,19 @@ extern "C" {
 
 /**
  * Device type definition for iniLabs DAVIS FX2-based boards, like DAVIS240a/b/c.
+ * Deprecated in favor of CAER_DEVICE_DAVIS.
  */
 #define CAER_DEVICE_DAVIS_FX2 1
 /**
- * Device type definition for iniLabs  DAVIS FX3-based boards, like DAVIS640.
+ * Device type definition for iniLabs DAVIS FX3-based boards, like DAVIS640.
+ * Deprecated in favor of CAER_DEVICE_DAVIS.
  */
 #define CAER_DEVICE_DAVIS_FX3 2
+/**
+ * Device type definition for iniLabs DAVIS boards, supporting both FX2 and FX3
+ * generation devices. This is the preferred way to access cameras now.
+ */
+#define CAER_DEVICE_DAVIS     4
 
 /**
  * DAVIS240A chip identifier.
