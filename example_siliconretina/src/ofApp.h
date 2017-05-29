@@ -3,6 +3,8 @@
 #include "ofMain.h"
 
 #include "ofxDVS.hpp"
+#include "ofxStats.h"
+
 
 class ofApp : public ofBaseApp{
     
@@ -23,6 +25,8 @@ public:
     void dragEvent(ofDragInfo dragInfo);
     void gotMessage(ofMessage msg);
     
+    // Silicon Retina
     ofxDVS dvs;
-    
+    // ofxStats instance
+    ofxStats stats;
 };
