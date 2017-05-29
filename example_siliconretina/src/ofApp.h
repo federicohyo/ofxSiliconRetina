@@ -3,7 +3,7 @@
 #include "ofMain.h"
 
 #include "ofxDVS.hpp"
-#include "ofxStats.h"
+//#include "ofxStats.h"
 
 
 class ofApp : public ofBaseApp{
@@ -28,5 +28,5 @@ public:
     // Silicon Retina
     ofxDVS dvs;
     // ofxStats instance
-    ofxStats stats;
+    //ofxStats stats;
 };

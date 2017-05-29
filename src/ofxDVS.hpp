@@ -103,7 +103,7 @@ public:
         
         if (camera_handle == NULL) {
             printf("error opening the device\n");
-            return (EXIT_FAILURE);
+            return;
         }
         
         // Send the default configuration before using the device.
@@ -138,6 +138,8 @@ public:
                 container.push_back(packetContainerT);
             }
             unlock();
+
+            nanosleep((const struct timespec[]){{0, 50000L}}, NULL);
 
             //check aps status
             if( apsStatus != apsStatusLocal){
@@ -180,7 +182,7 @@ public:
     bool dvsStatusLocal;
     bool imuStatus;
     bool imuStatusLocal;
-    
+
 };
 
 class ofxDVS {
