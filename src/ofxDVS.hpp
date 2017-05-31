@@ -205,6 +205,7 @@ public:
     void changeAps(); // enable / disable aps
     void changeDvs(); // enable / disable dvs
     void changeImu(); // enable / disable imu
+    void drawImageGenerator();
 
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
@@ -253,9 +254,9 @@ public:
     //Image Generator
     ofImage imageGenerator;
     float** spikeFeatures;
-    int lastTimeStamp;
-    float tau;
     bool rectifyPolarities;
+    int numSpikes;
+    int counterSpikes;
 };
 
 

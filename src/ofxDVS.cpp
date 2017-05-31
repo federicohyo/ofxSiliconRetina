@@ -56,9 +56,11 @@ void ofxDVS::setup() {
         }
     }
     imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
-    tau = 0.002 ;
     rectifyPolarities = true;
+    numSpikes = 2000;
+    counterSpikes = 0;
 }
+
 
 //--------------------------------------------------------------
 void ofxDVS::initSpikeColors() {
@@ -362,6 +364,20 @@ void ofxDVS::drawFrames() {
 
 }
 
+//--------------------------------------------------------------
+void ofxDVS::drawImageGenerator() {
+
+    // draw last imagegenerator frame
+    imageGenerator.draw(0,0,ofGetWidth(),ofGetHeight());
+    //for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+    //    for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+    //        ofColor thispix= imageGenerator.getColor(col_idx, row_idx);
+   //         ofLog(OF_LOG_WARNING,"Color Pixel red %d  \n", thispix.r);
+    //    }
+   // }
+
+}
+
 
 //--------------------------------------------------------------
 void ofxDVS::updateImageGenerator(){
@@ -372,108 +388,91 @@ void ofxDVS::updateImageGenerator(){
         if(packetsPolarity[i].pol){
             spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
         }else{
-            spikeFeatures[(int)pos.x][(int)pos.y] -= 1.0;
+            spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+        }
+        counterSpikes = counterSpikes+1;
+    }
+
+    if(numSpikes <= counterSpikes){
+
+        counterSpikes = 0;
+        ofLog(OF_LOG_WARNING,"Generate Image \n");
+        // normalize
+        int sum = 0, count = 0;
+        for (int i = 0; i < sizeX; i++) {
+            for (int j = 0; j < sizeY; j++) {
+                if (spikeFeatures[i][j] != 0.0) {
+                    sum += spikeFeatures[i][j];
+                    count++;
+                }
+            }
+        }
+        float mean = sum / count;
+        float var = 0;
+        for (int i = 0; i < sizeX; i++) {
+            for (int j = 0; j < sizeY; j++) {
+                if (spikeFeatures[i][j] != 0.0) {
+                    float f = spikeFeatures[i][j] - mean;
+                    var += f * f;
+                }
+            }
         }
         
-    }
-    lastTimeStamp = packetsPolarity[packetsPolarity.size()-1].timestamp;
-
-    //decay the map
-    for (size_t x = 0; x < sizeX; x++) {
-        for (size_t y = 0; y < sizeY; y++) {
-            if(spikeFeatures[x][y] == 0.0){
-                continue;
-            }else{
-                spikeFeatures[x][y] -= tau; // decay
-                if(spikeFeatures[x][y]  < 0.0){
-                    spikeFeatures[x][y]  = 0.0;
-                }
-            }
+        float sig = sqrt(var / count);
+        if (sig < (0.1f / 255.0f)) {
+            sig = 0.1f / 255.0f;
         }
-    }
-    
-    // normalize
-    int sum = 0, count = 0;
-    for (int i = 0; i < sizeX; i++) {
-        for (int j = 0; j < sizeY; j++) {
-            if (spikeFeatures[i][j] != 0.0) {
-                sum += spikeFeatures[i][j];
-                count++;
-            }
+        
+        float numSDevs = 3;
+        float mean_png_gray, range, halfrange;
+        
+        if (rectifyPolarities) {
+            mean_png_gray = 0; // rectified
         }
-    }
-    float mean = sum / count;
-    float var = 0;
-    for (int i = 0; i < sizeX; i++) {
-        for (int j = 0; j < sizeY; j++) {
-            if (spikeFeatures[i][j] != 0.0) {
-                float f = spikeFeatures[i][j] - mean;
-                var += f * f;
-            }
+        
+        
+        if (rectifyPolarities) {
+            range = numSDevs * sig * (1.0f / 256.0f); //256 included here for nullhop reshift
+            halfrange = 0;
         }
-    }
-    
-    float sig = sqrt(var / count);
-    if (sig < (0.1f / 255.0f)) {
-        sig = 0.1f / 255.0f;
-    }
-    
-    float numSDevs = 3;
-    float mean_png_gray, range, halfrange;
-    
-    if (rectifyPolarities) {
-        mean_png_gray = 0; // rectified
-    }
-    else {
-        mean_png_gray = (127.0 / 255.0);
-    }
-    
-    if (rectifyPolarities) {
-        range = numSDevs * sig * (1.0f / 256.0f); //256 included here for nullhop reshift
-        halfrange = 0;
-    }
-    else {
-        range = numSDevs * sig * 2 * (1.0f / 256.0f); //256 included here for nullhop reshift
-        halfrange = numSDevs * sig;
-    }
-    //ofLog(OF_LOG_WARNING,"var %f \n", var);
-    //ofLog(OF_LOG_WARNING,"mean %f \n", mean);
-    //ofLog(OF_LOG_WARNING,"range %f \n", range);
-
-    for (int col_idx = 0; col_idx < sizeX; col_idx++) {
-        for (int row_idx = 0; row_idx < sizeY; row_idx++) {
-            ofColor this_pixel;
-            this_pixel.set(0,0,0);
-            imageGenerator.setColor(col_idx,row_idx,this_pixel);
-        }
-    }
-    for (int col_idx = 0; col_idx < sizeX; col_idx++) {
-        for (int row_idx = 0; row_idx < sizeY; row_idx++) {
-            
-
-            if (spikeFeatures[col_idx][row_idx] == 0) {
-                
-                spikeFeatures[col_idx][row_idx] = mean_png_gray;
-                
-            }
-            else {
-                float f = (spikeFeatures[col_idx][row_idx] + halfrange) / range;
-                
-                if (f > 255) {
-                    f = 255; //255 included here for nullhop reshift
-                }
-                else if (f < 0) {
-                    f = 0;
-                }
-                
+        
+        //ofLog(OF_LOG_WARNING,"var %f \n", var);
+        //ofLog(OF_LOG_WARNING,"mean %f \n", mean);
+        //ofLog(OF_LOG_WARNING,"range %f \n", range);
+        
+        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
                 ofColor this_pixel;
-                this_pixel.set((int)floor(f),(int)floor(f),(int)floor(f));
-                //ofLog(OF_LOG_WARNING,"floor(f) %d \n", (int)floor(f));
+                this_pixel.set(0,0,0);
                 imageGenerator.setColor(col_idx,row_idx,this_pixel);
             }
         }
+        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+                if (spikeFeatures[col_idx][row_idx] == 0) {
+                    spikeFeatures[col_idx][row_idx] = mean_png_gray;
+                }
+                else {
+                    float f = (spikeFeatures[col_idx][row_idx] + halfrange) / range;
+                    if (f > 255) {
+                        f = 255; //255 included here for nullhop reshift
+                    }else if (f < 0) {
+                        f = 0;
+                    }
+                    ofColor this_pixel;
+                    this_pixel.set((int)floor(f),(int)floor(f),(int)floor(f));
+                    imageGenerator.setColor(col_idx,row_idx,ofColor(this_pixel.r, this_pixel.g, this_pixel.b));
+                }
+            }
+        }
+        // clear map
+        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+                spikeFeatures[col_idx][row_idx]  = 0.0;
+            }
+        }
+        imageGenerator.update();
     }
-    
 }
 
 

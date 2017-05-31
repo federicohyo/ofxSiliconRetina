@@ -8,12 +8,14 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
     dvs.update();
+    dvs.updateImageGenerator();
     stats.update();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     dvs.drawFrames();
+    //dvs.drawImageGenerator();
     dvs.drawSpikes();
     stats.draw();
 }
