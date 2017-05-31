@@ -79,7 +79,7 @@ public:
         // start the camera
 #if DAVIS == 1
         // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
+        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX2, 0, 0, NULL);
 #endif
 #if DVS128 == 1
         // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
@@ -219,11 +219,14 @@ public:
     vector<polarity> packetsPolarity;
     vector<frame> packetsFrames;
     vector<imu6> packetsImu6;
+    vector<ofImage> packetsImageGenerator;
     caerEventPacketContainer packetContainer;
     
     // Data functions
     vector<polarity> getPolarity();
     vector<frame> getFrames();
+    ofImage getImageGenerator();
+    void updateImageGenerator();
     
     // color palette for spikes
     int spkOnR[3];
@@ -246,6 +249,13 @@ public:
     //size
     int sizeX;
     int sizeY;
+    
+    //Image Generator
+    ofImage imageGenerator;
+    float** spikeFeatures;
+    int lastTimeStamp;
+    float tau;
+    bool rectifyPolarities;
 };
 
 
