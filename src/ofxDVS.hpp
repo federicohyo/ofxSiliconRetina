@@ -14,6 +14,17 @@
 #include "devices/dvs128.h"
 #include <atomic>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#elif defined(__unix__) || defined(__APPLE__)
+#include <pwd.h>
+#include <unistd.h>
+#endif
+
+#include <string>
+
+
 /// PLEASE SELECT SENSOR DAVIS or DVS128
 #define DAVIS  1
 #define DVS128 0
@@ -74,12 +85,13 @@ public:
     void threadedFunction()
     {
         
+    STARTDEVICE:
     	deviceReady = false;
 
         // start the camera
 #if DAVIS == 1
         // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS_FX2, 0, 0, NULL);
+        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
 #endif
 #if DVS128 == 1
         // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
@@ -88,7 +100,8 @@ public:
         
         if (camera_handle == NULL) {
             printf("error opening the device\n");
-            return;
+            sleep(1);
+            goto STARTDEVICE;
         }
         
         // Send the default configuration before using the device.
@@ -110,6 +123,7 @@ public:
 
         sizeX = infocam.dvsSizeX;
         sizeY = infocam.dvsSizeY;
+        chipId = infocam.chipID;
 
         // Now let's get start getting some data from the device. We just loop, no notification needed.
         caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
@@ -185,6 +199,7 @@ public:
     int sizeX;
     int sizeY;
     bool deviceReady;
+    int chipId;
 };
 
 class ofxDVS {
@@ -206,7 +221,13 @@ public:
     void changeDvs(); // enable / disable dvs
     void changeImu(); // enable / disable imu
     void drawImageGenerator();
-
+    const char * chipIDToName(int16_t chipID, bool withEndSlash);
+    void writeHeaderFile();
+    static int packetsFirstTimestampThenTypeCmp(const void *a, const void *b);
+    void changeRecordingStatus();
+    void openRecordingFile();
+    string getUserHomeDir();
+    
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
     void globalShutdownSignalHandler(int signal);
@@ -250,6 +271,7 @@ public:
     //size
     int sizeX;
     int sizeY;
+    int chipId;
     
     //Image Generator
     ofImage imageGenerator;
@@ -257,6 +279,10 @@ public:
     bool rectifyPolarities;
     int numSpikes;
     int counterSpikes;
+    int isRecording;
+    
+    //file output aedat 3.0
+    ofstream myFile;
 };
 
 

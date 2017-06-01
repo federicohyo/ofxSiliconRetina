@@ -19,7 +19,7 @@ ofxDVS::ofxDVS() {
 void ofxDVS::setup() {
         
     thread.startThread();   // start usb thread
-
+    
     // get camera size after ready
     LOCK_CHECK:
     thread.lock();
@@ -27,8 +27,10 @@ void ofxDVS::setup() {
     	thread.unlock();
     	goto LOCK_CHECK;
     }
+    
 	sizeX = thread.sizeX;
 	sizeY = thread.sizeY;
+    chipId = thread.chipId;
 	thread.unlock();
 
 	// init framebuffer
@@ -59,8 +61,61 @@ void ofxDVS::setup() {
     rectifyPolarities = true;
     numSpikes = 2000;
     counterSpikes = 0;
+    isRecording = false;
+    
 }
 
+//--------------------------------------------------------------
+void ofxDVS::openRecordingFile(){
+    // File Recording Output
+    string path;
+    path = getUserHomeDir();
+    time_t t = time(0);   // get time now
+    struct tm * now = localtime( & t );
+    char buffer [80];
+    strftime (buffer,80,"ofxDVS_%Y-%m-%d-%I_%M_%S.aedat",now);
+    string filename = path + "/" + buffer;
+    myFile.open(filename, ios::out | ios::binary);
+    writeHeaderFile();
+}
+
+//--------------------------------------------------------------
+void ofxDVS::writeHeaderFile(){
+    // Time
+    struct tm currentTime;
+    time_t currentTimeEpoch = time(NULL);
+    localtime_r(&currentTimeEpoch, &currentTime);
+    size_t currentTimeStringLength = 44;
+    char currentTimeString[currentTimeStringLength + 1]; // + 1 for terminating NUL byte.
+    strftime(currentTimeString, currentTimeStringLength + 1, "#Start-Time: %Y-%m-%d %H:%M:%S (TZ%z)\r\n", &currentTime);
+    
+    // Select Chip Id
+    size_t sourceStringLength = (size_t) snprintf(NULL, 0, "#Source 0: %s\r\n",chipIDToName(chipId, false));
+    char sourceString[sourceStringLength + 1];
+    snprintf(sourceString, sourceStringLength + 1, "#Source 0: %s\r\n",chipIDToName(chipId, false));
+    sourceString[sourceStringLength] = '\0';
+    // Write Header
+    myFile << "#!AER-DAT3.1\r\n";
+    myFile << "#Format: RAW\r\n";
+    myFile << sourceString;
+    myFile << currentTimeString;
+    myFile << "#!END-HEADER\r\n";
+}
+
+//--------------------------------------------------------------
+void ofxDVS::changeRecordingStatus(){
+    if(isRecording){
+        isRecording = false;
+        //close file
+        myFile.close();
+        ofLog(OF_LOG_NOTICE, "Stop recording\n");
+    }else{
+        //open file and write header
+        openRecordingFile();
+        isRecording = true;
+        ofLog(OF_LOG_NOTICE, "Start recording\n");
+    }
+}
 
 //--------------------------------------------------------------
 void ofxDVS::initSpikeColors() {
@@ -253,8 +308,38 @@ void ofxDVS::update() {
     for(int i=0; i<thread.container.size(); i++){
         packetContainer = thread.container.back(); // apparently this is a pointer
         thread.container.pop_back();
+        
+        // organize data
         organizeData(packetContainer);
-        caerEventPacketContainerFree(packetContainer);  // free all packet containers here
+
+        // recording status
+        if(isRecording){
+            // order packet containers in time
+            size_t currPacketContainerSize = (size_t) caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+            qsort(packetContainer->eventPackets, currPacketContainerSize, sizeof(caerEventPacketHeader),
+                  &packetsFirstTimestampThenTypeCmp);
+            
+            // save to files
+            int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+            
+            for (int32_t i = 0; i < packetNum; i++) {
+                
+                caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
+                if(packetHeader == NULL){
+                    continue;
+                }
+                
+                caerEventPacketHeaderSetEventCapacity(packetHeader, caerEventPacketHeaderGetEventNumber(packetHeader));
+                
+                size_t sizePacket = caerEventPacketGetSize(packetHeader);
+                myFile.write((char*)packetHeader, sizePacket);
+
+            }
+        }
+        
+        // free all packet containers here
+
+        caerEventPacketContainerFree(packetContainer);
     }
     // done with the resource
     thread.unlock();
@@ -369,12 +454,6 @@ void ofxDVS::drawImageGenerator() {
 
     // draw last imagegenerator frame
     imageGenerator.draw(0,0,ofGetWidth(),ofGetHeight());
-    //for (int col_idx = 0; col_idx < sizeX; col_idx++) {
-    //    for (int row_idx = 0; row_idx < sizeY; row_idx++) {
-    //        ofColor thispix= imageGenerator.getColor(col_idx, row_idx);
-   //         ofLog(OF_LOG_WARNING,"Color Pixel red %d  \n", thispix.r);
-    //    }
-   // }
 
 }
 
@@ -396,7 +475,7 @@ void ofxDVS::updateImageGenerator(){
     if(numSpikes <= counterSpikes){
 
         counterSpikes = 0;
-        ofLog(OF_LOG_WARNING,"Generate Image \n");
+        //ofLog(OF_LOG_WARNING,"Generate Image \n");
         // normalize
         int sum = 0, count = 0;
         for (int i = 0; i < sizeX; i++) {
@@ -496,6 +575,123 @@ ofTexture* ofxDVS::getTextureRef() {
 
 //--------------------------------------------------------------
 void ofxDVS::exit() {
+    
     // stop the thread
     thread.stopThread();
+    
+    if(isRecording){
+        // close file
+        myFile.close();
+    }
+
+}
+
+const char * ofxDVS::chipIDToName(int16_t chipID, bool withEndSlash) {
+    switch (chipID) {
+        case 0:
+            return ((withEndSlash) ? ("DAVIS240A/") : ("DAVIS240A"));
+            break;
+            
+        case 1:
+            return ((withEndSlash) ? ("DAVIS240B/") : ("DAVIS240B"));
+            break;
+            
+        case 2:
+            return ((withEndSlash) ? ("DAVIS240C/") : ("DAVIS240C"));
+            break;
+            
+        case 3:
+            return ((withEndSlash) ? ("DAVIS128/") : ("DAVIS128"));
+            break;
+            
+        case 4:
+            return ((withEndSlash) ? ("DAVIS346A/") : ("DAVIS346A"));
+            break;
+            
+        case 5:
+            return ((withEndSlash) ? ("DAVIS346B/") : ("DAVIS346B"));
+            break;
+            
+        case 6:
+            return ((withEndSlash) ? ("DAVIS640/") : ("DAVIS640"));
+            break;
+            
+        case 7:
+            return ((withEndSlash) ? ("DAVISHet640/") : ("DAVISHet640"));
+            break;
+            
+        case 8:
+            return ((withEndSlash) ? ("DAVIS208/") : ("DAVIS208"));
+            break;
+            
+        case 9:
+            return ((withEndSlash) ? ("DAVIS346Cbsi/") : ("DAVIS346Cbsi"));
+            break;
+    }
+    
+    return ((withEndSlash) ? ("Unknown/") : ("Unknown"));
+}
+
+// --- Sort packet container by timestamp and type ID
+int ofxDVS::packetsFirstTimestampThenTypeCmp(const void *a, const void *b) {
+    const caerEventPacketHeader *aa = (const caerEventPacketHeader *)a;
+    const caerEventPacketHeader *bb = (const caerEventPacketHeader *)b;
+    
+    if(*aa == NULL && *bb == NULL){
+        return(0);
+    }else if( *aa == NULL && *bb != NULL){
+        return(-1);
+    }else if( *aa != NULL && *bb == NULL){
+        return(1);
+    }
+    
+    // Sort first by timestamp of the first event.
+    int32_t eventTimestampA = caerGenericEventGetTimestamp(caerGenericEventGetEvent(*aa, 0), *aa);
+    int32_t eventTimestampB = caerGenericEventGetTimestamp(caerGenericEventGetEvent(*bb, 0), *bb);
+    
+    if (eventTimestampA < eventTimestampB) {
+        return (-1);
+    }
+    else if (eventTimestampA > eventTimestampB) {
+        return (1);
+    }
+    else {
+        // If equal, further sort by type ID.
+        int16_t eventTypeA = caerEventPacketHeaderGetEventType(*aa);
+        int16_t eventTypeB = caerEventPacketHeaderGetEventType(*bb);
+        
+        if (eventTypeA < eventTypeB) {
+            return (-1);
+        }
+        else if (eventTypeA > eventTypeB) {
+            return (1);
+        }
+        else {
+            return (0);
+        }
+    }
+}
+
+string ofxDVS::getUserHomeDir()
+{
+    std::string homeDir = "";
+    
+#ifdef _WIN32
+    char szPath[ MAX_PATH ];
+    
+    if ( S_OK == SHGetFolderPathA( NULL, CSIDL_PROFILE, NULL, 0, szPath ) )
+    {
+        homeDir = path;
+    }
+#elif defined(__unix__) || defined(__APPLE__)
+    uid_t uid = getuid();
+    struct passwd* pwd = getpwuid( uid );
+    
+    if ( NULL != pwd )
+    {
+        homeDir = pwd->pw_dir;
+    }
+#endif
+    
+    return homeDir;
 }

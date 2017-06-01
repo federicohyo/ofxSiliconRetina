@@ -21,10 +21,10 @@ namespace libcaer {
 namespace events {
 namespace utils {
 
-std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
-std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
+inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
+inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
 
-std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
+inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
 			return (std::unique_ptr<SpecialEventPacket>(new SpecialEventPacket(packet, takeMemoryOwnership)));
@@ -84,7 +84,7 @@ std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet,
 	}
 }
 
-std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
+inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
 			return (std::make_shared<SpecialEventPacket>(packet, takeMemoryOwnership));

@@ -29,4 +29,6 @@ public:
     ofxDVS dvs;
     // ofxStats instance
     ofxStats stats;
+
+    
 };

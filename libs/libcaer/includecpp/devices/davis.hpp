@@ -25,6 +25,15 @@ protected:
 	}
 
 public:
+	davis(uint16_t deviceID) :
+			usb(deviceID, CAER_DEVICE_DAVIS) {
+	}
+
+	davis(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+		const std::string &serialNumberRestrict) :
+			usb(deviceID, CAER_DEVICE_DAVIS, busNumberRestrict, devAddressRestrict, serialNumberRestrict) {
+	}
+
 	struct caer_davis_info infoGet() const noexcept {
 		return (caerDavisInfoGet(handle.get()));
 	}

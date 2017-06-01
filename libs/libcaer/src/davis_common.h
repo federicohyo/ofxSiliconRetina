@@ -38,6 +38,22 @@
 #define DAVIS_IMU_DEFAULT_SIZE 64
 #define DAVIS_SAMPLE_DEFAULT_SIZE 512
 
+#define DAVIS_DEVICE_NAME "DAVIS"
+
+#define DAVIS_FX2_DEVICE_PID 0x841B
+#define DAVIS_FX2_REQUIRED_LOGIC_REVISION 9880
+#define DAVIS_FX2_REQUIRED_FIRMWARE_VERSION 3
+#define DAVIS_FX2_USB_CLOCK_FREQ 30
+
+#define DAVIS_FX3_DEVICE_PID 0x841A
+#define DAVIS_FX3_REQUIRED_LOGIC_REVISION 9880
+#define DAVIS_FX3_REQUIRED_FIRMWARE_VERSION 3
+#define DAVIS_FX3_USB_CLOCK_FREQ 80
+
+#define DEBUG_ENDPOINT 0x81
+#define DEBUG_TRANSFER_NUM 4
+#define DEBUG_TRANSFER_SIZE 64
+
 struct davis_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
@@ -125,6 +141,10 @@ struct davis_state {
 	// Current composite events, for later copy, to not loose them on commits.
 	caerFrameEvent currentFrameEvent[APS_ROI_REGIONS_MAX];
 	struct caer_imu6_event currentIMU6Event;
+	// Debug transfer support (FX3 only).
+	bool isFX3Device;
+	struct libusb_transfer *debugTransfers[DEBUG_TRANSFER_NUM];
+	atomic_uint_fast32_t activeDebugTransfers;
 };
 
 typedef struct davis_state *davisState;
@@ -139,20 +159,22 @@ struct davis_handle {
 
 typedef struct davis_handle *davisHandle;
 
-void davisCommonLog(enum caer_log_level logLevel, davisHandle handle, const char *format, ...) ATTRIBUTE_FORMAT(3);
+caerDeviceHandle davisCommonOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+	const char *serialNumberRestrict);
+caerDeviceHandle davisFX2Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+	const char *serialNumberRestrict);
+caerDeviceHandle davisFX3Open(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
+	const char *serialNumberRestrict);
 
-bool davisCommonOpen(davisHandle handle, uint16_t VID, uint16_t PID, const char *deviceName, uint16_t deviceID,
-	uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict,
-	uint16_t requiredLogicRevision, uint16_t requiredFirmwareVersion);
-bool davisCommonClose(davisHandle handle);
+caerDeviceHandle davisCommonOpenInternal(uint16_t deviceType, uint16_t deviceID, uint8_t busNumberRestrict,
+	uint8_t devAddressRestrict, const char *serialNumberRestrict);
+bool davisCommonClose(caerDeviceHandle cdh);
 
-bool davisCommonSendDefaultFPGAConfig(caerDeviceHandle cdh,
-	bool (*configSet)(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param));
-bool davisCommonSendDefaultChipConfig(caerDeviceHandle cdh,
-	bool (*configSet)(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param));
-
-bool davisCommonConfigSet(davisHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t param);
-bool davisCommonConfigGet(davisHandle handle, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
+bool davisCommonSendDefaultConfig(caerDeviceHandle cdh);
+// Negative addresses are used for host-side configuration.
+// Positive addresses (including zero) are used for device-side configuration.
+bool davisCommonConfigSet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t param);
+bool davisCommonConfigGet(caerDeviceHandle cdh, int8_t modAddr, uint8_t paramAddr, uint32_t *param);
 
 bool davisCommonDataStart(caerDeviceHandle handle, void (*dataNotifyIncrease)(void *ptr),
 	void (*dataNotifyDecrease)(void *ptr), void *dataNotifyUserPtr, void (*dataShutdownNotify)(void *ptr),

@@ -380,80 +380,6 @@
 				<key>sourceTree</key>
 				<string>SOURCE_ROOT</string>
 			</dict>
-			<key>6A0A1D0E9BD3143C9F0B1529</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis_fx3.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/davis_fx3.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>0A69988D4EC1490D573BA7DE</key>
-			<dict>
-				<key>fileRef</key>
-				<string>6FD3E425EE536925220863C8</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>6FD3E425EE536925220863C8</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis_fx3.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/davis_fx3.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>47C88A31A0D2E177A098C8E8</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis_fx2.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/davis_fx2.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>7B9A58EDC932652F15577846</key>
-			<dict>
-				<key>fileRef</key>
-				<string>15CEA23464010B6F4894251B</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>15CEA23464010B6F4894251B</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis_fx2.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/davis_fx2.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
 			<key>810FBA9BD09ADA751EBB156A</key>
 			<dict>
 				<key>explicitFileType</key>
@@ -530,10 +456,6 @@
 					<string>53A28478E031D1938A2DCF57</string>
 					<string>CC80A564796D4641D396A92A</string>
 					<string>810FBA9BD09ADA751EBB156A</string>
-					<string>15CEA23464010B6F4894251B</string>
-					<string>47C88A31A0D2E177A098C8E8</string>
-					<string>6FD3E425EE536925220863C8</string>
-					<string>6A0A1D0E9BD3143C9F0B1529</string>
 					<string>E6BF861CFA656ED539F40510</string>
 					<string>AD975112D95064883DCD661B</string>
 					<string>784A13640E955EEFCA725235</string>
@@ -1010,6 +932,34 @@
 				<key>sourceTree</key>
 				<string>SOURCE_ROOT</string>
 			</dict>
+			<key>52FF58B95AAB70FF27099569</key>
+			<dict>
+				<key>children</key>
+				<array>
+					<string>D01A41D2934A066FEF7B9F40</string>
+				</array>
+				<key>isa</key>
+				<string>PBXGroup</string>
+				<key>name</key>
+				<string>libusb-1.0</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>D01A41D2934A066FEF7B9F40</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.c.h</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>libusb.h</string>
+				<key>path</key>
+				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0/libusb.h</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
 			<key>264909ECC3D3AA06B5221895</key>
 			<dict>
 				<key>explicitFileType</key>
@@ -1361,6 +1311,7 @@
 					<string>5B18A1385EF7E060409D458E</string>
 					<string>61DC1359831D4C2E555E351A</string>
 					<string>264909ECC3D3AA06B5221895</string>
+					<string>52FF58B95AAB70FF27099569</string>
 					<string>5DDAE67229D9A61724BA9CE0</string>
 					<string>1A4C63A98C53F8BEA4B545E0</string>
 					<string>9F230FAC78D55B68D531E535</string>
@@ -1651,8 +1602,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
@@ -1664,6 +1614,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>
@@ -1735,8 +1686,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
@@ -1748,6 +1698,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>
@@ -1821,8 +1772,6 @@
 					<string>20B09BDF2518F5E343BEA41D</string>
 					<string>FB1858EF104D56E41EE52D04</string>
 					<string>C8A4B0FA91BF65A21618A458</string>
-					<string>7B9A58EDC932652F15577846</string>
-					<string>0A69988D4EC1490D573BA7DE</string>
 					<string>408E92C787DE6EDE5D3E4693</string>
 					<string>5E9F18E67D74FB3C83421BF5</string>
 					<string>25418C9D4B3B57222099CD60</string>
@@ -1915,8 +1864,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
@@ -1928,6 +1876,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>
@@ -1989,8 +1938,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.3.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
@@ -2002,6 +1950,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>

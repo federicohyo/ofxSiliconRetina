@@ -57,7 +57,7 @@ extern "C" {
 /**
  * libcaer version (MAJOR * 10000 + MINOR * 100 + PATCH).
  */
-#define LIBCAER_VERSION ((2 * 10000) + (1 * 100) + 3)
+#define LIBCAER_VERSION ((2 * 10000) + (1 * 100) + 4)
 /**
  * libcaer name string.
  */
@@ -65,7 +65,7 @@ extern "C" {
 /**
  * libcaer version string.
  */
-#define LIBCAER_VERSION_STRING "2.1.3"
+#define LIBCAER_VERSION_STRING "2.1.4"
 
 /**
  * libcaer OpenCV support.

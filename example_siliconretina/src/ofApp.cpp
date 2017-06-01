@@ -34,6 +34,9 @@ void ofApp::keyPressed(int key){
     if (key == 'i') {
         dvs.changeImu(); //enable/disable imu
     }
+    if (key == 's') {
+        dvs.changeRecordingStatus(); //enable/disable recording
+    }
 }
 
 //--------------------------------------------------------------
