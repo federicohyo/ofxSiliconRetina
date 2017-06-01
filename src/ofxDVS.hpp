@@ -22,8 +22,19 @@
 #include <unistd.h>
 #endif
 
-#include <string>
+#include <iostream>
+#include <dirent.h>
+#include <string.h>
+#include <cstdio>
 
+#ifdef WIN32
+bool islinux = false;
+
+#else
+bool islinux = true;
+#endif
+
+#include <string>
 
 /// PLEASE SELECT SENSOR DAVIS or DVS128
 #define DAVIS  1
@@ -82,54 +93,137 @@ class usbThread: public ofThread
 {
 public:
  
+    string getUserHomeDir()
+    {
+        std::string homeDir = "";
+        
+#ifdef _WIN32
+        char szPath[ MAX_PATH ];
+        
+        if ( S_OK == SHGetFolderPathA( NULL, CSIDL_PROFILE, NULL, 0, szPath ) )
+        {
+            homeDir = path;
+        }
+#elif defined(__unix__) || defined(__APPLE__)
+        uid_t uid = getuid();
+        struct passwd* pwd = getpwuid( uid );
+        
+        if ( NULL != pwd )
+        {
+            homeDir = pwd->pw_dir;
+        }
+#endif
+        
+        return homeDir;
+    }
+    
+    int getdir (string dir, vector<string> &files)
+    {
+        DIR *dp;
+        struct dirent *dirp;
+        if((dp  = opendir(dir.c_str())) == NULL) {
+            std::cout << "Error(" << errno << ") opening " << dir << std::endl;
+            return errno;
+        }
+        
+        while ((dirp = readdir(dp)) != NULL) {
+            files.push_back(std::string(dirp->d_name));
+        }
+        closedir(dp);
+        return 0;
+    }
+    
+    bool tryFile(){
+        // vector string files is in thread as well as files_id , current file
+        
+        // list all files in home
+        path = getUserHomeDir();
+        getdir(path,files);
+        aedat_version = -1;
+        
+        for (unsigned int i = 0;i < files.size();i++) {
+            //cout << files[i] << endl;
+            // fuond aedat file
+            if(files[i].substr(files[i].find_last_of(".") + 1) == "aedat") {
+                string string_path = path + "/" + files[i];
+                //cout << string_path << endl;
+                fstream file(files[i], ios::in | ios::out | ios::binary);
+                files_id = i;   // store file id
+                string input_file = string_path;
+                string line;
+                ifstream istream;
+                istream.open(input_file.c_str(),ios::binary|ios::in);
+                
+                // parse header
+                while(getline(istream,line,'\n')){
+                    if(line.empty()) continue;
+                    string xx = line;
+                    string header_headp = xx.erase (9,xx.length());
+                    if(header_headp.compare("#!AER-DAT") == 0 ){
+                        line.erase(0,9);
+                        line.erase(4,line.length());
+                        string version_major = line.substr(0, line.find("."));
+                        size_t pos = 0;
+                        string token;
+                        string delimiter = ".";
+                        string major_haeder;
+                        string minor_header;
+                        while ((pos = line.find(delimiter)) != std::string::npos) {
+                            token = line.substr(0, pos);
+                            //std::cout << token << std::endl;
+                            minor_header = line.erase(0, pos + delimiter.length());
+                        }
+                        major_haeder =  token;
+
+                        if(major_haeder.compare("3") == 0){
+                            ofLog(OF_LOG_NOTICE, "Found Version 3 aedat file minor ");
+                            aedat_version = 3;
+                            //cout << "minor" << minor_header << endl;
+                        }else{
+                            ofLog(OF_LOG_ERROR, "Aedat Version not compatible found "+major_haeder+ " but we can only play version 3");
+                            break;
+                            
+                        }
+
+                    }
+                    
+                    if(aedat_version != -1){
+                        fileInput = true;
+                    }
+                    
+                    if(line.compare("#!END-HEADER\r") == 0){
+                        if(fileInput){
+                            ofLog(OF_LOG_NOTICE, "File Input Enabled");
+                        }
+                        break;
+                    }
+                    
+                }
+                istream.close();
+                
+            } else {
+                //cout << "Not an aedat file..." << endl;
+                ;
+            }
+        
+            
+        }
+    
+        if(fileInput){
+            return(true);
+        }else{
+            return(false);
+        }
+        
+    }
+    
     void threadedFunction()
     {
         
-    STARTDEVICE:
+    STARTDEVICEORFILE:
     	deviceReady = false;
-
-        // start the camera
-#if DAVIS == 1
-        // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
-#endif
-#if DVS128 == 1
-        // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-        camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
-#endif
-        
-        if (camera_handle == NULL) {
-            printf("error opening the device\n");
-            sleep(1);
-            goto STARTDEVICE;
-        }
-        
-        // Send the default configuration before using the device.
-        // No configuration is sent automatically!
-        caerDeviceSendDefaultConfig(camera_handle);
-        
-        // Turn on Autoexposure if device has APS
-#if DAVIS == 1
-        caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, true);
-#endif
-        
-        // get device size
-#if DAVIS == 1
-        caer_davis_info infocam = caerDavisInfoGet(camera_handle);
-#endif
-#if DVS128 == 1
-        caer_dvs128_info infocam = caerDVS128InfoGet(camera_handle);
-#endif
-
-        sizeX = infocam.dvsSizeX;
-        sizeY = infocam.dvsSizeY;
-        chipId = infocam.chipID;
-
-        // Now let's get start getting some data from the device. We just loop, no notification needed.
-        caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
-
-        // Let's turn on blocking data-get mode to avoid wasting resources.
-        caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+        fileInput = false;
+        fileInputReady = false;
         
         // get current frame status
         apsStatus = true;
@@ -139,50 +233,230 @@ public:
         imuStatus = true;
         imuStatusLocal = true;
         
-        deviceReady = true;
+    STARTFILEMODE:
+        if( fileInput == false ){
 
-        while(isThreadRunning())
-        {
-            lock();
-            packetContainerT = NULL;
-            packetContainerT = caerDeviceDataGet(camera_handle);
-            if (packetContainerT != NULL){
-                container.push_back(packetContainerT);
+            // start the camera
+    #if DAVIS == 1
+            // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+            camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
+    #endif
+    #if DVS128 == 1
+            // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+            camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
+    #endif
+            
+            if (camera_handle == NULL) {
+                ofLog(OF_LOG_ERROR,"error opening the device\n");
+                if(tryFile()){
+                    goto STARTFILEMODE;
+                }
+                //sleep(1);
+                goto STARTDEVICEORFILE;
             }
-            unlock();
+            
+            
+            // Send the default configuration before using the device.
+            // No configuration is sent automatically!
+            caerDeviceSendDefaultConfig(camera_handle);
+            
+            // Turn on Autoexposure if device has APS
+    #if DAVIS == 1
+            caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, true);
+    #endif
+            
+            // get device size
+    #if DAVIS == 1
+            caer_davis_info infocam = caerDavisInfoGet(camera_handle);
+    #endif
+    #if DVS128 == 1
+            caer_dvs128_info infocam = caerDVS128InfoGet(camera_handle);
+    #endif
 
-            nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
+            sizeX = infocam.dvsSizeX;
+            sizeY = infocam.dvsSizeY;
+            chipId = infocam.chipID;
 
-            //check aps status
-            if( apsStatus != apsStatusLocal){
-                apsStatusLocal = apsStatus;
-                //enable disable frames
-#if DAVIS == 1
-                caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, apsStatusLocal);
-#endif
+            // Now let's get start getting some data from the device. We just loop, no notification needed.
+            caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
+
+            // Let's turn on blocking data-get mode to avoid wasting resources.
+            caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
+            
+            deviceReady = true;
+            
+            while(isThreadRunning())
+            {
+                lock();
+                packetContainerT = NULL;
+                packetContainerT = caerDeviceDataGet(camera_handle);
+                if (packetContainerT != NULL){
+                    container.push_back(packetContainerT);
+                }
+                unlock();
+
+                nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
+
+                //check aps status
+                if( apsStatus != apsStatusLocal){
+                    apsStatusLocal = apsStatus;
+                    //enable disable frames
+    #if DAVIS == 1
+                    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, apsStatusLocal);
+    #endif
+                }
+                //check dvs status
+                if( dvsStatus != dvsStatusLocal){
+                    dvsStatusLocal = dvsStatus;
+                    //enable disable frames
+    #if DAVIS == 1
+                    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, dvsStatusLocal);
+    #elif DVS128 == 1
+                    caerDeviceConfigSet(camera_handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, dvsStatusLocal);
+    #endif
+                }
+                //check imu status
+                if( imuStatus != imuStatusLocal){
+                    imuStatusLocal = imuStatus;
+                    //enable disable frames
+    #if DAVIS == 1
+                    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
+    #endif
+                }
+
             }
-            //check dvs status
-            if( dvsStatus != dvsStatusLocal){
-                dvsStatusLocal = dvsStatus;
-                //enable disable frames
-#if DAVIS == 1
-                caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, dvsStatusLocal);
-#elif DVS128 == 1
-                caerDeviceConfigSet(camera_handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, dvsStatusLocal);
-#endif
+        
+        }else{
+            // file input mode
+            ofLog(OF_LOG_NOTICE, "Reading input file\n");
+            
+            sizeX = 240;
+            sizeY = 180;
+            chipId = 0;
+        
+            string line;
+            ifstream istreamf;
+            string filename_to_open = path+"/"+files[files_id];
+            ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
+            istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
+            bool header_skipped = false;
+            
+            if (istreamf.is_open()){
+                ofLog(OF_LOG_NOTICE, "Daje\n");
+                fileInputReady = true;
             }
-            //check imu status
-            if( imuStatus != imuStatusLocal){
-                imuStatusLocal = imuStatus;
-                //enable disable frames
-#if DAVIS == 1
-                caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
-#endif
+            
+            while(isThreadRunning())
+            {
+                lock();
+                packetContainerT = NULL;
+                //cout << files[files_id] << endl;
+                
+                // parse header
+                if(header_skipped == false){
+                    while(getline(istreamf,line,'\n')){
+                        if(line.empty()) continue;
+                        if(line.compare("#!END-HEADER\r") == 0){
+                            header_skipped = true;
+                            ofLog(OF_LOG_NOTICE, "Header Parsed..");
+                            break;
+                        }
+                    }
+                }
+                if(header_skipped){
+                    // read 28 bytes and parse file
+                    ofLog(OF_LOG_NOTICE, "Next bytes..");
+                    
+                    char buffer_header[28];
+                    
+                    istreamf.read(buffer_header,28);
+                    //buffer_header[28] = '0';
+                    cout << buffer_header << endl;
+
+                    char *src = buffer_header;
+                    int eventype =  int((unsigned char)(buffer_header[1]) << 8 |
+                                        (unsigned char)(buffer_header[0]));
+                    int eventsource = int((unsigned char)(buffer_header[3]) << 8 |
+                                          (unsigned char)(buffer_header[2]));
+                    int eventsize = int((unsigned char)(buffer_header[7]) << 24 |
+                                        (unsigned char)(buffer_header[6]) << 16 |
+                                        (unsigned char)(buffer_header[5]) << 8 |
+                                        (unsigned char)(buffer_header[4]));
+                    int eventoffset = int((unsigned char)(buffer_header[11]) << 24 |
+                                          (unsigned char)(buffer_header[10]) << 16 |
+                                          (unsigned char)(buffer_header[9]) << 8 |
+                                          (unsigned char)(buffer_header[8]));
+                    int eventtsoverflow = int((unsigned char)(buffer_header[15]) << 24|
+                                              (unsigned char)(buffer_header[14]) << 16|
+                                              (unsigned char)(buffer_header[13]) << 8 |
+                                              (unsigned char)(buffer_header[12]));
+                    int eventcapacity = int((unsigned char)(buffer_header[19]) << 24|
+                                            (unsigned char)(buffer_header[18]) << 16|
+                                            (unsigned char)(buffer_header[17]) << 8 |
+                                            (unsigned char)(buffer_header[16]));
+                    int eventnumber = int((unsigned char)(buffer_header[23]) << 24|
+                                          (unsigned char)(buffer_header[22]) << 16|
+                                          (unsigned char)(buffer_header[21]) << 8 |
+                                          (unsigned char)(buffer_header[20]));
+                    int eventvalid = int((unsigned char)(buffer_header[27]) << 24|
+                                         (unsigned char)(buffer_header[26]) << 16|
+                                         (unsigned char)(buffer_header[25]) << 8 |
+                                         (unsigned char)(buffer_header[24]));
+                    int next_read = eventcapacity * eventsize;
+                    cout << "next read " << next_read << endl;
+                    cout << "eventype " << eventype << endl;
+                    cout << "eventcapacity " << eventcapacity << endl;
+                    cout << "eventsize " << eventsize << endl;
+                    
+                    char buffer_data[next_read];
+                    istreamf.read(buffer_data,next_read);
+                    
+                    /*caerEventPacketContainer total = caerEventPacketContainerAllocate(1);
+                    caerEventPacketHeaderSetEventSize((caerEventPacketHeader)total, eventsize);
+                    memcpy(total, buffer_header, 28 * sizeof(char));
+                    memcpy(total, buffer_data, next_read * sizeof(char));
+                    //packetContainerT = caerEventPacketContainerAllocate(1);
+                    //memcpy(packetContainerT, total, (next_read+28) * sizeof(char));
+                    
+                    //cout << "evnum evnum " << evnum << endl;
+                    cout << "eventnumber " << eventnumber << endl;
+
+                    
+                    int32_t packetNum = 1;
+                    caerEventPacketContainerSetEventPacket(packetContainerT, eventnumber, (caerEventPacketHeader)total);
+                    caerEventPacketHeaderSetEventCapacity((caerEventPacketHeader)total, caerEventPacketHeaderGetEventNumber((caerEventPacketHeader)total));
+                    size_t sizePacket = caerEventPacketGetSize((caerEventPacketHeader)total);
+                    cout << "sizePacket size " << sizePacket << endl;*/
+                    
+                    //return;
+                    /*
+                    eventtype = struct.unpack('H', data[0:2])[0]
+                    eventsource = struct.unpack('H', data[2:4])[0]
+                    eventsize = struct.unpack('I', data[4:8])[0]
+                    eventoffset = struct.unpack('I', data[8:12])[0]
+                    eventtsoverflow = struct.unpack('I', data[12:16])[0]
+                    eventcapacity = struct.unpack('I', data[16:20])[0]
+                    eventnumber = struct.unpack('I', data[20:24])[0]
+                    eventvalid = struct.unpack('I', data[24:28])[0]
+                    next_read = eventcapacity * eventsize  # we now read the full packet
+                    data = file_read.read(next_read)    */
+                
+                }
+                
+                //packetContainerT = caerDeviceDataGet(camera_handle);
+                if (packetContainerT != NULL){
+                    container.push_back(packetContainerT);
+                }
+                unlock();
+                
+                nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
+            
+                
             }
 
+        
         }
     }
-    
     caerDeviceHandle camera_handle;
     vector<caerEventPacketContainer> container;
     caerEventPacketContainer packetContainerT;
@@ -200,6 +474,16 @@ public:
     int sizeY;
     bool deviceReady;
     int chipId;
+
+    
+    //file input
+    vector<string> files = vector<string>();
+    int files_id;
+    bool fileInput;
+    int aedat_version;
+    bool fileInputReady;
+    string path;
+
 };
 
 class ofxDVS {
@@ -280,6 +564,7 @@ public:
     int numSpikes;
     int counterSpikes;
     int isRecording;
+    string path;
     
     //file output aedat 3.0
     ofstream myFile;

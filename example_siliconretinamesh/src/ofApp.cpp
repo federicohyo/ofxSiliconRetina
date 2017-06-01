@@ -7,7 +7,7 @@ void ofApp::setup(){
     ofSetBackgroundColor(255);
     
     fbo.allocate(ofGetWidth(),ofGetHeight());
-    fboCam.allocate(SIZEX,SIZEY);
+    fboCam.allocate(dvs.sizeX,dvs.sizeY);
     
     // webcam.setup(640,480);
 }
@@ -20,7 +20,7 @@ void ofApp::update(){
     mesh.clear();
     vector<polarity> packets = dvs.getPolarity();
     for(int i=0;i < packets.size();i++) {
-        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,SIZEX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,SIZEY,0,fbo.getHeight()), 0));
+        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeY,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), 0));
         mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
         if(packets[i].pol){
             mesh.addColor(ofColor(255,0,0));
@@ -59,6 +59,21 @@ void ofApp::draw(){
 void ofApp::keyPressed(int key){
     if(key == 'f') {
         ofToggleFullscreen();
+    }
+    if (key == 'c') {
+        dvs.loopColor(); //change color for dvs events
+    }
+    if (key == 'a') {
+        dvs.changeAps(); //enable/disable aps
+    }
+    if (key == 'd') {
+        dvs.changeDvs(); //enable/disable dvs
+    }
+    if (key == 'i') {
+        dvs.changeImu(); //enable/disable imu
+    }
+    if (key == 's') {
+        dvs.changeRecordingStatus(); //enable/disable recording
     }
 }
 

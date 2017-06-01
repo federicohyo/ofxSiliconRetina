@@ -23,7 +23,7 @@ void ofxDVS::setup() {
     // get camera size after ready
     LOCK_CHECK:
     thread.lock();
-    if(thread.deviceReady!=true){
+    if(thread.deviceReady!=true && thread.fileInputReady!=true){
     	thread.unlock();
     	goto LOCK_CHECK;
     }

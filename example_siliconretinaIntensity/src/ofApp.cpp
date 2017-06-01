@@ -2,14 +2,18 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    // dvs
+    dvs.setup();
+    
     // shader
     ofSetFrameRate(60);
     ofEnableAlphaBlending();
     ofSetWindowShape(dvs.sizeX*mulSize, dvs.sizeX*mulSize);
     ofSetWindowPosition(1, 1);
     events.allocate(dvs.sizeY*mulSize,dvs.sizeY*mulSize);
-    // dvs
-    dvs.setup();
+    // no frames no imu
+    dvs.apsStatus = false;
+    dvs.imuStatus = false;
 }
 
 //--------------------------------------------------------------
@@ -54,6 +58,9 @@ void ofApp::keyPressed(int key){
     }
     if (key == 'i') {
         dvs.changeImu(); //enable/disable imu
+    }
+    if (key == 's') {
+        dvs.changeRecordingStatus(); //enable/disable recording
     }
 }
 
