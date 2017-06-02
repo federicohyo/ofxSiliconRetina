@@ -17,7 +17,9 @@ void ofApp::draw(){
     dvs.drawFrames();
     //dvs.drawImageGenerator();
     dvs.drawSpikes();
-    stats.draw();
+    if(dvs.statsStatus){
+        stats.draw();
+    }
 }
 
 //--------------------------------------------------------------
@@ -34,8 +36,11 @@ void ofApp::keyPressed(int key){
     if (key == 'i') {
         dvs.changeImu(); //enable/disable imu
     }
-    if (key == 's') {
+    if (key == 'r') {
         dvs.changeRecordingStatus(); //enable/disable recording
+    }
+    if (key == 's') {
+        dvs.changeStats(); //enable/disable recording
     }
 }
 

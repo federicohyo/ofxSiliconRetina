@@ -337,12 +337,12 @@ public:
             string line;
             ifstream istreamf;
             string filename_to_open = path+"/"+files[files_id];
+        
             ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
             istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
             bool header_skipped = false;
             
             if (istreamf.is_open()){
-                ofLog(OF_LOG_NOTICE, "Daje\n");
                 fileInputReady = true;
             }
             
@@ -350,97 +350,56 @@ public:
             {
                 lock();
                 packetContainerT = NULL;
-                //cout << files[files_id] << endl;
                 
+            HEADERPARSE:
                 // parse header
                 if(header_skipped == false){
                     while(getline(istreamf,line,'\n')){
                         if(line.empty()) continue;
                         if(line.compare("#!END-HEADER\r") == 0){
                             header_skipped = true;
-                            ofLog(OF_LOG_NOTICE, "Header Parsed..");
+                            //ofLog(OF_LOG_NOTICE, "Header Parsed..");
                             break;
                         }
                     }
                 }
                 if(header_skipped){
                     // read 28 bytes and parse file
-                    ofLog(OF_LOG_NOTICE, "Next bytes..");
-                    
-                    char buffer_header[28];
+                    //ofLog(OF_LOG_NOTICE, "Next bytes..");
+                    char *buffer_header = (char*)malloc(28);
                     
                     istreamf.read(buffer_header,28);
+                    
                     //buffer_header[28] = '0';
-                    cout << buffer_header << endl;
-
-                    char *src = buffer_header;
-                    int eventype =  int((unsigned char)(buffer_header[1]) << 8 |
-                                        (unsigned char)(buffer_header[0]));
-                    int eventsource = int((unsigned char)(buffer_header[3]) << 8 |
-                                          (unsigned char)(buffer_header[2]));
-                    int eventsize = int((unsigned char)(buffer_header[7]) << 24 |
-                                        (unsigned char)(buffer_header[6]) << 16 |
-                                        (unsigned char)(buffer_header[5]) << 8 |
-                                        (unsigned char)(buffer_header[4]));
-                    int eventoffset = int((unsigned char)(buffer_header[11]) << 24 |
-                                          (unsigned char)(buffer_header[10]) << 16 |
-                                          (unsigned char)(buffer_header[9]) << 8 |
-                                          (unsigned char)(buffer_header[8]));
-                    int eventtsoverflow = int((unsigned char)(buffer_header[15]) << 24|
-                                              (unsigned char)(buffer_header[14]) << 16|
-                                              (unsigned char)(buffer_header[13]) << 8 |
-                                              (unsigned char)(buffer_header[12]));
-                    int eventcapacity = int((unsigned char)(buffer_header[19]) << 24|
-                                            (unsigned char)(buffer_header[18]) << 16|
-                                            (unsigned char)(buffer_header[17]) << 8 |
-                                            (unsigned char)(buffer_header[16]));
-                    int eventnumber = int((unsigned char)(buffer_header[23]) << 24|
-                                          (unsigned char)(buffer_header[22]) << 16|
-                                          (unsigned char)(buffer_header[21]) << 8 |
-                                          (unsigned char)(buffer_header[20]));
-                    int eventvalid = int((unsigned char)(buffer_header[27]) << 24|
-                                         (unsigned char)(buffer_header[26]) << 16|
-                                         (unsigned char)(buffer_header[25]) << 8 |
-                                         (unsigned char)(buffer_header[24]));
+                    if( istreamf.eof() ){
+                        ofLog(OF_LOG_NOTICE,"Reached the end of the file. Restarting...");
+                        istreamf.clear();
+                        istreamf.seekg(0, ios::beg); // from beginning
+                        header_skipped = false;
+                        goto HEADERPARSE;
+                    }
+                    if (istreamf.fail( )){
+                        ofLog(OF_LOG_ERROR, "Error opening aedat file..");
+                        return;
+                    }
+                    int eventype =  caerEventPacketHeaderGetEventType((caerEventPacketHeader)buffer_header);
+                    //int eventype =  int((unsigned char)(buffer_header[1]) << 8 |
+                    //                    (unsigned char)(buffer_header[0]));
+                    int eventsource = caerEventPacketHeaderGetEventSource((caerEventPacketHeader)buffer_header);
+                    int eventsize = caerEventPacketHeaderGetEventSize((caerEventPacketHeader)buffer_header);
+                    int eventoffset = caerEventPacketHeaderGetEventTSOffset((caerEventPacketHeader)buffer_header);
+                    int eventtsoverflow =  caerEventPacketHeaderGetEventTSOverflow((caerEventPacketHeader)buffer_header);
+                    int eventcapacity = caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader)buffer_header);
+                    int eventnumber = caerEventPacketHeaderGetEventNumber((caerEventPacketHeader)buffer_header);
+                    int eventvalid = caerEventPacketHeaderGetEventValid((caerEventPacketHeader)buffer_header);
                     int next_read = eventcapacity * eventsize;
-                    cout << "next read " << next_read << endl;
-                    cout << "eventype " << eventype << endl;
-                    cout << "eventcapacity " << eventcapacity << endl;
-                    cout << "eventsize " << eventsize << endl;
-                    
-                    char buffer_data[next_read];
-                    istreamf.read(buffer_data,next_read);
-                    
-                    /*caerEventPacketContainer total = caerEventPacketContainerAllocate(1);
-                    caerEventPacketHeaderSetEventSize((caerEventPacketHeader)total, eventsize);
-                    memcpy(total, buffer_header, 28 * sizeof(char));
-                    memcpy(total, buffer_data, next_read * sizeof(char));
-                    //packetContainerT = caerEventPacketContainerAllocate(1);
-                    //memcpy(packetContainerT, total, (next_read+28) * sizeof(char));
-                    
-                    //cout << "evnum evnum " << evnum << endl;
-                    cout << "eventnumber " << eventnumber << endl;
 
+                    buffer_header = (char *)realloc(buffer_header, 28+next_read);
+                    istreamf.read(buffer_header+28,next_read);
                     
-                    int32_t packetNum = 1;
-                    caerEventPacketContainerSetEventPacket(packetContainerT, eventnumber, (caerEventPacketHeader)total);
-                    caerEventPacketHeaderSetEventCapacity((caerEventPacketHeader)total, caerEventPacketHeaderGetEventNumber((caerEventPacketHeader)total));
-                    size_t sizePacket = caerEventPacketGetSize((caerEventPacketHeader)total);
-                    cout << "sizePacket size " << sizePacket << endl;*/
-                    
-                    //return;
-                    /*
-                    eventtype = struct.unpack('H', data[0:2])[0]
-                    eventsource = struct.unpack('H', data[2:4])[0]
-                    eventsize = struct.unpack('I', data[4:8])[0]
-                    eventoffset = struct.unpack('I', data[8:12])[0]
-                    eventtsoverflow = struct.unpack('I', data[12:16])[0]
-                    eventcapacity = struct.unpack('I', data[16:20])[0]
-                    eventnumber = struct.unpack('I', data[20:24])[0]
-                    eventvalid = struct.unpack('I', data[24:28])[0]
-                    next_read = eventcapacity * eventsize  # we now read the full packet
-                    data = file_read.read(next_read)    */
-                
+                    packetContainerT = caerEventPacketContainerAllocate(1);
+                    caerEventPacketContainerSetEventPacket(packetContainerT, 0, (caerEventPacketHeader)buffer_header);
+                    caerEventPacketContainerSetEventPacketsNumber(packetContainerT, 1);
                 }
                 
                 //packetContainerT = caerDeviceDataGet(camera_handle);
@@ -448,7 +407,7 @@ public:
                     container.push_back(packetContainerT);
                 }
                 unlock();
-                
+                //caerEventPacketContainerFree(packetContainerT);
                 nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
             
                 
@@ -504,6 +463,7 @@ public:
     void changeAps(); // enable / disable aps
     void changeDvs(); // enable / disable dvs
     void changeImu(); // enable / disable imu
+    void changeStats();
     void drawImageGenerator();
     const char * chipIDToName(int16_t chipID, bool withEndSlash);
     void writeHeaderFile();
@@ -551,6 +511,7 @@ public:
     bool apsStatus; // enable/disable aps
     bool dvsStatus; // enable/disable dvs
     bool imuStatus; // enable/disable imu
+    bool statsStatus; // enable/disable stats
 
     //size
     int sizeX;

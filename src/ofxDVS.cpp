@@ -176,14 +176,16 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
         
         caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
         if (packetHeader == NULL) {
-            //ofLog(OF_LOG_WARNING,"Packet %d is empty (not present).\n", i);
+            ofLog(OF_LOG_WARNING,"Packet %d is empty (not present).\n", i);
             continue; // Skip if nothing there.
         }
+        
+        int type = caerEventPacketHeaderGetEventType(packetHeader);
         
         //ofLog(OF_LOG_WARNING,"Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
         //           caerEventPacketHeaderGetEventNumber(packetHeader));
         
-        if (i == IMU6_EVENT) {
+        if (type == IMU6_EVENT && imuStatus) {
             
             packetsImu6.clear();
             packetsImu6.shrink_to_fit();
@@ -208,7 +210,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             packetsImu6.push_back(nuPackImu6);
             CAER_IMU6_ITERATOR_VALID_END
         }
-        if (i == POLARITY_EVENT) {
+        if (type == POLARITY_EVENT  && dvsStatus) {
             
             packetsPolarity.clear();
             packetsPolarity.shrink_to_fit();
@@ -224,10 +226,10 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             nuPack.pol = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
             
             packetsPolarity.push_back(nuPack);
-            
+
             CAER_POLARITY_ITERATOR_VALID_END
         }
-        if (i == FRAME_EVENT){
+        if (type == FRAME_EVENT && apsStatus){
             // first time we get in here
             // otherwise we do not clear packetframes
             // and we keep the last one
@@ -374,9 +376,11 @@ void ofxDVS::changeAps() {
     bool current_status = thread.apsStatus;
     if(current_status){
         thread.apsStatus = false;
+        apsStatus = false;
         ofLog(OF_LOG_NOTICE,"Aps Disabled\n");
     }else{
         thread.apsStatus = true;
+        apsStatus = true;
         ofLog(OF_LOG_NOTICE,"Aps Enabled\n");
     }
     thread.unlock();
@@ -388,13 +392,29 @@ void ofxDVS::changeDvs() {
     bool current_status = thread.dvsStatus;
     if(current_status){
         thread.dvsStatus = false;
+        dvsStatus = false;
         ofLog(OF_LOG_NOTICE,"Dvs Disabled\n");
     }else{
         thread.dvsStatus = true;
+        dvsStatus = true;
         ofLog(OF_LOG_NOTICE,"Dvs Enabled\n");
     }
     thread.unlock();
 }
+
+
+//--------------------------------------------------------------
+void ofxDVS::changeStats() {
+    bool current_status = statsStatus;
+    if(current_status){
+        statsStatus = false;
+        ofLog(OF_LOG_NOTICE,"Stats Disabled\n");
+    }else{
+        statsStatus = true;
+        ofLog(OF_LOG_NOTICE,"Stats Enabled\n");
+    }
+}
+
 
 //--------------------------------------------------------------
 void ofxDVS::changeImu() {
@@ -402,9 +422,11 @@ void ofxDVS::changeImu() {
     bool current_status = thread.imuStatus;
     if(current_status){
         thread.imuStatus = false;
+        imuStatus = false;
         ofLog(OF_LOG_NOTICE,"Imu Disabled\n");
     }else{
         thread.imuStatus = true;
+        imuStatus = true;
         ofLog(OF_LOG_NOTICE,"Imu Enabled\n");
     }
     thread.unlock();
