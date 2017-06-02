@@ -1,7 +1,7 @@
 ofxSiliconRetina
 =====================================
 
-[logo](https://github.com/federicohyo/ofxSiliconRetina/blob/master/ofxaddons_thumbnail.png "ofxSiliconRetina")
+![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/ofxaddons_thumbnail.png "ofxSiliconRetina")
 
 ![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/docs/viewer.png "Viewer")
 
