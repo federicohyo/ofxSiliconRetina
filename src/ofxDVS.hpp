@@ -27,12 +27,6 @@
 #include <string.h>
 #include <cstdio>
 
-#ifdef WIN32
-bool islinux = false;
-
-#else
-bool islinux = true;
-#endif
 
 #include <string>
 
