@@ -13,6 +13,8 @@ using namespace std::placeholders;
 //--------------------------------------------------------------
 ofxDVS::ofxDVS() {
     
+    doChangePath = false;
+    header_skipped = false;
 }
 
 //--------------------------------------------------------------
@@ -20,14 +22,31 @@ void ofxDVS::setup() {
         
     thread.startThread();   // start usb thread
     
+    // default behaviour is to start live mode
+    // after 1 seconds of non finding the device we start in file mode
+    ofResetElapsedTimeCounter();
+    uint64_t t0 = ofGetElapsedTimeMicros();
+    
     // get camera size after ready
     LOCK_CHECK:
     thread.lock();
     if(thread.deviceReady!=true && thread.fileInputReady!=true){
     	thread.unlock();
+        uint64_t t1 = ofGetElapsedTimeMicros();
+        //cout << ns << endl;
+        if( (t1-t0) > 1000000){
+            ofLog(OF_LOG_NOTICE, "starting in file mode.");
+            ofFileDialogResult result = ofSystemLoadDialog("Load aedat3.1 file");
+            if(result.bSuccess) {
+                path = result.getPath();
+                // load your file at `path`
+                changePath();
+            }
+        }
     	goto LOCK_CHECK;
     }
     
+    // viewer started in live or file mode
 	sizeX = thread.sizeX;
 	sizeY = thread.sizeY;
     chipId = thread.chipId;
@@ -37,17 +56,30 @@ void ofxDVS::setup() {
     fbo.allocate(sizeX, sizeY, GL_RGBA32F);
     tex = &fbo.getTexture();
 
-    // render spike colored
+    // init spike colors
     initSpikeColors();
 
     // start the thread
+    initThreadVariables();
+
+    //init spikefeature/imagegenerator
+    initImageGenerator();
+
+    //init baFilterState
+    initBAfilter();
+}
+
+void ofxDVS::initThreadVariables(){
     apsStatus = true;       // enable aps
     dvsStatus = true;       // enable dvs
     imuStatus = true;       // enable imu
     maxContainerQueued = 100; // at most accumulates 100 packaetcontainers before dropping
     packetContainer = NULL;
+    isRecording = false;
+}
 
-    //init spikefeature/imagegenerator
+//--------------------------------------------------------------
+void ofxDVS::initImageGenerator(){
     spikeFeatures = new float*[sizeX];
     for(int i = 0; i < sizeX; ++i){
         spikeFeatures[i] = new float[sizeY];
@@ -61,14 +93,43 @@ void ofxDVS::setup() {
     rectifyPolarities = true;
     numSpikes = 2000;
     counterSpikes = 0;
-    isRecording = false;
-    
 }
+
+//--------------------------------------------------------------
+void ofxDVS::changePath(){
+    thread.lock();
+    thread.doChangePath = true;
+    ofLog(OF_LOG_NOTICE, path);
+    // update file path
+    thread.path = path;
+    // clean memory
+    vector<polarity>().swap(packetsPolarity);
+    packetsPolarity.clear();
+    packetsPolarity.shrink_to_fit();
+    vector<frame>().swap(packetsFrames);
+    packetsFrames.clear();
+    packetsFrames.shrink_to_fit();
+    vector<imu6>().swap(packetsImu6);
+    packetsImu6.clear();
+    packetsImu6.shrink_to_fit();
+    header_skipped  = false;
+    thread.fileInput = true;
+    thread.header_skipped = header_skipped;
+    for(int i=0; i<thread.container.size(); i++){
+        packetContainer = thread.container.back();
+        thread.container.pop_back();
+        caerEventPacketContainerFree(packetContainer);
+        thread.container.clear();
+        thread.container.shrink_to_fit();
+    }
+    thread.unlock();
+}
+
 
 //--------------------------------------------------------------
 void ofxDVS::openRecordingFile(){
     // File Recording Output
-    string path;
+    //string path;
     path = getUserHomeDir();
     time_t t = time(0);   // get time now
     struct tm * now = localtime( & t );
@@ -206,7 +267,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             nuPackImu6.accel.set(accelX,accelY,accelZ);
             nuPackImu6.gyro.set(gyroX,gyroY,gyroZ);
             nuPackImu6.timestamp = caerIMU6EventGetTimestamp(caerIMU6IteratorElement);
-            
+            nuPackImu6.valid = true ;
             packetsImu6.push_back(nuPackImu6);
             CAER_IMU6_ITERATOR_VALID_END
         }
@@ -225,6 +286,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             
             nuPack.pol = caerPolarityEventGetPolarity(caerPolarityIteratorElement);
             
+            nuPack.valid = true;
             packetsPolarity.push_back(nuPack);
 
             CAER_POLARITY_ITERATOR_VALID_END
@@ -290,9 +352,9 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
                     
                 }
             }
-            
+            nuPackFrames.valid = true;
             packetsFrames.push_back(nuPackFrames);
-            
+            nuPackFrames.singleFrame.clear();
             CAER_FRAME_ITERATOR_VALID_END
         }
         
@@ -308,7 +370,7 @@ void ofxDVS::update() {
     // Copy data from usbThread
     thread.lock();
     for(int i=0; i<thread.container.size(); i++){
-        packetContainer = thread.container.back(); // apparently this is a pointer
+        packetContainer = thread.container.back(); // this is a pointer
         thread.container.pop_back();
         
         // organize data
@@ -340,7 +402,6 @@ void ofxDVS::update() {
         }
         
         // free all packet containers here
-
         caerEventPacketContainerFree(packetContainer);
     }
     // done with the resource
@@ -350,7 +411,11 @@ void ofxDVS::update() {
     thread.lock();
     if(thread.container.size() > maxContainerQueued){
         ofLog(OF_LOG_WARNING, "Visualization is too slow, dropping events to keep real-time.");
+        packetContainer = thread.container.back(); // this is a pointer
+        thread.container.pop_back();
+        caerEventPacketContainerFree(packetContainer);
         thread.container.clear();
+        thread.container.shrink_to_fit();
     }
     thread.unlock();
 
@@ -471,6 +536,72 @@ void ofxDVS::drawFrames() {
 
 }
 
+//--------------------------
+void ofxDVS::initBAfilter(){
+    baFilterMap=new long*[sizeX];
+    for( int i=0; i<sizeX; ++i ) {
+        baFilterMap[i] = new long[sizeY];
+        for( int j=0; j<sizeY; ++j ) {
+            baFilterMap[i][j] = 0;
+        }
+    }
+}
+
+//--------------------------
+// Background Activity Filter
+void ofxDVS::updateBAFilter(){
+    
+    for (int i = 0; i < packetsPolarity.size(); i++) {
+        ofPoint pos = packetsPolarity[i].pos;
+
+        // get last spike time
+        int lastTS = baFilterMap[(int)pos.x][(int)pos.y];
+        int ts = packetsPolarity[i].timestamp;
+        int deltaT = 7000;
+        
+        if (( (ts - lastTS) >= deltaT) || (lastTS == 0)) {
+            // Filter out invalid, simply invalid them
+            packetsPolarity[i].valid = false;
+        }
+        
+        // Update neighboring region.
+        size_t sizeMaxX = (sizeX - 1);
+        size_t sizeMaxY = (sizeY - 1);
+
+        int x = pos.x;
+        int y = pos.y;
+        
+        if (x > 0) {
+            baFilterMap[x - 1][y] = ts;
+        }
+        if (x < sizeMaxX) {
+            baFilterMap[x + 1][y] = ts;
+        }
+        
+        if (y > 0) {
+            baFilterMap[x][y - 1] = ts;
+        }
+        if (y < sizeMaxY) {
+            baFilterMap[x][y + 1] = ts;
+        }
+        
+        if (x > 0 && y > 0) {
+            baFilterMap[x - 1][y - 1] = ts;
+        }
+        if (x < sizeMaxX && y < sizeMaxY) {
+            baFilterMap[x + 1][y + 1] = ts;
+        }
+        
+        if (x > 0 && y < sizeMaxY) {
+            baFilterMap[x - 1][y + 1] = ts;
+        }
+        if (x < sizeMaxX && y > 0) {
+            baFilterMap[x + 1][y - 1] = ts;
+        }
+    
+    }
+}
+
 //--------------------------------------------------------------
 void ofxDVS::drawImageGenerator() {
 
@@ -484,14 +615,18 @@ void ofxDVS::drawImageGenerator() {
 void ofxDVS::updateImageGenerator(){
     
     for (int i = 0; i < packetsPolarity.size(); i++) {
-        ofPoint pos = packetsPolarity[i].pos;
-        // update surfaceMap
-        if(packetsPolarity[i].pol){
-            spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
-        }else{
-            spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+        // only valid
+        if(packetsPolarity[i].valid){
+            ofPoint pos = packetsPolarity[i].pos;
+            
+            // update surfaceMap
+            if(packetsPolarity[i].pol){
+                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+            }else{
+                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+            }
+            counterSpikes = counterSpikes+1;
         }
-        counterSpikes = counterSpikes+1;
     }
 
     if(numSpikes <= counterSpikes){
@@ -589,7 +724,16 @@ void ofxDVS::drawImu6() {
 
 }
 
-
+//--------------------------------------------------------------
+void ofxDVS::loadFile() {
+    ofFileDialogResult result = ofSystemLoadDialog("Load aedat file");
+    if(result.bSuccess) {
+        path = result.getPath();
+        // load your file at `path`
+        changePath();
+    }
+}
+    
 //--------------------------------------------------------------
 ofTexture* ofxDVS::getTextureRef() {
     return tex;

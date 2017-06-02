@@ -27,7 +27,6 @@
 #include <string.h>
 #include <cstdio>
 
-
 #include <string>
 
 /// PLEASE SELECT SENSOR DAVIS or DVS128
@@ -44,6 +43,7 @@ struct polarity {
     ofPoint pos;
     int timestamp;
     bool pol;
+    bool valid;
 };
 
 struct frame {
@@ -73,6 +73,8 @@ struct frame {
     /// from top to bottom (increasing Y axis).
     ofImage singleFrame;
     
+    bool valid;
+    
 };
 
 struct imu6 {
@@ -80,6 +82,7 @@ struct imu6 {
     int timestamp;
     ofVec3f accel;
     ofVec3f gyro;
+    bool valid;
 };
 
 
@@ -87,6 +90,49 @@ class usbThread: public ofThread
 {
 public:
  
+    void parseSourceString(char *sourceString) {
+        // Create SourceInfo node.
+
+        // Determine sizes via known chip information.
+        if (caerStrEquals(sourceString, "DVS128")) {
+            sizeX = sizeY = 128;
+        }
+        else if (caerStrEquals(sourceString, "DAVIS240A") || caerStrEquals(sourceString, "DAVIS240B")
+                 || caerStrEquals(sourceString, "DAVIS240C")) {
+            sizeX = 240;
+            sizeY = 180;
+        }
+        else if (caerStrEquals(sourceString, "DAVIS128")) {
+            sizeX = sizeY = 128;
+        }
+        else if (caerStrEquals(sourceString, "DAVIS346A") || caerStrEquals(sourceString, "DAVIS346B")
+                 || caerStrEquals(sourceString, "DAVIS346Cbsi")) {
+            sizeX = 346;
+            sizeY = 260;
+        }
+        else if (caerStrEquals(sourceString, "DAVIS640")) {
+            sizeX = 640;
+            sizeY = 480;
+        }
+        else if (caerStrEquals(sourceString, "DAVISHet640")) {
+            sizeX = 640;
+            sizeY = 480;
+        }
+        else if (caerStrEquals(sourceString, "DAVIS208")) {
+            sizeX = 208;
+            sizeY = 192;
+        }
+        else {
+            // Default fall-back of 640x480 (VGA).
+            ofLog(OF_LOG_WARNING,
+                    "Impossible to determine display sizes from Source information/string. Falling back to 640x480 (VGA).");
+            sizeX = 640;
+            sizeY = 480;
+        }
+        
+    }
+
+    
     string getUserHomeDir()
     {
         std::string homeDir = "";
@@ -125,6 +171,12 @@ public:
         }
         closedir(dp);
         return 0;
+    }
+    
+    bool forceFileMode(){
+        //start file mode
+        fileInput = true;
+        return(true);
     }
     
     bool tryFile(){
@@ -217,6 +269,7 @@ public:
     STARTDEVICEORFILE:
     	deviceReady = false;
         fileInput = false;
+        fileInputLocal = false;
         fileInputReady = false;
         
         // get current frame status
@@ -243,6 +296,9 @@ public:
             if (camera_handle == NULL) {
                 ofLog(OF_LOG_ERROR,"error opening the device\n");
                 if(tryFile()){
+                    goto STARTFILEMODE;
+                }
+                if(forceFileMode()){
                     goto STARTFILEMODE;
                 }
                 //sleep(1);
@@ -282,6 +338,7 @@ public:
             while(isThreadRunning())
             {
                 lock();
+                
                 packetContainerT = NULL;
                 packetContainerT = caerDeviceDataGet(camera_handle);
                 if (packetContainerT != NULL){
@@ -317,42 +374,52 @@ public:
                     caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
     #endif
                 }
+                
 
             }
         
         }else{
+            
             // file input mode
             ofLog(OF_LOG_NOTICE, "Reading input file\n");
             
-            sizeX = 240;
-            sizeY = 180;
-            chipId = 0;
+
+            doChangePath = false;
         
             string line;
-            ifstream istreamf;
             string filename_to_open = path+"/"+files[files_id];
         
             ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
             istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
-            bool header_skipped = false;
+            header_skipped = false;
             
-            if (istreamf.is_open()){
-                fileInputReady = true;
-            }
+
             
             while(isThreadRunning())
             {
+                
                 lock();
                 packetContainerT = NULL;
-                
+                //ofLog(OF_LOG_NOTICE, "Header skipped %d..", header_skipped);
             HEADERPARSE:
                 // parse header
                 if(header_skipped == false){
+                    
+                    
                     while(getline(istreamf,line,'\n')){
                         if(line.empty()) continue;
+                        //set dimensions according to header file
+                        char sourceString[1024 + 1];
+                        if (std::sscanf(line.c_str(), "#Source %i : %1024[^\r]s\n", &chipId, sourceString) == 2) {
+                            parseSourceString(sourceString);
+                        }
                         if(line.compare("#!END-HEADER\r") == 0){
                             header_skipped = true;
-                            //ofLog(OF_LOG_NOTICE, "Header Parsed..");
+                            ofLog(OF_LOG_NOTICE, "File Header Parsed..");
+                            doChangePath = false;
+                            //if (istreamf.is_open()){
+                            fileInputReady = true;
+                            //}
                             break;
                         }
                     }
@@ -367,8 +434,10 @@ public:
                     //buffer_header[28] = '0';
                     if( istreamf.eof() ){
                         ofLog(OF_LOG_NOTICE,"Reached the end of the file. Restarting...");
-                        istreamf.clear();
-                        istreamf.seekg(0, ios::beg); // from beginning
+                        //istreamf.clear();
+                        //istreamf.seekg(0, ios::beg); // from beginning
+                        istreamf.close();
+                        istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
                         header_skipped = false;
                         goto HEADERPARSE;
                     }
@@ -377,8 +446,6 @@ public:
                         return;
                     }
                     int eventype =  caerEventPacketHeaderGetEventType((caerEventPacketHeader)buffer_header);
-                    //int eventype =  int((unsigned char)(buffer_header[1]) << 8 |
-                    //                    (unsigned char)(buffer_header[0]));
                     int eventsource = caerEventPacketHeaderGetEventSource((caerEventPacketHeader)buffer_header);
                     int eventsize = caerEventPacketHeaderGetEventSize((caerEventPacketHeader)buffer_header);
                     int eventoffset = caerEventPacketHeaderGetEventTSOffset((caerEventPacketHeader)buffer_header);
@@ -394,17 +461,29 @@ public:
                     packetContainerT = caerEventPacketContainerAllocate(1);
                     caerEventPacketContainerSetEventPacket(packetContainerT, 0, (caerEventPacketHeader)buffer_header);
                     caerEventPacketContainerSetEventPacketsNumber(packetContainerT, 1);
+                    
                 }
                 
-                //packetContainerT = caerDeviceDataGet(camera_handle);
                 if (packetContainerT != NULL){
                     container.push_back(packetContainerT);
                 }
-                unlock();
-                //caerEventPacketContainerFree(packetContainerT);
-                nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
-            
                 
+                if(doChangePath){
+                    // need to close the file
+                    // reopen it with the new path
+                    istreamf.clear();
+                    istreamf.seekg(0, ios::beg); // from
+                    istreamf.close();
+                    filename_to_open = path;
+                    ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
+                    istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
+                    header_skipped = false;
+                    doChangePath = false;
+                    goto HEADERPARSE;
+                }
+                unlock();
+
+                nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
             }
 
         
@@ -421,13 +500,13 @@ public:
     bool dvsStatusLocal;
     bool imuStatus;
     bool imuStatusLocal;
+    bool fileInputLocal;
 
     //size device
     int sizeX;
     int sizeY;
     bool deviceReady;
     int chipId;
-
     
     //file input
     vector<string> files = vector<string>();
@@ -436,7 +515,9 @@ public:
     int aedat_version;
     bool fileInputReady;
     string path;
-
+    bool doChangePath;
+    bool header_skipped;
+    ifstream istreamf;
 };
 
 class ofxDVS {
@@ -465,7 +546,9 @@ public:
     void changeRecordingStatus();
     void openRecordingFile();
     string getUserHomeDir();
-    
+    void loadFile();
+    void initThreadVariables();
+
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
     void globalShutdownSignalHandler(int signal);
@@ -486,7 +569,12 @@ public:
     vector<polarity> getPolarity();
     vector<frame> getFrames();
     ofImage getImageGenerator();
+    void initImageGenerator();
     void updateImageGenerator();
+    void initBAfilter();
+    void updateBAFilter();
+    long **baFilterMap;
+    void changePath();
     
     // color palette for spikes
     int spkOnR[3];
@@ -518,8 +606,11 @@ public:
     bool rectifyPolarities;
     int numSpikes;
     int counterSpikes;
+    //File system
     int isRecording;
     string path;
+    bool doChangePath;
+    bool header_skipped;
     
     //file output aedat 3.0
     ofstream myFile;

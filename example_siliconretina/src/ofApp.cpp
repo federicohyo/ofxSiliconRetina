@@ -8,6 +8,7 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
     dvs.update();
+    //dvs.updateBAFilter();
     dvs.updateImageGenerator();
     stats.update();
 }
@@ -41,6 +42,9 @@ void ofApp::keyPressed(int key){
     }
     if (key == 's') {
         dvs.changeStats(); //enable/disable recording
+    }
+    if (key == 'n'){ //load file from disk
+        dvs.loadFile();
     }
 }
 
