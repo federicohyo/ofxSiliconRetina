@@ -1,6 +1,10 @@
 ofxSiliconRetina
 =====================================
 
+Inline-style: 
+![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/ofxaddons_thumbnail.png "ofxSiliconRetina")
+
+
 
 Introduction
 ------------
@@ -15,25 +19,42 @@ Installation
 ------------
 Any steps necessary to install your addon. Optimally, this means just dropping the folder into the `openFrameworks/addons/` folder.
 
-Dependencies
+Dependencies - included in this package -
 ------------
-This addons includes libcaer and libusb, if missing the one from your operative system. Please compile and copy them into the libs folder.
+This addons includes libcaer and libusb, if missing the one from your architecture. 
+Please compile and copy them into the libs folder.
 
 libcaer can be obained here: https://github.com/inilabs/libcaer
 libusb can be obtained here: https://github.com/libusb/libusb
 
+OfxPlugins
+-----------
+
+ofxStats can be obtained here https://github.com/tado/ofxStats
+
+HotKeys
+-----------
+
+s: enable/disable stats
+d: enable/disable dvs
+a: enable/disable aps
+i: enable/disable imu
+s: start/stop recording files* 
+
+* aedat3.1 file format: https://inilabs.com/support/software/fileformat/ 
+
+
 Compatibility
 ------------
-Tested on OF release 0.9.3 
+Tested on OF release 0.9.x 
 
 Known issues
 ------------
 
 Please select the correct device by changing the definition line in ofxSiliconRetina/src/ofxDVS.hpp
---
-/// PLEASE SELECT SENSOR  DVS128 / DAVIS240 / DAVIS346
-#define DAVIS240
---
+
+PLEASE SELECT SENSOR FAMILY  DVS128 / DAVIS (FX2/FX3)
+#define DAVIS
 
 Version history
 ------------
