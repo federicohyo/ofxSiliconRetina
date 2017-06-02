@@ -62,15 +62,19 @@ PLEASE SELECT SENSOR FAMILY  DVS128 / DAVIS (FX2/FX3)
 Version history
 ------------
 
-### Version 0.12 (27 May 2017):
+### (2 June 2017):
+
+Added aedat3.1 recording and playback capabilities (very limited in playback, no time or slow down control possible).
+
+### (27 May 2017):
 
 Added shader example, added keyboards shortcuts, and reduced usb latency (now it uses threads)
 
-### Version 0.11 (25 May 2017):
+### (25 May 2017):
 
 Implemented frames, imu6 events 
 
-### Version 0.1 (25 May 2017):
+### (25 May 2017):
 
 Implemented polarity events for DVS128, DAVIS240, DAVIS346B 
 
