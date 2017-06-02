@@ -19,7 +19,9 @@ ofxSiliconRetina is distributed under the [MIT License](https://en.wikipedia.org
 
 Installation
 ------------
-Any steps necessary to install your addon. Optimally, this means just dropping the folder into the `openFrameworks/addons/` folder.
+Copy this addon inside the folder `openFrameworks/addons/`. 
+
+This addons depends only on ofxStats, available here: https://github.com/tado/ofxStats 
 
 Dependencies - included in this package -
 ------------
@@ -29,18 +31,17 @@ Please compile and copy them into the libs folder.
 libcaer can be obained here: https://github.com/inilabs/libcaer
 libusb can be obtained here: https://github.com/libusb/libusb
 
-OfxPlugins
------------
-
-ofxStats can be obtained here https://github.com/tado/ofxStats
-
 HotKeys
 -----------
 
 s: enable/disable stats
+
 d: enable/disable dvs
+
 a: enable/disable aps
+
 i: enable/disable imu
+
 s: start/stop recording files* 
 
 * aedat3.1 file format: https://inilabs.com/support/software/fileformat/ 
