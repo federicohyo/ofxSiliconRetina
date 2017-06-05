@@ -9,7 +9,7 @@ void ofApp::setup(){
 void ofApp::update(){
     dvs.update();
     //dvs.updateBAFilter();
-    dvs.updateImageGenerator();
+    //dvs.updateImageGenerator();
     stats.update();
 }
 
@@ -45,6 +45,9 @@ void ofApp::keyPressed(int key){
     }
     if (key == 'n'){ //load file from disk
         dvs.loadFile();
+    }
+    if (key == 'l'){ //connect to device
+        dvs.tryLive();
     }
 }
 

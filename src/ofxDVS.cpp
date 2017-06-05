@@ -67,6 +67,9 @@ void ofxDVS::setup() {
 
     //init baFilterState
     initBAfilter();
+    
+    // reset timestamp
+    ofResetElapsedTimeCounter();
 }
 
 void ofxDVS::initThreadVariables(){
@@ -78,21 +81,38 @@ void ofxDVS::initThreadVariables(){
     isRecording = false;
 }
 
-//--------------------------------------------------------------
-void ofxDVS::initImageGenerator(){
-    spikeFeatures = new float*[sizeX];
-    for(int i = 0; i < sizeX; ++i){
-        spikeFeatures[i] = new float[sizeY];
-    }
-    for(int i = 0; i < sizeX; ++i){
-        for(int j = 0; j < sizeY; ++j){
-            spikeFeatures[i][j] = 0.0;
+
+
+void ofxDVS::tryLive(){
+    thread.lock();
+    // free al memory
+    if(thread.fileInput){
+        // clean memory
+        vector<polarity>().swap(packetsPolarity);
+        packetsPolarity.clear();
+        packetsPolarity.shrink_to_fit();
+        vector<frame>().swap(packetsFrames);
+        packetsFrames.clear();
+        packetsFrames.shrink_to_fit();
+        vector<imu6>().swap(packetsImu6);
+        packetsImu6.clear();
+        packetsImu6.shrink_to_fit();
+        header_skipped  = false;
+        thread.fileInput = false;
+        thread.header_skipped = header_skipped;
+        for(int i=0; i<thread.container.size(); i++){
+            packetContainer = thread.container.back();
+            thread.container.pop_back();
+            caerEventPacketContainerFree(packetContainer);
+            thread.container.clear();
+            thread.container.shrink_to_fit();
         }
     }
-    imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
-    rectifyPolarities = true;
-    numSpikes = 2000;
-    counterSpikes = 0;
+    thread.header_skipped  = true;
+    thread.fileInput = false;
+    thread.liveInput = true;
+    thread.unlock();
+    
 }
 
 //--------------------------------------------------------------
@@ -112,7 +132,8 @@ void ofxDVS::changePath(){
     vector<imu6>().swap(packetsImu6);
     packetsImu6.clear();
     packetsImu6.shrink_to_fit();
-    header_skipped  = false;
+    thread.istreamf.close();
+    thread.header_skipped  = false;
     thread.fileInput = true;
     thread.header_skipped = header_skipped;
     for(int i=0; i<thread.container.size(); i++){
@@ -122,6 +143,8 @@ void ofxDVS::changePath(){
         thread.container.clear();
         thread.container.shrink_to_fit();
     }
+    thread.packetsHiTimestamps.clear();
+    thread.packetsHiTimestamps.shrink_to_fit();
     thread.unlock();
 }
 
@@ -242,6 +265,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
         }
         
         int type = caerEventPacketHeaderGetEventType(packetHeader);
+        int lastTs = 0;
         
         //ofLog(OF_LOG_WARNING,"Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
         //           caerEventPacketHeaderGetEventNumber(packetHeader));
@@ -269,7 +293,12 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             nuPackImu6.timestamp = caerIMU6EventGetTimestamp(caerIMU6IteratorElement);
             nuPackImu6.valid = true ;
             packetsImu6.push_back(nuPackImu6);
+            if(nuPackImu6.timestamp> lastTs){
+                lastTs = nuPackImu6.timestamp;
+            }
+            
             CAER_IMU6_ITERATOR_VALID_END
+            
         }
         if (type == POLARITY_EVENT  && dvsStatus) {
             
@@ -289,6 +318,9 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             nuPack.valid = true;
             packetsPolarity.push_back(nuPack);
 
+            if(nuPack.timestamp> lastTs){
+                lastTs = nuPack.timestamp;
+            }
             CAER_POLARITY_ITERATOR_VALID_END
         }
         if (type == FRAME_EVENT && apsStatus){
@@ -353,8 +385,14 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
                 }
             }
             nuPackFrames.valid = true;
+            nuPackFrames.frameEnd = caerFrameEventGetTSEndOfExposure(caerFrameIteratorElement);
+            nuPackFrames.frameStart = caerFrameEventGetTSStartOfExposure(caerFrameIteratorElement);
+
             packetsFrames.push_back(nuPackFrames);
             nuPackFrames.singleFrame.clear();
+            if(nuPackFrames.frameEnd > lastTs){
+                lastTs = nuPackFrames.frameEnd;
+            }
             CAER_FRAME_ITERATOR_VALID_END
         }
         
@@ -373,6 +411,14 @@ void ofxDVS::update() {
         packetContainer = thread.container.back(); // this is a pointer
         thread.container.pop_back();
         
+        // get packet hi timestamp
+        for (size_t ts; ts<thread.packetsHiTimestamps.size(); ts++){
+            cout << "file " << thread.packetsHiTimestamps[thread.packetsHiTimestamps.size()-1] - thread.packetsHiTimestamps[0] << endl;
+            cout << "from setup " << ofGetElapsedTimeMicros() << endl;
+            // now decides which timestamp to update
+            
+        }
+        
         // organize data
         organizeData(packetContainer);
 
@@ -382,19 +428,14 @@ void ofxDVS::update() {
             size_t currPacketContainerSize = (size_t) caerEventPacketContainerGetEventPacketsNumber(packetContainer);
             qsort(packetContainer->eventPackets, currPacketContainerSize, sizeof(caerEventPacketHeader),
                   &packetsFirstTimestampThenTypeCmp);
-            
             // save to files
             int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-            
             for (int32_t i = 0; i < packetNum; i++) {
-                
                 caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
                 if(packetHeader == NULL){
                     continue;
                 }
-                
                 caerEventPacketHeaderSetEventCapacity(packetHeader, caerEventPacketHeaderGetEventNumber(packetHeader));
-                
                 size_t sizePacket = caerEventPacketGetSize(packetHeader);
                 myFile.write((char*)packetHeader, sizePacket);
 
@@ -504,7 +545,6 @@ void ofxDVS::drawSpikes() {
     //ofClear(0,255);
     //ofFill();
     //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
-
     float scalex = (float) ofGetWidth();
     float scaley = (float) ofGetHeight();
     float scaleFx,scaleFy;
@@ -521,19 +561,16 @@ void ofxDVS::drawSpikes() {
         ofDrawCircle((int) packetsPolarity[i].pos.x*scaleFx, (int)packetsPolarity[i].pos.y*scaleFy, 1);
         ofPopStyle();
     }
-
     //fbo.end();
     //fbo.draw(0,0,ofGetWidth(),ofGetHeight());
 }
 
 //--------------------------------------------------------------
 void ofxDVS::drawFrames() {
-
     // draw last frame in packets
     for (int i = 0; i < packetsFrames.size(); i++) {
         packetsFrames[i].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
     }
-
 }
 
 //--------------------------
@@ -602,122 +639,6 @@ void ofxDVS::updateBAFilter(){
     }
 }
 
-//--------------------------------------------------------------
-void ofxDVS::drawImageGenerator() {
-
-    // draw last imagegenerator frame
-    imageGenerator.draw(0,0,ofGetWidth(),ofGetHeight());
-
-}
-
-
-//--------------------------------------------------------------
-void ofxDVS::updateImageGenerator(){
-    
-    for (int i = 0; i < packetsPolarity.size(); i++) {
-        // only valid
-        if(packetsPolarity[i].valid){
-            ofPoint pos = packetsPolarity[i].pos;
-            
-            // update surfaceMap
-            if(packetsPolarity[i].pol){
-                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
-            }else{
-                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
-            }
-            counterSpikes = counterSpikes+1;
-        }
-    }
-
-    if(numSpikes <= counterSpikes){
-
-        counterSpikes = 0;
-        //ofLog(OF_LOG_WARNING,"Generate Image \n");
-        // normalize
-        int sum = 0, count = 0;
-        for (int i = 0; i < sizeX; i++) {
-            for (int j = 0; j < sizeY; j++) {
-                if (spikeFeatures[i][j] != 0.0) {
-                    sum += spikeFeatures[i][j];
-                    count++;
-                }
-            }
-        }
-        float mean = sum / count;
-        float var = 0;
-        for (int i = 0; i < sizeX; i++) {
-            for (int j = 0; j < sizeY; j++) {
-                if (spikeFeatures[i][j] != 0.0) {
-                    float f = spikeFeatures[i][j] - mean;
-                    var += f * f;
-                }
-            }
-        }
-        
-        float sig = sqrt(var / count);
-        if (sig < (0.1f / 255.0f)) {
-            sig = 0.1f / 255.0f;
-        }
-        
-        float numSDevs = 3;
-        float mean_png_gray, range, halfrange;
-        
-        if (rectifyPolarities) {
-            mean_png_gray = 0; // rectified
-        }
-        
-        
-        if (rectifyPolarities) {
-            range = numSDevs * sig * (1.0f / 256.0f); //256 included here for nullhop reshift
-            halfrange = 0;
-        }
-        
-        //ofLog(OF_LOG_WARNING,"var %f \n", var);
-        //ofLog(OF_LOG_WARNING,"mean %f \n", mean);
-        //ofLog(OF_LOG_WARNING,"range %f \n", range);
-        
-        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
-            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
-                ofColor this_pixel;
-                this_pixel.set(0,0,0);
-                imageGenerator.setColor(col_idx,row_idx,this_pixel);
-            }
-        }
-        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
-            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
-                if (spikeFeatures[col_idx][row_idx] == 0) {
-                    spikeFeatures[col_idx][row_idx] = mean_png_gray;
-                }
-                else {
-                    float f = (spikeFeatures[col_idx][row_idx] + halfrange) / range;
-                    if (f > 255) {
-                        f = 255; //255 included here for nullhop reshift
-                    }else if (f < 0) {
-                        f = 0;
-                    }
-                    ofColor this_pixel;
-                    this_pixel.set((int)floor(f),(int)floor(f),(int)floor(f));
-                    imageGenerator.setColor(col_idx,row_idx,ofColor(this_pixel.r, this_pixel.g, this_pixel.b));
-                }
-            }
-        }
-        // clear map
-        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
-            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
-                spikeFeatures[col_idx][row_idx]  = 0.0;
-            }
-        }
-        imageGenerator.update();
-    }
-}
-
-
-//--------------------------------------------------------------
-ofImage ofxDVS:: getImageGenerator(){
-    
-    return imageGenerator;
-    
-}
 
 //--------------------------------------------------------------
 void ofxDVS::drawImu6() {
@@ -861,3 +782,133 @@ string ofxDVS::getUserHomeDir()
     
     return homeDir;
 }
+
+// Image Generator
+//--------------------------------------------------------------
+void ofxDVS::initImageGenerator(){
+    spikeFeatures = new float*[sizeX];
+    for(int i = 0; i < sizeX; ++i){
+        spikeFeatures[i] = new float[sizeY];
+    }
+    for(int i = 0; i < sizeX; ++i){
+        for(int j = 0; j < sizeY; ++j){
+            spikeFeatures[i][j] = 0.0;
+        }
+    }
+    imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+    rectifyPolarities = true;
+    numSpikes = 2000;
+    counterSpikes = 0;
+}
+
+//--------------------------------------------------------------
+void ofxDVS::drawImageGenerator() {
+    
+    // draw last imagegenerator frame
+    imageGenerator.draw(0,0,ofGetWidth(),ofGetHeight());
+    
+}
+
+//--------------------------------------------------------------
+void ofxDVS::updateImageGenerator(){
+    
+    for (int i = 0; i < packetsPolarity.size(); i++) {
+        // only valid
+        if(packetsPolarity[i].valid){
+            ofPoint pos = packetsPolarity[i].pos;
+            
+            // update surfaceMap
+            if(packetsPolarity[i].pol){
+                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+            }else{
+                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+            }
+            counterSpikes = counterSpikes+1;
+        }
+    }
+    
+    if(numSpikes <= counterSpikes){
+        
+        counterSpikes = 0;
+        //ofLog(OF_LOG_WARNING,"Generate Image \n");
+        // normalize
+        int sum = 0, count = 0;
+        for (int i = 0; i < sizeX; i++) {
+            for (int j = 0; j < sizeY; j++) {
+                if (spikeFeatures[i][j] != 0.0) {
+                    sum += spikeFeatures[i][j];
+                    count++;
+                }
+            }
+        }
+        float mean = sum / count;
+        float var = 0;
+        for (int i = 0; i < sizeX; i++) {
+            for (int j = 0; j < sizeY; j++) {
+                if (spikeFeatures[i][j] != 0.0) {
+                    float f = spikeFeatures[i][j] - mean;
+                    var += f * f;
+                }
+            }
+        }
+        
+        float sig = sqrt(var / count);
+        if (sig < (0.1f / 255.0f)) {
+            sig = 0.1f / 255.0f;
+        }
+        
+        float numSDevs = 3;
+        float mean_png_gray, range, halfrange;
+        
+        if (rectifyPolarities) {
+            mean_png_gray = 0; // rectified
+        }
+        
+        if (rectifyPolarities) {
+            range = numSDevs * sig * (1.0f / 256.0f); //256 included here for nullhop reshift
+            halfrange = 0;
+        }
+        
+        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+                ofColor this_pixel;
+                this_pixel.set(0,0,0);
+                imageGenerator.setColor(col_idx,row_idx,this_pixel);
+            }
+        }
+        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+                if (spikeFeatures[col_idx][row_idx] == 0) {
+                    spikeFeatures[col_idx][row_idx] = mean_png_gray;
+                }
+                else {
+                    float f = (spikeFeatures[col_idx][row_idx] + halfrange) / range;
+                    if (f > 255) {
+                        f = 255; //255 included here for nullhop reshift
+                    }else if (f < 0) {
+                        f = 0;
+                    }
+                    ofColor this_pixel;
+                    this_pixel.set((int)floor(f),(int)floor(f),(int)floor(f));
+                    imageGenerator.setColor(col_idx,row_idx,ofColor(this_pixel.r, this_pixel.g, this_pixel.b));
+                }
+            }
+        }
+        // clear map
+        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+            for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+                spikeFeatures[col_idx][row_idx]  = 0.0;
+            }
+        }
+        imageGenerator.update();
+    }
+}
+
+//--------------------------------------------------------------
+ofImage ofxDVS:: getImageGenerator(){
+    
+    return imageGenerator;
+    
+}
+
+

@@ -178,7 +178,56 @@ public:
         fileInput = true;
         return(true);
     }
-    
+   
+    bool makeFileIndex(){
+        // vector string files is in thread as well as files_id , current file
+        // no need to parse header we already are at the end of it
+        // no need to open file, just go trought it
+        long posHeaderParsed;
+        posHeaderParsed=istreamf.tellg();
+        while(true){
+            // make index of all timestamps
+            char *buffer_header = (char*)malloc(28);
+            istreamf.read(buffer_header,28);
+            if( istreamf.eof() ){
+                //ofLog(OF_LOG_NOTICE,"Reached the end of the file. Restarting...");
+                free(buffer_header);
+                break;
+            }
+            int eventype =  caerEventPacketHeaderGetEventType((caerEventPacketHeader)buffer_header);
+            int eventsource = caerEventPacketHeaderGetEventSource((caerEventPacketHeader)buffer_header);
+            int eventsize = caerEventPacketHeaderGetEventSize((caerEventPacketHeader)buffer_header);
+            int eventoffset = caerEventPacketHeaderGetEventTSOffset((caerEventPacketHeader)buffer_header);
+            int eventtsoverflow =  caerEventPacketHeaderGetEventTSOverflow((caerEventPacketHeader)buffer_header);
+            int eventcapacity = caerEventPacketHeaderGetEventCapacity((caerEventPacketHeader)buffer_header);
+            int eventnumber = caerEventPacketHeaderGetEventNumber((caerEventPacketHeader)buffer_header);
+            int eventvalid = caerEventPacketHeaderGetEventValid((caerEventPacketHeader)buffer_header);
+            int next_read = eventcapacity * eventsize;
+            //ofLog(OF_LOG_WARNING,"next_read %d\n", next_read);
+            buffer_header = (char *)realloc(buffer_header, 28+next_read);
+            istreamf.read(buffer_header+28,next_read);
+            caerEventPacketContainer packetContainerT = caerEventPacketContainerAllocate(1);
+            caerEventPacketContainerSetEventPacket(packetContainerT, 0, (caerEventPacketHeader)buffer_header);
+            caerEventPacketContainerSetEventPacketsNumber(packetContainerT, 1);
+            int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainerT);
+            for (int32_t i = 0; i < packetNum; i++) {
+                caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainerT, i);
+                if (packetHeader == NULL) {
+                    //ofLog(OF_LOG_WARNING,"Packet %d is empty (not present).\n", i);
+                    continue; // Skip if nothing there.
+                }
+                long hits = caerEventPacketContainerGetHighestEventTimestamp(packetContainerT);
+                packetsHiTimestamps.push_back(hits);
+                //ofLog(OF_LOG_WARNING,"Highest timestamps %lu\n", hits);
+            }
+            free(buffer_header);
+        }
+        // set the pointer back to where it was
+        istreamf.clear();
+        istreamf.seekg(posHeaderParsed);
+        //istreamf.close();
+    }
+
     bool tryFile(){
         // vector string files is in thread as well as files_id , current file
         
@@ -235,6 +284,8 @@ public:
                     
                     if(aedat_version != -1){
                         fileInput = true;
+                        path = string_path;
+
                     }
                     
                     if(line.compare("#!END-HEADER\r") == 0){
@@ -267,10 +318,13 @@ public:
     {
         
     STARTDEVICEORFILE:
+        lock();
     	deviceReady = false;
         fileInput = false;
+        liveInput = false;
         fileInputLocal = false;
         fileInputReady = false;
+        fileIndexReady = false;
         
         // get current frame status
         apsStatus = true;
@@ -279,20 +333,21 @@ public:
         dvsStatusLocal = true;
         imuStatus = true;
         imuStatusLocal = true;
-        
+        unlock();
     STARTFILEMODE:
         if( fileInput == false ){
 
-            // start the camera
-    #if DAVIS == 1
-            // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-            camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
-    #endif
-    #if DVS128 == 1
-            // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-            camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
-    #endif
-            
+            if(camera_handle == NULL){
+                // start the camera
+        #if DAVIS == 1
+                // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+                camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
+        #endif
+        #if DVS128 == 1
+                // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
+                camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
+        #endif
+            }
             if (camera_handle == NULL) {
                 ofLog(OF_LOG_ERROR,"error opening the device\n");
                 if(tryFile()){
@@ -303,6 +358,8 @@ public:
                 }
                 //sleep(1);
                 goto STARTDEVICEORFILE;
+            }else{
+                ofLog(OF_LOG_NOTICE,"Succesfully open a Dynamic Vision Sensor\n");
             }
             
             
@@ -375,6 +432,14 @@ public:
     #endif
                 }
                 
+                if(fileInput){
+                    goto STARTFILEMODE;
+                }
+                
+                if(liveInput){
+                    ofLog(OF_LOG_NOTICE, "trying live input \n");
+                    goto STARTDEVICEORFILE;
+                }
 
             }
         
@@ -383,17 +448,17 @@ public:
             // file input mode
             ofLog(OF_LOG_NOTICE, "Reading input file\n");
             
-
             doChangePath = false;
-        
-            string line;
-            string filename_to_open = path+"/"+files[files_id];
-        
-            ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
+            filename_to_open = path;
+            //ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
             istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
+            istreamf.seekg(0,istreamf.beg);
+            if (!istreamf.is_open()){
+                ofLog(OF_LOG_ERROR, "Error opening file %s", filename_to_open.c_str());
+            }else{
+                ofLog(OF_LOG_NOTICE, "Ok opening file %s", filename_to_open.c_str());
+            }
             header_skipped = false;
-            
-
             
             while(isThreadRunning())
             {
@@ -402,35 +467,48 @@ public:
                 packetContainerT = NULL;
                 //ofLog(OF_LOG_NOTICE, "Header skipped %d..", header_skipped);
             HEADERPARSE:
+                
+                if(liveInput){
+                    ofLog(OF_LOG_NOTICE, "trying live input \n");
+                    goto STARTDEVICEORFILE;
+                }
+
                 // parse header
-                if(header_skipped == false){
-                    
-                    
+                if(!header_skipped){
+
                     while(getline(istreamf,line,'\n')){
                         if(line.empty()) continue;
+                        ofLog(OF_LOG_NOTICE, "File Header %s \n", line.c_str());
                         //set dimensions according to header file
                         char sourceString[1024 + 1];
-                        if (std::sscanf(line.c_str(), "#Source %i : %1024[^\r]s\n", &chipId, sourceString) == 2) {
+                        if (std::sscanf(line.c_str(), "#Source %i: %1024[^\r]s\n", &chipId, sourceString) == 2) {
                             parseSourceString(sourceString);
                         }
                         if(line.compare("#!END-HEADER\r") == 0){
                             header_skipped = true;
                             ofLog(OF_LOG_NOTICE, "File Header Parsed..");
                             doChangePath = false;
-                            //if (istreamf.is_open()){
                             fileInputReady = true;
-                            //}
-                            break;
+                            if(fileIndexReady != true){
+                                //header_skipped = false;
+                                //goto STARTFILEMODE;
+                                ofLog(OF_LOG_NOTICE, "Make File Index");
+                                makeFileIndex(); // index timestamps
+                                ofLog(OF_LOG_NOTICE, "Done Index");
+                                fileIndexReady = true;
+                                goto HEADERPARSE;
+                            }else{
+                                goto HEADERPARSE;
+                            }
                         }
                     }
+                    
                 }
                 if(header_skipped){
                     // read 28 bytes and parse file
                     //ofLog(OF_LOG_NOTICE, "Next bytes..");
                     char *buffer_header = (char*)malloc(28);
-                    
                     istreamf.read(buffer_header,28);
-                    
                     //buffer_header[28] = '0';
                     if( istreamf.eof() ){
                         ofLog(OF_LOG_NOTICE,"Reached the end of the file. Restarting...");
@@ -454,39 +532,29 @@ public:
                     int eventnumber = caerEventPacketHeaderGetEventNumber((caerEventPacketHeader)buffer_header);
                     int eventvalid = caerEventPacketHeaderGetEventValid((caerEventPacketHeader)buffer_header);
                     int next_read = eventcapacity * eventsize;
-
                     buffer_header = (char *)realloc(buffer_header, 28+next_read);
                     istreamf.read(buffer_header+28,next_read);
-                    
                     packetContainerT = caerEventPacketContainerAllocate(1);
                     caerEventPacketContainerSetEventPacket(packetContainerT, 0, (caerEventPacketHeader)buffer_header);
                     caerEventPacketContainerSetEventPacketsNumber(packetContainerT, 1);
-                    
                 }
-                
                 if (packetContainerT != NULL){
                     container.push_back(packetContainerT);
                 }
-                
                 if(doChangePath){
-                    // need to close the file
-                    // reopen it with the new path
-                    istreamf.clear();
-                    istreamf.seekg(0, ios::beg); // from
-                    istreamf.close();
                     filename_to_open = path;
                     ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
                     istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
                     header_skipped = false;
                     doChangePath = false;
+                    fileIndexReady = false;
+                    packetsHiTimestamps.clear();
+                    packetsHiTimestamps.shrink_to_fit();
                     goto HEADERPARSE;
                 }
                 unlock();
-
                 nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
             }
-
-        
         }
     }
     caerDeviceHandle camera_handle;
@@ -507,6 +575,7 @@ public:
     int sizeY;
     bool deviceReady;
     int chipId;
+    bool liveInput;
     
     //file input
     vector<string> files = vector<string>();
@@ -518,6 +587,12 @@ public:
     bool doChangePath;
     bool header_skipped;
     ifstream istreamf;
+    vector<long> packetsHiTimestamps;
+    bool fileIndexReady;
+    
+    //tmp
+    string line;
+    string filename_to_open;
 };
 
 class ofxDVS {
@@ -548,6 +623,7 @@ public:
     string getUserHomeDir();
     void loadFile();
     void initThreadVariables();
+    void tryLive();
 
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
@@ -614,6 +690,8 @@ public:
     
     //file output aedat 3.0
     ofstream myFile;
+    vector<long> packetsHiTimestamps;
+
 };
 
 
