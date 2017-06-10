@@ -47,6 +47,12 @@ i: enable/disable imu
 
 s: start/stop recording files* 
 
+n: load recording file
+
++: faster playback
+
+-: slower playback
+
 * aedat3.1 file format: https://inilabs.com/support/software/fileformat/ 
 
 
