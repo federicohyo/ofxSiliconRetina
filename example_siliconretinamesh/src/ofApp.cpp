@@ -53,9 +53,7 @@ void ofApp::update(){
             tdiff = 0;
             tmp = packets[i].timestamp;//tmp-nus;
         }
-        //cout << "current ts "<< packets[i].timestamp << " start ts " << tmp << "tdiff" << tdiff <<endl;
-        //ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight())
-        mesh.addVertex(ofVec3f(packets[i].pos.x, packets[i].pos.y, tdiff>>m));
+        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), tdiff>>m));
         mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
         if(packets[i].pol){
             mesh.addColor(ofColor(255,0,0));
@@ -69,18 +67,13 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    //    dvs.draw();
+
     ofClear(0,0,0,255);
     cam.begin();
-
     mesh.setMode(OF_PRIMITIVE_POINTS);
     glPointSize(3);
     mesh.drawWireframe();
-    
-    //cam.begin();
     ofPushMatrix();
-    //ofTranslate(-ofGetWidth(), -ofGetHeight());
-    //ofTranslate(0, -ofGetHeight());
     mesh.draw();
     ofPopMatrix();
     cam.end();
@@ -119,8 +112,8 @@ void ofApp::draw(){
     ofSetLineWidth(1);
     
     ofVec2f offset(10, -10);
-    //ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth())
-    string infos = "x:" + ofToString(nearestVertexCam.x) + " y:" + ofToString(nearestVertexCam.y) + " z: "+ofToString(nearestVertexCam.z)+" us";
+    ofVec2f origXY = ofVec2f(ofMap(nearestVertexCam.x,0,fbo.getWidth(),0,dvs.sizeX),ofMap(nearestVertexCam.y,0,fbo.getHeight(),0,dvs.sizeY));
+    string infos = "x:" + ofToString(origXY.x) + " y:" + ofToString(origXY.y) + " z: "+ofToString(nearestVertexCam.z)+" us";
     ofDrawBitmapStringHighlight(infos, mouse + offset);
     
 }
