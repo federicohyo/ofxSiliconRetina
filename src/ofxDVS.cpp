@@ -965,10 +965,11 @@ void ofxDVS::changeTargetSpeed(long val){
 }
 
 //--------------------------------------------------------------
-long ofxDVS::getTargetSpeed(long val){
+long ofxDVS::getTargetSpeed(){
     return(targetSpeed);
 }
 
+//--------------------------------------------------------------
 void ofxDVS::changePause(){
     if(paused){
         paused = false;

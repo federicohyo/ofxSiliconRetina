@@ -652,7 +652,7 @@ public:
     long **baFilterMap;
     void changePath();
     void changeTargetSpeed(long val);
-    long getTargetSpeed(long val);
+    long getTargetSpeed();
     void changePause();
     
     // color palette for spikes
