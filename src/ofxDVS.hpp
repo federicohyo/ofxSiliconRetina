@@ -403,7 +403,7 @@ public:
                 }
                 unlock();
 
-                nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
+                nanosleep((const struct timespec[]){{0, 500L}}, NULL);
 
                 //check aps status
                 if( apsStatus != apsStatusLocal){

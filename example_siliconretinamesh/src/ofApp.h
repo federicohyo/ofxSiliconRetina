@@ -2,6 +2,7 @@
 
 #include "ofMain.h"
 #include "ofxDVS.hpp"
+#include "ofxStats.h"
 
 class ofApp : public ofBaseApp{
 
@@ -32,4 +33,8 @@ class ofApp : public ofBaseApp{
         bool started;
         long m;
         long nus;
+    
+    // ofxStats instance
+    ofxStats stats;
+
 };

@@ -1,1 +1,2 @@
 ofxSiliconRetina
+ofxStats

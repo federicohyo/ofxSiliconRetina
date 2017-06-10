@@ -17,7 +17,8 @@ void ofApp::setup(){
     ofEnableDepthTest();
     glEnable(GL_POINT_SMOOTH); // use circular points instead of square points
     glPointSize(3);
-    
+    ofSetVerticalSync(true);
+
     tmp = 0;
     started = false;
     m = 4;
@@ -26,6 +27,8 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    
+    stats.update();
     
     dvs.update();
     
@@ -51,8 +54,8 @@ void ofApp::update(){
             tmp = packets[i].timestamp;//tmp-nus;
         }
         //cout << "current ts "<< packets[i].timestamp << " start ts " << tmp << "tdiff" << tdiff <<endl;
-        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeY,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), tdiff>>m));
-        mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
+        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), tdiff>>m));
+        //mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
         if(packets[i].pol){
             mesh.addColor(ofColor(255,0,0));
         }else{
@@ -66,24 +69,54 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     //    dvs.draw();
-    
-    fbo.begin();
     ofClear(0,0,0,255);
-    
+    cam.begin();
+
     mesh.setMode(OF_PRIMITIVE_POINTS);
-    //  mesh.setMode(OF_PRIMITIVE_TRIANGLE_STRIP);
     glPointSize(3);
     mesh.drawWireframe();
-    fbo.end();
     
-    //fbo.draw(0,0,ofGetWidth(),ofGetHeight());
-    
-    cam.begin();
+    //cam.begin();
     ofPushMatrix();
-    ofTranslate(-ofGetWidth()/2, -ofGetHeight()/2);
+    //ofTranslate(-ofGetWidth(), -ofGetHeight());
+    //ofTranslate(0, -ofGetHeight());
     mesh.draw();
     ofPopMatrix();
     cam.end();
+    
+    // stats
+    if(dvs.statsStatus){
+        stats.draw();
+    }
+    
+    // Nearest Vertex
+    int n = mesh.getNumVertices();
+    float nearestDistance = 0;
+    ofVec3f nearestVertex;
+    int nearestIndex = 0;
+    ofVec2f mouse(mouseX, mouseY);
+    for(int i = 0; i < n; i++) {
+        ofVec3f cur = cam.worldToScreen(mesh.getVertex(i));
+        float distance = cur.distance(mouse);
+        if(i == 0 || distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestVertex = cur;
+            nearestIndex = i;
+        }
+    }
+    
+    ofSetColor(ofColor::gray);
+    ofDrawLine(nearestVertex, mouse);
+    
+    ofNoFill();
+    ofSetColor(ofColor::yellow);
+    ofSetLineWidth(2);
+    ofDrawCircle(nearestVertex, 4);
+    ofSetLineWidth(1);
+    
+    ofVec2f offset(10, -10);
+    string infos = "x:" + ofToString(nearestVertex.x) + " y:" + ofToString(nearestVertex.y) + " z:" +ofToString(nearestVertex.z);
+    ofDrawBitmapStringHighlight(infos, mouse + offset);
     
 }
 
@@ -108,7 +141,7 @@ void ofApp::keyPressed(int key){
         dvs.changeRecordingStatus(); //enable/disable recording
     }
     if (key == 's') {
-        dvs.changeRecordingStatus(); //enable/disable recording
+        dvs.changeStats(); //enable/disable stats
     }
     if (key == 'n'){ //load file from disk
         dvs.loadFile();

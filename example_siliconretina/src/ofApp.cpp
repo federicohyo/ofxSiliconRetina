@@ -41,7 +41,7 @@ void ofApp::keyPressed(int key){
         dvs.changeRecordingStatus(); //enable/disable recording
     }
     if (key == 's') {
-        dvs.changeStats(); //enable/disable recording
+        dvs.changeStats(); //enable/disable stats
     }
     if (key == 'n'){ //load file from disk
         dvs.loadFile();

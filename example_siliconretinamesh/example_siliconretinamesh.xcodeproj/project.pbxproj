@@ -9,6 +9,70 @@
 		<string>46</string>
 		<key>objects</key>
 		<dict>
+			<key>79C40CED16184AB056D72086</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.c.h</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxStats.h</string>
+				<key>path</key>
+				<string>../../../addons/ofxStats/src/ofxStats.h</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
+			<key>E0ECD4E68A65392E93D1BA69</key>
+			<dict>
+				<key>children</key>
+				<array>
+					<string>1A406AE9EBBBC39DFC86BBE7</string>
+					<string>79C40CED16184AB056D72086</string>
+				</array>
+				<key>isa</key>
+				<string>PBXGroup</string>
+				<key>name</key>
+				<string>src</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>801A29006D2FD14BF29BE06C</key>
+			<dict>
+				<key>children</key>
+				<array>
+					<string>E0ECD4E68A65392E93D1BA69</string>
+				</array>
+				<key>isa</key>
+				<string>PBXGroup</string>
+				<key>name</key>
+				<string>ofxStats</string>
+				<key>sourceTree</key>
+				<string>&lt;group&gt;</string>
+			</dict>
+			<key>04EADF24E10F8185E5A4E0DC</key>
+			<dict>
+				<key>fileRef</key>
+				<string>1A406AE9EBBBC39DFC86BBE7</string>
+				<key>isa</key>
+				<string>PBXBuildFile</string>
+			</dict>
+			<key>1A406AE9EBBBC39DFC86BBE7</key>
+			<dict>
+				<key>explicitFileType</key>
+				<string>sourcecode.cpp.cpp</string>
+				<key>fileEncoding</key>
+				<string>30</string>
+				<key>isa</key>
+				<string>PBXFileReference</string>
+				<key>name</key>
+				<string>ofxStats.cpp</string>
+				<key>path</key>
+				<string>../../../addons/ofxStats/src/ofxStats.cpp</string>
+				<key>sourceTree</key>
+				<string>SOURCE_ROOT</string>
+			</dict>
 			<key>2F1D6B225F788C78882946DA</key>
 			<dict>
 				<key>children</key>
@@ -1384,6 +1448,7 @@
 				<key>children</key>
 				<array>
 					<string>15E4481F0FB2FCE8B0CC7824</string>
+					<string>801A29006D2FD14BF29BE06C</string>
 				</array>
 				<key>isa</key>
 				<string>PBXGroup</string>
@@ -1563,6 +1628,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
 						<string>../../../addons/ofxSiliconRetina/src</string>
+						<string>../../../addons/ofxStats/src</string>
 					</array>
 					<key>CONFIGURATION_BUILD_DIR</key>
 					<string>$(SRCROOT)/bin/</string>
@@ -1646,6 +1712,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
 						<string>../../../addons/ofxSiliconRetina/src</string>
+						<string>../../../addons/ofxStats/src</string>
 					</array>
 					<key>CONFIGURATION_BUILD_DIR</key>
 					<string>$(SRCROOT)/bin/</string>
@@ -1713,6 +1780,7 @@
 					<string>3A778AE3ADACC3F218128EFF</string>
 					<string>4363DD56D0F0DADD83593218</string>
 					<string>988A453C859F755B2BE778CD</string>
+					<string>04EADF24E10F8185E5A4E0DC</string>
 				</array>
 				<key>isa</key>
 				<string>PBXSourcesBuildPhase</string>
@@ -1822,6 +1890,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
 						<string>../../../addons/ofxSiliconRetina/src</string>
+						<string>../../../addons/ofxStats/src</string>
 					</array>
 					<key>COMBINE_HIDPI_IMAGES</key>
 					<string>YES</string>
@@ -1895,6 +1964,7 @@
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
 						<string>../../../addons/ofxSiliconRetina/src</string>
+						<string>../../../addons/ofxStats/src</string>
 					</array>
 					<key>COMBINE_HIDPI_IMAGES</key>
 					<string>YES</string>
