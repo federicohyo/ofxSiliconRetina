@@ -49,6 +49,12 @@ void ofApp::keyPressed(int key){
     if (key == 'l'){ //connect to device
         dvs.tryLive();
     }
+    if (key == '+') {
+        dvs.changeTargetSpeed(+500); //faster
+    }
+    if (key == '-') {
+        dvs.changeTargetSpeed(-500); //slower
+    }
 }
 
 //--------------------------------------------------------------

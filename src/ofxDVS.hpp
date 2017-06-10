@@ -609,7 +609,7 @@ public:
     void initSpikeColors();
     void loopColor();
     void exit();
-    bool organizeData(caerEventPacketContainer packetContainer);
+    bool organizeData(caerEventPacketContainer packetContainer, long startTs, long stopTs);
     void changeAps(); // enable / disable aps
     void changeDvs(); // enable / disable dvs
     void changeImu(); // enable / disable imu
@@ -651,6 +651,9 @@ public:
     void updateBAFilter();
     long **baFilterMap;
     void changePath();
+    void changeTargetSpeed(long val);
+    long getTargetSpeed(long val);
+    void changePause();
     
     // color palette for spikes
     int spkOnR[3];
@@ -687,11 +690,16 @@ public:
     string path;
     bool doChangePath;
     bool header_skipped;
+    bool paused;
     
     //file output aedat 3.0
     ofstream myFile;
     vector<long> packetsHiTimestamps;
-
+    vector<long> ofxTime;
+    long ofxLastTs;
+    bool committed;
+    long currentSpeed;
+    long targetSpeed;
 };
 
 

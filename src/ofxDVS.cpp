@@ -70,15 +70,20 @@ void ofxDVS::setup() {
     
     // reset timestamp
     ofResetElapsedTimeCounter();
+    ofxLastTs = 0;
+    targetSpeed = 6666;
+    
+    paused = false;
 }
 
 void ofxDVS::initThreadVariables(){
     apsStatus = true;       // enable aps
     dvsStatus = true;       // enable dvs
     imuStatus = true;       // enable imu
-    maxContainerQueued = 100; // at most accumulates 100 packaetcontainers before dropping
+    maxContainerQueued = 1000; // at most accumulates 100 packaetcontainers before dropping
     packetContainer = NULL;
     isRecording = false;
+    committed = false;
 }
 
 
@@ -242,8 +247,11 @@ vector<frame> ofxDVS::getFrames() {
 }
 
 //--------------------------------------------------------------
-bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
+bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs, long stopTs){
 
+    //cout << "Start "<< startTs << endl;
+    //cout << "Stop "<< stopTs << endl;
+    
     if (packetContainer == NULL) {
         return(false); // Skip if nothing there.
     }
@@ -395,9 +403,9 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             }
             CAER_FRAME_ITERATOR_VALID_END
         }
-        
     }
     
+
     return(true);
 
 }
@@ -405,61 +413,107 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 //--------------------------------------------------------------
 void ofxDVS::update() {
     
-    // Copy data from usbThread
-    thread.lock();
-    for(int i=0; i<thread.container.size(); i++){
-        packetContainer = thread.container.back(); // this is a pointer
-        thread.container.pop_back();
-        
-        // get packet hi timestamp
-        for (size_t ts; ts<thread.packetsHiTimestamps.size(); ts++){
-            cout << "file " << thread.packetsHiTimestamps[thread.packetsHiTimestamps.size()-1] - thread.packetsHiTimestamps[0] << endl;
-            cout << "from setup " << ofGetElapsedTimeMicros() << endl;
-            // now decides which timestamp to update
+    if(paused == false){
+        // Copy data from usbThread
+        // only copy the one from a fixed interval of time if we are reading from a file
+        thread.lock();
+        for(int i=0; i<thread.container.size(); i++){
+            packetContainer = thread.container.back(); // this is a pointer
+            thread.container.pop_back();
             
-        }
-        
-        // organize data
-        organizeData(packetContainer);
-
-        // recording status
-        if(isRecording){
-            // order packet containers in time
-            size_t currPacketContainerSize = (size_t) caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-            qsort(packetContainer->eventPackets, currPacketContainerSize, sizeof(caerEventPacketHeader),
-                  &packetsFirstTimestampThenTypeCmp);
-            // save to files
-            int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-            for (int32_t i = 0; i < packetNum; i++) {
-                caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
-                if(packetHeader == NULL){
-                    continue;
+            packetsHiTimestamps = thread.packetsHiTimestamps;
+            // get packet hi timestamp
+            /*for (size_t ts; ts<thread.packetsHiTimestamps.size(); ts++){
+                ofxTime.push_back(ofGetElapsedTimeMicros() - );
+                cout << "file " << thread.packetsHiTimestamps[thread.packetsHiTimestamps.size()-1] - thread.packetsHiTimestamps[0] << endl;
+                cout << "from setup " << ofGetElapsedTimeMicros() << endl;
+                // now decides which timestamp to update
+                
+            }*/
+            
+            long now = ofGetElapsedTimeMicros();
+            if(ofxLastTs == 0){
+                currentSpeed = 0;
+            }else{
+                if(committed == false){
+                    long currentSpeed_tmp = (now - ofxLastTs);
+                    currentSpeed += currentSpeed_tmp;
+                }else{
+                    currentSpeed = (now - ofxLastTs); // time elapsed since last-time we were here
                 }
-                caerEventPacketHeaderSetEventCapacity(packetHeader, caerEventPacketHeaderGetEventNumber(packetHeader));
-                size_t sizePacket = caerEventPacketGetSize(packetHeader);
-                myFile.write((char*)packetHeader, sizePacket);
+            }
+                
+            // in live mode always call -> organizeData(packetContainer, durationToPlay, now);
+             // i.e. 60 fps 16666
+
+            ofxLastTs = now;
+        
+
+            if(currentSpeed <= targetSpeed){
+                // do not play yet
+                committed = false;
+            }else{
+                // say when and play
+                committed = true;
+                // play
+                organizeData(packetContainer, currentSpeed, now);
+                //cout << "elapsed time from start: " << now << endl;
+                //cout << "elapsed time from last time here (currentSpeed): " << currentSpeed << endl;
+                ///cout << "target elapsed time from last time here (targetspeed): " << targetSpeed << endl;
 
             }
-        }
-        
-        // free all packet containers here
-        caerEventPacketContainerFree(packetContainer);
-    }
-    // done with the resource
-    thread.unlock();
-    
-    // check how fast we are going, if we are too slow, drop some data
-    thread.lock();
-    if(thread.container.size() > maxContainerQueued){
-        ofLog(OF_LOG_WARNING, "Visualization is too slow, dropping events to keep real-time.");
-        packetContainer = thread.container.back(); // this is a pointer
-        thread.container.pop_back();
-        caerEventPacketContainerFree(packetContainer);
-        thread.container.clear();
-        thread.container.shrink_to_fit();
-    }
-    thread.unlock();
 
+
+            // recording status
+            if(isRecording){
+                // order packet containers in time
+                size_t currPacketContainerSize = (size_t) caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+                qsort(packetContainer->eventPackets, currPacketContainerSize, sizeof(caerEventPacketHeader),
+                      &packetsFirstTimestampThenTypeCmp);
+                // save to files
+                int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+                for (int32_t i = 0; i < packetNum; i++) {
+                    caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
+                    if(packetHeader == NULL){
+                        continue;
+                    }
+                    caerEventPacketHeaderSetEventCapacity(packetHeader, caerEventPacketHeaderGetEventNumber(packetHeader));
+                    size_t sizePacket = caerEventPacketGetSize(packetHeader);
+                    caerEventPacketHeaderSetEventSource(packetHeader, caerEventPacketHeaderGetEventSource(packetHeader));
+                    myFile.write((char*)packetHeader, sizePacket);
+
+                }
+            }
+            
+            // free all packet containers here
+            caerEventPacketContainerFree(packetContainer);
+        }
+        // done with the resource
+        thread.unlock();
+        
+        // check how fast we are going, if we are too slow, drop some data
+        thread.lock();
+        if(thread.container.size() > maxContainerQueued){
+            ofLog(OF_LOG_WARNING, "Visualization is too slow, dropping events to keep real-time.");
+            packetContainer = thread.container.back(); // this is a pointer
+            thread.container.pop_back();
+            caerEventPacketContainerFree(packetContainer);
+            thread.container.clear();
+            thread.container.shrink_to_fit();
+        }
+        thread.unlock();
+    }else{
+        // we are paused.. just trow away
+        thread.lock();
+        for(int i=0; i<thread.container.size(); i++){
+            packetContainer = thread.container.back(); // this is a pointer
+            thread.container.pop_back();
+            // free all packet containers here
+            caerEventPacketContainerFree(packetContainer);
+        }
+        // done with the resource
+        thread.unlock();
+    }
 }
 
 //--------------------------------------------------------------
@@ -901,6 +955,25 @@ void ofxDVS::updateImageGenerator(){
             }
         }
         imageGenerator.update();
+    }
+}
+
+//--------------------------------------------------------------
+void ofxDVS::changeTargetSpeed(long val){
+    targetSpeed = targetSpeed + val;
+    ofLog(OF_LOG_NOTICE, "Target speed is now %lu", targetSpeed);
+}
+
+//--------------------------------------------------------------
+long ofxDVS::getTargetSpeed(long val){
+    return(targetSpeed);
+}
+
+void ofxDVS::changePause(){
+    if(paused){
+        paused = false;
+    }else{
+        paused = true;
     }
 }
 

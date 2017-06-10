@@ -27,4 +27,9 @@ class ofApp : public ofBaseApp{
         ofFbo fbo;
         ofFbo fboCam;
         ofEasyCam cam;
+    
+        long tmp;
+        bool started;
+        long m;
+        long nus;
 };

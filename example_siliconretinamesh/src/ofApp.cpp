@@ -4,12 +4,24 @@
 void ofApp::setup(){
     dvs.setup();
     
+    ofSetVerticalSync(true);
+
     ofSetBackgroundColor(255);
     
     fbo.allocate(ofGetWidth(),ofGetHeight());
     fboCam.allocate(dvs.sizeX,dvs.sizeY);
+
+    mesh.setMode(OF_PRIMITIVE_POINTS);
     
     // webcam.setup(640,480);
+    ofEnableDepthTest();
+    glEnable(GL_POINT_SMOOTH); // use circular points instead of square points
+    glPointSize(3);
+    
+    tmp = 0;
+    started = false;
+    m = 4;
+    nus = 10000;
 }
 
 //--------------------------------------------------------------
@@ -20,7 +32,23 @@ void ofApp::update(){
     mesh.clear();
     vector<polarity> packets = dvs.getPolarity();
     for(int i=0;i < packets.size();i++) {
-        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeY,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), 0));
+        //long tdiff = (int) ofRandom(1000) % 1000;//packets[i].timestamp - dvs.ofxLastTs;
+        long tdiff = 0;
+        if( packets[i].timestamp < tmp){
+            tmp = packets[i].timestamp;
+        }
+        if(started == false){
+            tdiff = 0;
+            tmp = packets[i].timestamp;
+            started = true;
+        }else{
+            tdiff = packets[i].timestamp - tmp;
+        }
+        if(tdiff > nus){
+            tmp = packets[i].timestamp;
+        }
+        //cout << "current ts "<< packets[i].timestamp << " start ts " << tmp << "tdiff" << tdiff <<endl;
+        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeY,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), tdiff>>m));
         mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
         if(packets[i].pol){
             mesh.addColor(ofColor(255,0,0));
@@ -28,6 +56,7 @@ void ofApp::update(){
             mesh.addColor(ofColor(0,255,0));
         }
     }
+    
     
 }
 
@@ -72,8 +101,40 @@ void ofApp::keyPressed(int key){
     if (key == 'i') {
         dvs.changeImu(); //enable/disable imu
     }
+    if (key == 'r') {
+        dvs.changeRecordingStatus(); //enable/disable recording
+    }
     if (key == 's') {
         dvs.changeRecordingStatus(); //enable/disable recording
+    }
+    if (key == 'n'){ //load file from disk
+        dvs.loadFile();
+    }
+    if (key == 'p'){ //load file from disk
+        dvs.changePause();
+    }
+    if (key == 'l'){ //connect to device
+        dvs.tryLive();
+    }
+    if (key == '+') {
+        dvs.changeTargetSpeed(+500); //faster
+    }
+    if (key == '-') {
+        dvs.changeTargetSpeed(-500); //slower
+    }
+    if (key == 'm') {
+        m += 2;
+    }
+    if (key == 'k') {
+        m -= 2;
+    }
+    if (key == 'j') {
+        int perc = (nus / 100) * 10;
+        nus += perc;
+    }
+    if (key == 'h') {
+        int perc = (nus / 100) * 10;
+        nus -= perc;
     }
 }
 
