@@ -54,8 +54,9 @@ void ofApp::update(){
             tmp = packets[i].timestamp;//tmp-nus;
         }
         //cout << "current ts "<< packets[i].timestamp << " start ts " << tmp << "tdiff" << tdiff <<endl;
-        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), tdiff>>m));
-        //mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
+        //ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight())
+        mesh.addVertex(ofVec3f(packets[i].pos.x, packets[i].pos.y, tdiff>>m));
+        mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
         if(packets[i].pol){
             mesh.addColor(ofColor(255,0,0));
         }else{
@@ -93,14 +94,17 @@ void ofApp::draw(){
     int n = mesh.getNumVertices();
     float nearestDistance = 0;
     ofVec3f nearestVertex;
+    ofVec3f nearestVertexCam;
     int nearestIndex = 0;
     ofVec2f mouse(mouseX, mouseY);
     for(int i = 0; i < n; i++) {
         ofVec3f cur = cam.worldToScreen(mesh.getVertex(i));
+        ofVec3f camCur = mesh.getVertex(i);
         float distance = cur.distance(mouse);
         if(i == 0 || distance < nearestDistance) {
             nearestDistance = distance;
             nearestVertex = cur;
+            nearestVertexCam = camCur;
             nearestIndex = i;
         }
     }
@@ -115,7 +119,8 @@ void ofApp::draw(){
     ofSetLineWidth(1);
     
     ofVec2f offset(10, -10);
-    string infos = "x:" + ofToString(nearestVertex.x) + " y:" + ofToString(nearestVertex.y) + " z:" +ofToString(nearestVertex.z);
+    //ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth())
+    string infos = "x:" + ofToString(nearestVertexCam.x) + " y:" + ofToString(nearestVertexCam.y) + " z: "+ofToString(nearestVertexCam.z)+" us";
     ofDrawBitmapStringHighlight(infos, mouse + offset);
     
 }
