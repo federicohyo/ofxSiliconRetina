@@ -113,7 +113,13 @@ void ofApp::draw(){
     
     ofVec2f offset(10, -10);
     ofVec2f origXY = ofVec2f(ofMap(nearestVertexCam.x,0,fbo.getWidth(),0,dvs.sizeX),ofMap(nearestVertexCam.y,0,fbo.getHeight(),0,dvs.sizeY));
-    string infos = "x:" + ofToString(origXY.x) + " y:" + ofToString(origXY.y) + " z: "+ofToString(nearestVertexCam.z)+" us";
+    long zconv;
+    if(m > 0){
+        zconv = (long)(nearestVertexCam.z)<<m;
+    }else{
+        zconv = (long)nearestVertexCam.z;
+    }
+    string infos = "x:" + ofToString(origXY.x) + " y:" + ofToString(origXY.y) + " z: "+ofToString(zconv)+" us";
     ofDrawBitmapStringHighlight(infos, mouse + offset);
     
 }
