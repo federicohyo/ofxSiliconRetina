@@ -9,7 +9,7 @@ The statistic panel shows the display running only at about 60 fps. Nonetheless,
 
 ![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/docs/viewer_mesh_3d2.png "Mesh Example")
 
-This shows the output of the mesh example. The image can be rotated and translated by using the right mouse button and the mouse wheel simultaneously.
+This shows the output of the mesh example. The image can be rotated and translated using the mouse, in addition several parameters can be tuned by using the hotkeys (m,k,j,h).
 
 Introduction
 ------------
