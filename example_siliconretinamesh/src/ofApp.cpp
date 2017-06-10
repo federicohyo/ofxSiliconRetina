@@ -35,6 +35,7 @@ void ofApp::update(){
         //long tdiff = (int) ofRandom(1000) % 1000;//packets[i].timestamp - dvs.ofxLastTs;
         long tdiff = 0;
         if( packets[i].timestamp < tmp){
+            ofLog(OF_LOG_NOTICE, "Detected lower timestamp.. ");
             tmp = packets[i].timestamp;
         }
         if(started == false){
@@ -45,7 +46,9 @@ void ofApp::update(){
             tdiff = packets[i].timestamp - tmp;
         }
         if(tdiff > nus){
-            tmp = packets[i].timestamp;
+            mesh.clear();
+            tdiff = 0;
+            tmp = packets[i].timestamp;//tmp-nus;
         }
         //cout << "current ts "<< packets[i].timestamp << " start ts " << tmp << "tdiff" << tdiff <<endl;
         mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeY,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), tdiff>>m));
@@ -117,16 +120,28 @@ void ofApp::keyPressed(int key){
         dvs.tryLive();
     }
     if (key == '+') {
-        dvs.changeTargetSpeed(+500); //faster
+        if(dvs.getTargetSpeed() < LONG_MAX-600){
+            dvs.changeTargetSpeed(+10); //faster
+        }
     }
     if (key == '-') {
-        dvs.changeTargetSpeed(-500); //slower
+        if(dvs.getTargetSpeed() > 500){
+            dvs.changeTargetSpeed(-10); //slower
+        }
     }
     if (key == 'm') {
-        m += 2;
+        if(m < 8){
+            m += 2;
+        }else{
+            ofLog(OF_LOG_NOTICE, "max value reached %lu", m);
+        }
     }
     if (key == 'k') {
-        m -= 2;
+        if(m >= 2){
+            m -= 2;
+        }else{
+            ofLog(OF_LOG_NOTICE, "min value reached %lu", m);
+        }
     }
     if (key == 'j') {
         int perc = (nus / 100) * 10;
