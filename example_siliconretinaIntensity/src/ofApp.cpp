@@ -59,9 +59,28 @@ void ofApp::keyPressed(int key){
     if (key == 'i') {
         dvs.changeImu(); //enable/disable imu
     }
-    if (key == 's') {
+    if (key == 'p'){ //load file from disk
+        dvs.changePause();
+    }
+    if (key == 'r') {
         dvs.changeRecordingStatus(); //enable/disable recording
     }
+    if (key == 's') {
+        dvs.changeStats(); //enable/disable stats
+    }
+    if (key == 'n'){ //load file from disk
+        dvs.loadFile();
+    }
+    if (key == 'l'){ //connect to device
+        dvs.tryLive();
+    }
+    if (key == '+') {
+        dvs.changeTargetSpeed(+500); //faster
+    }
+    if (key == '-') {
+        dvs.changeTargetSpeed(-500); //slower
+    }
+
 }
 
 //--------------------------------------------------------------

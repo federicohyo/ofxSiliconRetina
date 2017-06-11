@@ -2213,7 +2213,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.9.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
@@ -2301,7 +2301,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.9.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
@@ -2483,7 +2483,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.9.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
@@ -2561,7 +2561,7 @@
 					<key>OTHER_LDFLAGS</key>
 					<array>
 						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.4.dylib</string>
+						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.1.9.dylib</string>
 						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/usb-1.0.a</string>
 					</array>
 					<key>HEADER_SEARCH_PATHS</key>
