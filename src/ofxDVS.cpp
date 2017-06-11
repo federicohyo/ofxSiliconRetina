@@ -268,7 +268,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs
         
         caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
         if (packetHeader == NULL) {
-            ofLog(OF_LOG_WARNING,"Packet %d is empty (not present).\n", i);
+            //ofLog(OF_LOG_WARNING,"Packet %d is empty (not present).\n", i);
             continue; // Skip if nothing there.
         }
         

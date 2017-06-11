@@ -23,6 +23,9 @@ void ofApp::setup(){
     started = false;
     m = 4;
     nus = 10000;
+    
+    //disable aps
+    dvs.changeAps();
 }
 
 //--------------------------------------------------------------
@@ -53,8 +56,10 @@ void ofApp::update(){
             tdiff = 0;
             tmp = packets[i].timestamp;//tmp-nus;
         }
-        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), tdiff>>m));
+        long timeus = tdiff>>m;
+        mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,dvs.sizeX,0,fbo.getWidth()),ofMap(packets[i].pos.y,0,dvs.sizeY,0,fbo.getHeight()), timeus));
         mesh.addTexCoord(ofVec2f(packets[i].pos.x, packets[i].pos.y));
+        //int alphaus = (int)ceil(((float)tdiff/(float)nus)*256);
         if(packets[i].pol){
             mesh.addColor(ofColor(255,0,0));
         }else{
@@ -132,9 +137,9 @@ void ofApp::keyPressed(int key){
     if (key == 'c') {
         dvs.loopColor(); //change color for dvs events
     }
-    if (key == 'a') {
-        dvs.changeAps(); //enable/disable aps
-    }
+    //if (key == 'a') {
+    //    dvs.changeAps(); //enable/disable aps
+    //}
     if (key == 'd') {
         dvs.changeDvs(); //enable/disable dvs
     }
