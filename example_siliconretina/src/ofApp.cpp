@@ -37,6 +37,9 @@ void ofApp::keyPressed(int key){
     if (key == 'i') {
         dvs.changeImu(); //enable/disable imu
     }
+    if (key == 'p'){ //load file from disk
+        dvs.changePause();
+    }
     if (key == 'r') {
         dvs.changeRecordingStatus(); //enable/disable recording
     }
