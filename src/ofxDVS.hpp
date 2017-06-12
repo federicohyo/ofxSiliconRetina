@@ -609,7 +609,7 @@ public:
     void initSpikeColors();
     void loopColor();
     void exit();
-    bool organizeData(caerEventPacketContainer packetContainer, long startTs, long stopTs);
+    bool organizeData(caerEventPacketContainer packetContainer);
     void changeAps(); // enable / disable aps
     void changeDvs(); // enable / disable dvs
     void changeImu(); // enable / disable imu
@@ -697,8 +697,6 @@ public:
     vector<long> packetsHiTimestamps;
     vector<long> ofxTime;
     long ofxLastTs;
-    bool committed;
-    long currentSpeed;
     long targetSpeed;
 };
 

@@ -53,10 +53,18 @@ void ofApp::keyPressed(int key){
         dvs.tryLive();
     }
     if (key == '+') {
-        dvs.changeTargetSpeed(+500); //faster
+    	long tgc = dvs.getTargetSpeed();
+    	long changetgc = floor(ceil(tgc*0.1));
+    	if(tgc+changetgc < LONG_MAX){
+    		dvs.changeTargetSpeed(+500); //faster
+        }
     }
     if (key == '-') {
-        dvs.changeTargetSpeed(-500); //slower
+    	long tgc = dvs.getTargetSpeed();
+    	long changetgc = floor(ceil(tgc*0.1));
+    	if(tgc-changetgc > 0){
+    		dvs.changeTargetSpeed(-500); //slower
+    	}
     }
 }
 

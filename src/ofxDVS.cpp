@@ -83,7 +83,6 @@ void ofxDVS::initThreadVariables(){
     maxContainerQueued = 1000; // at most accumulates 100 packaetcontainers before dropping
     packetContainer = NULL;
     isRecording = false;
-    committed = false;
 }
 
 
@@ -247,19 +246,23 @@ vector<frame> ofxDVS::getFrames() {
 }
 
 //--------------------------------------------------------------
-bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs, long stopTs){
+bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
-    //cout << "Start "<< startTs << endl;
-    //cout << "Stop "<< stopTs << endl;
-    
+
+	// every time here get targetSpeed us of data (fixed us playback)
+	long timeInterval = targetSpeed;
+
     if (packetContainer == NULL) {
         return(false); // Skip if nothing there.
     }
     
+    long firstTs = 0;
+    long highestTs = 0;
     
     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-    
-    
+    firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
+    highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+
     for (int32_t i = 0; i < packetNum; i++) {
         
         polarity nuPack;
@@ -273,8 +276,8 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs
         }
         
         int type = caerEventPacketHeaderGetEventType(packetHeader);
-        int lastTs = 0;
-        
+        long lastTs = 0;
+
         //ofLog(OF_LOG_WARNING,"Packet %d of type %d -> size is %d.\n", i, caerEventPacketHeaderGetEventType(packetHeader),
         //           caerEventPacketHeaderGetEventNumber(packetHeader));
         
@@ -295,16 +298,17 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs
             gyroX = caerIMU6EventGetGyroX(caerIMU6IteratorElement);
             gyroY = caerIMU6EventGetGyroY(caerIMU6IteratorElement);
             gyroZ = caerIMU6EventGetGyroZ(caerIMU6IteratorElement);
-            
+
             nuPackImu6.accel.set(accelX,accelY,accelZ);
             nuPackImu6.gyro.set(gyroX,gyroY,gyroZ);
             nuPackImu6.timestamp = caerIMU6EventGetTimestamp(caerIMU6IteratorElement);
             nuPackImu6.valid = true ;
             packetsImu6.push_back(nuPackImu6);
-            if(nuPackImu6.timestamp> lastTs){
+
+            if(nuPackImu6.timestamp > lastTs){
                 lastTs = nuPackImu6.timestamp;
             }
-            
+
             CAER_IMU6_ITERATOR_VALID_END
             
         }
@@ -326,9 +330,10 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs
             nuPack.valid = true;
             packetsPolarity.push_back(nuPack);
 
-            if(nuPack.timestamp> lastTs){
+            if(nuPack.timestamp > lastTs){
                 lastTs = nuPack.timestamp;
             }
+
             CAER_POLARITY_ITERATOR_VALID_END
         }
         if (type == FRAME_EVENT && apsStatus){
@@ -350,7 +355,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs
             nuPackFrames.positionX = caerFrameEventGetPositionX(caerFrameIteratorElement);
             nuPackFrames.positionY = caerFrameEventGetPositionY(caerFrameIteratorElement);
             nuPackFrames.frameChannels = caerFrameEventGetChannelNumber(caerFrameIteratorElement);
-            
             
             nuPackFrames.singleFrame.allocate(nuPackFrames.lenghtX, nuPackFrames.lenghtY, OF_IMAGE_COLOR);
             for (int32_t y = 0; y < nuPackFrames.lenghtY; y++) {
@@ -401,7 +405,12 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer, long startTs
             if(nuPackFrames.frameEnd > lastTs){
                 lastTs = nuPackFrames.frameEnd;
             }
+
             CAER_FRAME_ITERATOR_VALID_END
+
+			//check against lastTS if we are above then return
+			//if(lastTs )
+			cout << "highestTs " << highestTs << " FirstTS " << firstTs << " LastTs " << lastTs << endl;
         }
     }
     
@@ -431,38 +440,7 @@ void ofxDVS::update() {
                 
             }*/
             
-            long now = ofGetElapsedTimeMicros();
-            if(ofxLastTs == 0){
-                currentSpeed = 0;
-            }else{
-                if(committed == false){
-                    long currentSpeed_tmp = (now - ofxLastTs);
-                    currentSpeed += currentSpeed_tmp;
-                }else{
-                    currentSpeed = (now - ofxLastTs); // time elapsed since last-time we were here
-                }
-            }
-                
-            // in live mode always call -> organizeData(packetContainer, durationToPlay, now);
-             // i.e. 60 fps 16666
-
-            ofxLastTs = now;
-        
-
-            if(currentSpeed <= targetSpeed){
-                // do not play yet
-                committed = false;
-            }else{
-                // say when and play
-                committed = true;
-                // play
-                organizeData(packetContainer, currentSpeed, now);
-                //cout << "elapsed time from start: " << now << endl;
-                //cout << "elapsed time from last time here (currentSpeed): " << currentSpeed << endl;
-                ///cout << "target elapsed time from last time here (targetspeed): " << targetSpeed << endl;
-
-            }
-
+            organizeData(packetContainer);
 
             // recording status
             if(isRecording){
