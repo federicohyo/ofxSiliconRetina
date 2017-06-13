@@ -147,8 +147,8 @@ void ofxDVS::changePath(){
         thread.container.clear();
         thread.container.shrink_to_fit();
     }
-    thread.packetsHiTimestamps.clear();
-    thread.packetsHiTimestamps.shrink_to_fit();
+    //thread.packetsHiTimestamps.clear();
+    //thread.packetsHiTimestamps.shrink_to_fit();
     thread.unlock();
 }
 
@@ -262,6 +262,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
     firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
     highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+	cout << "highestTs " << highestTs << " FirstTS " << firstTs << endl;
 
     for (int32_t i = 0; i < packetNum; i++) {
         
@@ -410,7 +411,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
 			//check against lastTS if we are above then return
 			//if(lastTs )
-			cout << "highestTs " << highestTs << " FirstTS " << firstTs << " LastTs " << lastTs << endl;
         }
     }
     
@@ -427,19 +427,10 @@ void ofxDVS::update() {
         // only copy the one from a fixed interval of time if we are reading from a file
         thread.lock();
         for(int i=0; i<thread.container.size(); i++){
-            packetContainer = thread.container.back(); // this is a pointer
-            thread.container.pop_back();
+            packetContainer = thread.container[i]; // this is a pointer
+            //thread.container.pop_back();
             
-            packetsHiTimestamps = thread.packetsHiTimestamps;
-            // get packet hi timestamp
-            /*for (size_t ts; ts<thread.packetsHiTimestamps.size(); ts++){
-                ofxTime.push_back(ofGetElapsedTimeMicros() - );
-                cout << "file " << thread.packetsHiTimestamps[thread.packetsHiTimestamps.size()-1] - thread.packetsHiTimestamps[0] << endl;
-                cout << "from setup " << ofGetElapsedTimeMicros() << endl;
-                // now decides which timestamp to update
-                
-            }*/
-            
+            //packetsHiTimestamps = thread.packetsHiTimestamps;
             organizeData(packetContainer);
 
             // recording status
@@ -465,7 +456,10 @@ void ofxDVS::update() {
             
             // free all packet containers here
             caerEventPacketContainerFree(packetContainer);
+
         }
+        thread.container.clear();
+        thread.container.shrink_to_fit();
         // done with the resource
         thread.unlock();
         

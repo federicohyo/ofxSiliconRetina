@@ -217,7 +217,7 @@ public:
                     continue; // Skip if nothing there.
                 }
                 long hits = caerEventPacketContainerGetHighestEventTimestamp(packetContainerT);
-                packetsHiTimestamps.push_back(hits);
+                //packetsHiTimestamps.push_back(hits);
                 //ofLog(OF_LOG_WARNING,"Highest timestamps %lu\n", hits);
             }
             free(buffer_header);
@@ -548,8 +548,8 @@ public:
                     header_skipped = false;
                     doChangePath = false;
                     fileIndexReady = false;
-                    packetsHiTimestamps.clear();
-                    packetsHiTimestamps.shrink_to_fit();
+                    //packetsHiTimestamps.clear();
+                    //packetsHiTimestamps.shrink_to_fit();
                     goto HEADERPARSE;
                 }
                 unlock();
@@ -587,7 +587,7 @@ public:
     bool doChangePath;
     bool header_skipped;
     ifstream istreamf;
-    vector<long> packetsHiTimestamps;
+    //vector<long> packetsHiTimestamps;
     bool fileIndexReady;
     
     //tmp
@@ -694,7 +694,7 @@ public:
     
     //file output aedat 3.0
     ofstream myFile;
-    vector<long> packetsHiTimestamps;
+    //vector<long> packetsHiTimestamps;
     vector<long> ofxTime;
     long ofxLastTs;
     long targetSpeed;
