@@ -162,13 +162,17 @@ void ofApp::keyPressed(int key){
         dvs.tryLive();
     }
     if (key == '+') {
-        if(dvs.getTargetSpeed() < LONG_MAX-600){
-            dvs.changeTargetSpeed(+10); //faster
+        float tgc = dvs.getTargetSpeed();
+        float change = tgc*0.1;
+        if(tgc+change < LONG_MAX){
+            dvs.changeTargetSpeed(+change); //faster
         }
     }
     if (key == '-') {
-        if(dvs.getTargetSpeed() > 500){
-            dvs.changeTargetSpeed(-10); //slower
+        float tgc = dvs.getTargetSpeed();
+        float change = tgc*0.1;
+        if(tgc-change > 0){
+            dvs.changeTargetSpeed(-change); //slower
         }
     }
     if (key == 'm') {
