@@ -248,7 +248,6 @@ vector<frame> ofxDVS::getFrames() {
 //--------------------------------------------------------------
 bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
-
 	// every time here get targetSpeed us of data (fixed us playback)
 	long timeInterval = targetSpeed;
 
@@ -260,9 +259,13 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
     long highestTs = 0;
     
     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-    firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
+    /*firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
     highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
-	cout << "highestTs " << highestTs << " FirstTS " << firstTs << endl;
+	long current_file_dt = highestTs-firstTs;
+	long current_ofx_dt = ofGetElapsedTimeMicros() - ofxLastTs;
+
+	cout << "highestTs " << highestTs << " FirstTS " << firstTs << " ofxLastTs " << ofxLastTs << endl;
+	cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;*/
 
     for (int32_t i = 0; i < packetNum; i++) {
         
@@ -408,13 +411,11 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             }
 
             CAER_FRAME_ITERATOR_VALID_END
-
-			//check against lastTS if we are above then return
-			//if(lastTs )
         }
     }
     
-
+	//keep track of last commit
+    ofxLastTs = ofGetElapsedTimeMicros();
     return(true);
 
 }
@@ -424,18 +425,15 @@ void ofxDVS::update() {
     
     if(paused == false){
         // Copy data from usbThread
-        // only copy the one from a fixed interval of time if we are reading from a file
         thread.lock();
         for(int i=0; i<thread.container.size(); i++){
-            packetContainer = thread.container[i]; // this is a pointer
-            //thread.container.pop_back();
-            
-            //packetsHiTimestamps = thread.packetsHiTimestamps;
-            organizeData(packetContainer);
+            packetContainer = thread.container[i];
+
+            bool delpc = organizeData(packetContainer);
 
             // recording status
             if(isRecording){
-                // order packet containers in time
+                // order packet containers in time - file format aedat 3.1 standard -
                 size_t currPacketContainerSize = (size_t) caerEventPacketContainerGetEventPacketsNumber(packetContainer);
                 qsort(packetContainer->eventPackets, currPacketContainerSize, sizeof(caerEventPacketHeader),
                       &packetsFirstTimestampThenTypeCmp);
@@ -453,18 +451,19 @@ void ofxDVS::update() {
 
                 }
             }
-            
             // free all packet containers here
-            caerEventPacketContainerFree(packetContainer);
-
+            if(delpc){
+            	caerEventPacketContainerFree(packetContainer);
+            	thread.container.erase( thread.container.begin()+i );
+            }
         }
-        thread.container.clear();
-        thread.container.shrink_to_fit();
+        //thread.container.clear();
+        //thread.container.shrink_to_fit();
         // done with the resource
         thread.unlock();
         
         // check how fast we are going, if we are too slow, drop some data
-        thread.lock();
+        /*thread.lock();
         if(thread.container.size() > maxContainerQueued){
             ofLog(OF_LOG_WARNING, "Visualization is too slow, dropping events to keep real-time.");
             packetContainer = thread.container.back(); // this is a pointer
@@ -473,10 +472,11 @@ void ofxDVS::update() {
             thread.container.clear();
             thread.container.shrink_to_fit();
         }
-        thread.unlock();
+        thread.unlock();*/
     }else{
-        // we are paused.. just trow away
+        // we are paused..
         thread.lock();
+        // in live mode .. just trow away
         for(int i=0; i<thread.container.size(); i++){
             packetContainer = thread.container.back(); // this is a pointer
             thread.container.pop_back();
@@ -945,8 +945,14 @@ long ofxDVS::getTargetSpeed(){
 void ofxDVS::changePause(){
     if(paused){
         paused = false;
+        thread.lock();
+        thread.paused = paused;
+        thread.unlock();
     }else{
         paused = true;
+        thread.lock();
+        thread.paused = paused;
+        thread.unlock();
     }
 }
 

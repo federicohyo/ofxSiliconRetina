@@ -459,15 +459,20 @@ public:
                 ofLog(OF_LOG_NOTICE, "Ok opening file %s", filename_to_open.c_str());
             }
             header_skipped = false;
-            
+
             while(isThreadRunning())
             {
-                
+
+              PAUSED:
+				if(paused){
+					nanosleep((const struct timespec[]){{0, 50000L}}, NULL);
+					goto PAUSED;
+				}
                 lock();
+
+              HEADERPARSE:
                 packetContainerT = NULL;
                 //ofLog(OF_LOG_NOTICE, "Header skipped %d..", header_skipped);
-            HEADERPARSE:
-                
                 if(liveInput){
                     ofLog(OF_LOG_NOTICE, "trying live input \n");
                     goto STARTDEVICEORFILE;
@@ -502,18 +507,14 @@ public:
                             }
                         }
                     }
-                    
                 }
                 if(header_skipped){
                     // read 28 bytes and parse file
                     //ofLog(OF_LOG_NOTICE, "Next bytes..");
                     char *buffer_header = (char*)malloc(28);
                     istreamf.read(buffer_header,28);
-                    //buffer_header[28] = '0';
                     if( istreamf.eof() ){
                         ofLog(OF_LOG_NOTICE,"Reached the end of the file. Restarting...");
-                        //istreamf.clear();
-                        //istreamf.seekg(0, ios::beg); // from beginning
                         istreamf.close();
                         istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
                         header_skipped = false;
@@ -589,6 +590,7 @@ public:
     ifstream istreamf;
     //vector<long> packetsHiTimestamps;
     bool fileIndexReady;
+    bool paused;
     
     //tmp
     string line;
