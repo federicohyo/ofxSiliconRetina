@@ -447,6 +447,7 @@ public:
             
             // file input mode
             ofLog(OF_LOG_NOTICE, "Reading input file\n");
+            doLoad = true;
             
             doChangePath = false;
             filename_to_open = path;
@@ -508,7 +509,7 @@ public:
                         }
                     }
                 }
-                if(header_skipped){
+                if(header_skipped && doLoad){
                     // read 28 bytes and parse file
                     //ofLog(OF_LOG_NOTICE, "Next bytes..");
                     char *buffer_header = (char*)malloc(28);
@@ -591,6 +592,7 @@ public:
     //vector<long> packetsHiTimestamps;
     bool fileIndexReady;
     bool paused;
+    bool doLoad;
     
     //tmp
     string line;
@@ -653,9 +655,10 @@ public:
     void updateBAFilter();
     long **baFilterMap;
     void changePath();
-    void changeTargetSpeed(long val);
-    long getTargetSpeed();
+    void changeTargetSpeed(float val);
+    float getTargetSpeed();
     void changePause();
+
     
     // color palette for spikes
     int spkOnR[3];
@@ -699,7 +702,7 @@ public:
     //vector<long> packetsHiTimestamps;
     vector<long> ofxTime;
     long ofxLastTs;
-    long targetSpeed;
+    float targetSpeed;   // real time speed
 };
 
 

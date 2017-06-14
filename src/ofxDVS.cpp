@@ -71,8 +71,7 @@ void ofxDVS::setup() {
     // reset timestamp
     ofResetElapsedTimeCounter();
     ofxLastTs = 0;
-    targetSpeed = 6666;
-    
+    targetSpeed = 1; // real_time
     paused = false;
 }
 
@@ -249,23 +248,21 @@ vector<frame> ofxDVS::getFrames() {
 bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
 	// every time here get targetSpeed us of data (fixed us playback)
-	long timeInterval = targetSpeed;
-
+	//long timeInterval = targetSpeed;
     if (packetContainer == NULL) {
         return(false); // Skip if nothing there.
     }
     
-    long firstTs = 0;
-    long highestTs = 0;
-    
     int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-    /*firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
+    /*
+    firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
     highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
 	long current_file_dt = highestTs-firstTs;
 	long current_ofx_dt = ofGetElapsedTimeMicros() - ofxLastTs;
 
 	cout << "highestTs " << highestTs << " FirstTS " << firstTs << " ofxLastTs " << ofxLastTs << endl;
-	cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;*/
+	cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;
+     */
 
     for (int32_t i = 0; i < packetNum; i++) {
         
@@ -429,8 +426,23 @@ void ofxDVS::update() {
         for(int i=0; i<thread.container.size(); i++){
             packetContainer = thread.container[i];
 
-            bool delpc = organizeData(packetContainer);
+            long firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
+            long highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+            long current_file_dt = highestTs-firstTs;
+            long current_ofx_dt = ofGetElapsedTimeMicros() - ofxLastTs;
+            
 
+            bool delpc = false;
+            if( current_file_dt <  (float)current_ofx_dt/targetSpeed){
+                //cout << "highestTs " << highestTs << " FirstTS " << firstTs << " ofxLastTs " << ofxLastTs << endl;
+                //cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;
+                delpc = organizeData(packetContainer);
+            }else{
+                // no deal
+                if(i>0){
+                    i = i-1;
+                }
+            }
             // recording status
             if(isRecording){
                 // order packet containers in time - file format aedat 3.1 standard -
@@ -456,6 +468,7 @@ void ofxDVS::update() {
             	caerEventPacketContainerFree(packetContainer);
             	thread.container.erase( thread.container.begin()+i );
             }
+            thread.doLoad = delpc;
         }
         //thread.container.clear();
         //thread.container.shrink_to_fit();
@@ -854,7 +867,7 @@ void ofxDVS::updateImageGenerator(){
     }
     
     if(numSpikes <= counterSpikes){
-        
+
         counterSpikes = 0;
         //ofLog(OF_LOG_WARNING,"Generate Image \n");
         // normalize
@@ -931,13 +944,13 @@ void ofxDVS::updateImageGenerator(){
 }
 
 //--------------------------------------------------------------
-void ofxDVS::changeTargetSpeed(long val){
+void ofxDVS::changeTargetSpeed(float val){
     targetSpeed = targetSpeed + val;
-    ofLog(OF_LOG_NOTICE, "Target speed is now %lu", targetSpeed);
+    ofLog(OF_LOG_NOTICE, "Target speed is now %f", targetSpeed);
 }
 
 //--------------------------------------------------------------
-long ofxDVS::getTargetSpeed(){
+float ofxDVS::getTargetSpeed(){
     return(targetSpeed);
 }
 
@@ -955,6 +968,7 @@ void ofxDVS::changePause(){
         thread.unlock();
     }
 }
+
 
 //--------------------------------------------------------------
 ofImage ofxDVS:: getImageGenerator(){
