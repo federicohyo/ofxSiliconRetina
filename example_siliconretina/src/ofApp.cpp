@@ -8,7 +8,7 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
     dvs.update();
-    //dvs.updateBAFilter();
+    dvs.updateBAFilter();
     //dvs.updateImageGenerator();
     stats.update();
 }
