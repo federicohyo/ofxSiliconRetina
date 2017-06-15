@@ -34,7 +34,7 @@ void ofxDVS::setup() {
     	thread.unlock();
         uint64_t t1 = ofGetElapsedTimeMicros();
         //cout << ns << endl;
-        if( (t1-t0) > 1000000){
+        if( (t1-t0) > 10000){
             ofLog(OF_LOG_NOTICE, "starting in file mode.");
             ofFileDialogResult result = ofSystemLoadDialog("Load aedat3.1 file");
             if(result.bSuccess) {
@@ -146,8 +146,6 @@ void ofxDVS::changePath(){
         thread.container.clear();
         thread.container.shrink_to_fit();
     }
-    //thread.packetsHiTimestamps.clear();
-    //thread.packetsHiTimestamps.shrink_to_fit();
     thread.unlock();
 }
 
@@ -947,6 +945,11 @@ void ofxDVS::updateImageGenerator(){
 void ofxDVS::changeTargetSpeed(float val){
     targetSpeed = targetSpeed + val;
     ofLog(OF_LOG_NOTICE, "Target speed is now %f", targetSpeed);
+}
+
+//--------------------------------------------------------------
+void ofxDVS::setTargetSpeed(float val){
+	targetSpeed = val;
 }
 
 //--------------------------------------------------------------

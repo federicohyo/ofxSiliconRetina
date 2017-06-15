@@ -469,11 +469,9 @@ public:
 					nanosleep((const struct timespec[]){{0, 50000L}}, NULL);
 					goto PAUSED;
 				}
-                lock();
-
+                lock(); // thread lock
               HEADERPARSE:
                 packetContainerT = NULL;
-                //ofLog(OF_LOG_NOTICE, "Header skipped %d..", header_skipped);
                 if(liveInput){
                     ofLog(OF_LOG_NOTICE, "trying live input \n");
                     goto STARTDEVICEORFILE;
@@ -481,7 +479,6 @@ public:
 
                 // parse header
                 if(!header_skipped){
-
                     while(getline(istreamf,line,'\n')){
                         if(line.empty()) continue;
                         ofLog(OF_LOG_NOTICE, "File Header %s \n", line.c_str());
@@ -657,6 +654,7 @@ public:
     void changePath();
     void changeTargetSpeed(float val);
     float getTargetSpeed();
+    void setTargetSpeed(float value);
     void changePause();
 
     
