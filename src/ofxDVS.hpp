@@ -225,7 +225,6 @@ public:
         // set the pointer back to where it was
         istreamf.clear();
         istreamf.seekg(posHeaderParsed);
-        //istreamf.close();
     }
 
     bool tryFile(){
@@ -238,7 +237,7 @@ public:
         
         for (unsigned int i = 0;i < files.size();i++) {
             //cout << files[i] << endl;
-            // fuond aedat file
+            // found aedat file
             if(files[i].substr(files[i].find_last_of(".") + 1) == "aedat") {
                 string string_path = path + "/" + files[i];
                 //cout << string_path << endl;
@@ -469,13 +468,15 @@ public:
 					nanosleep((const struct timespec[]){{0, 50000L}}, NULL);
 					goto PAUSED;
 				}
-                lock(); // thread lock
-              HEADERPARSE:
-                packetContainerT = NULL;
+
                 if(liveInput){
                     ofLog(OF_LOG_NOTICE, "trying live input \n");
                     goto STARTDEVICEORFILE;
                 }
+
+                lock(); // thread lock
+              HEADERPARSE:
+                packetContainerT = NULL;
 
                 // parse header
                 if(!header_skipped){
@@ -586,7 +587,6 @@ public:
     bool doChangePath;
     bool header_skipped;
     ifstream istreamf;
-    //vector<long> packetsHiTimestamps;
     bool fileIndexReady;
     bool paused;
     bool doLoad;
@@ -625,6 +625,7 @@ public:
     void loadFile();
     void initThreadVariables();
     void tryLive();
+    void changeColor(int i);
 
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
@@ -656,16 +657,17 @@ public:
     float getTargetSpeed();
     void setTargetSpeed(float value);
     void changePause();
+    void clearDraw();
 
     
     // color palette for spikes
-    int spkOnR[3];
-    int spkOnG[3];
-    int spkOnB[3];
+    int spkOnR[8];
+    int spkOnG[8];
+    int spkOnB[8];
     int spkOnA;
-    int spkOffR[3];
-    int spkOffG[3];
-    int spkOffB[3];
+    int spkOffR[8];
+    int spkOffG[8];
+    int spkOffB[8];
     int spkOffA;
     int paletteSpike;
     int maxContainerQueued;

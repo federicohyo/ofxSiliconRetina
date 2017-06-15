@@ -71,7 +71,7 @@ void ofxDVS::setup() {
     // reset timestamp
     ofResetElapsedTimeCounter();
     ofxLastTs = 0;
-    targetSpeed = 1; // real_time
+    targetSpeed = 0.01; // real_time
     paused = false;
 }
 
@@ -226,7 +226,37 @@ void ofxDVS::initSpikeColors() {
     spkOffR[2] = 255;
     spkOffG[2] = 255;
     spkOffB[2] = 0;
-    
+    spkOnR[3] = 0;
+    spkOnG[3] = 255;
+    spkOnB[3] = 125;
+    spkOffR[3] = 0;
+    spkOffG[3] = 255;
+    spkOffB[3] = 125;
+    spkOnR[4] = 0;
+    spkOnG[4] = 125;
+    spkOnB[4] = 255;
+    spkOffR[4] = 125;
+    spkOffG[4] = 255;
+    spkOffB[4] = 0;
+    spkOnR[5] = 0;
+    spkOnG[5] = 150;
+    spkOnB[5] = 255;
+    spkOffR[5] = 255;
+    spkOffG[5] = 150;
+    spkOffB[5] = 150;
+    spkOnR[6] = 0;
+    spkOnG[6] = 150;
+    spkOnB[6] = 255;
+    spkOffR[6] = 150;
+    spkOffG[6] = 255;
+    spkOffB[6] = 0;
+    spkOnR[7] = 150;
+    spkOnG[7] = 0;
+    spkOnB[7] = 255;
+    spkOffR[7] = 150;
+    spkOffG[7] = 0;
+    spkOffB[7] = 150;
+
     spkOnA = 255;
     spkOffA = 255;
 }
@@ -240,6 +270,31 @@ vector<polarity> ofxDVS::getPolarity() {
 //--------------------------------------------------------------
 vector<frame> ofxDVS::getFrames() {
     return packetsFrames;
+}
+
+//--------------------------------------------------------------
+void ofxDVS::clearDraw(){
+
+	// make a black frame
+	frame nuPackFrames;
+	nuPackFrames.exposureStart = 0;
+	nuPackFrames.exposureEnd = 0;
+	nuPackFrames.lenghtX = sizeX;
+	nuPackFrames.lenghtY = sizeY;
+	nuPackFrames.positionX = 0;
+	nuPackFrames.positionY = 0;
+	nuPackFrames.singleFrame.allocate(nuPackFrames.lenghtX, nuPackFrames.lenghtY, OF_IMAGE_COLOR);
+	for (int32_t y = 0; y < nuPackFrames.lenghtY; y++) {
+		for (int32_t x = 0; x < nuPackFrames.lenghtX; x++) {
+			ofColor color= ofColor(0,0,0);
+			nuPackFrames.singleFrame.setColor(x, y, color);
+		}
+	}
+    nuPackFrames.valid = true;
+    nuPackFrames.frameEnd = 0;
+    nuPackFrames.frameStart = 0;
+    packetsFrames.push_back(nuPackFrames);
+
 }
 
 //--------------------------------------------------------------
@@ -431,6 +486,9 @@ void ofxDVS::update() {
             
 
             bool delpc = false;
+            if(targetSpeed <= 0){
+            	targetSpeed = 0.0000001;
+            }
             if( current_file_dt <  (float)current_ofx_dt/targetSpeed){
                 //cout << "highestTs " << highestTs << " FirstTS " << firstTs << " ofxLastTs " << ofxLastTs << endl;
                 //cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;
@@ -507,6 +565,16 @@ void ofxDVS::loopColor() {
         paletteSpike = 0;
     }
 }
+
+//--------------------------------------------------------------
+void ofxDVS::changeColor(int i) {
+    if(paletteSpike < 7){
+        paletteSpike = i;
+    }else{
+        paletteSpike = 0;
+    }
+}
+
 
 //--------------------------------------------------------------
 void ofxDVS::draw() {

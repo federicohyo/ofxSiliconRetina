@@ -36,4 +36,8 @@ class ofApp : public ofBaseApp{
         void on2dPadEvent(ofxDatGui2dPadEvent e);
         void onTextInputEvent(ofxDatGuiTextInputEvent e);
         void onColorPickerEvent(ofxDatGuiColorPickerEvent e);
+
+        //counters
+        int numPaused;
+
 };

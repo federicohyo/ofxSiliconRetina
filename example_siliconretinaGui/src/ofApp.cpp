@@ -9,17 +9,41 @@ void ofApp::setup(){
     int y = 0;
     ofSetWindowPosition(0, 0);
 
+    vector<string> options = {"ONE", "TWO", "THREE", "FOUR"};
+
+
     f1 = new ofxDatGuiFolder("Control", ofColor::fromHex(0xFFD00B));
     f1->addBreak();
     f1->addFRM();
     f1->addBreak();
-    f1->addSlider("1/speed", 0, 3, 0.3);
+    f1->addSlider("1/speed", 0, 3, 0.2);
+    f1->addToggle("APS", true);
+    f1->addBreak();
+    f1->addToggle("DVS", true);
+    f1->addBreak();
+    f1->addToggle("IMU", true);
+    f1->addBreak();
+    f1->addMatrix("DVS Color", 7, true);
+    f1->addBreak();
+    f1->addButton("Clear");
+	f1->addBreak();
+    f1->addButton("Pause");
+	f1->addBreak();
+    f1->addButton("Start Recording");
+	f1->addBreak();
+    f1->addButton("Load Recording");
+	f1->addBreak();
+    f1->addButton("Live");
+	f1->addBreak();
     f1->setPosition(x, y);
     f1->expand();
 
     f1->onButtonEvent(this, &ofApp::onButtonEvent);
     f1->onToggleEvent(this, &ofApp::onToggleEvent);
     f1->onSliderEvent(this, &ofApp::onSliderEvent);
+    f1->onMatrixEvent(this, &ofApp::onMatrixEvent);
+
+    numPaused = 0;
 }
 
 //--------------------------------------------------------------
@@ -44,30 +68,15 @@ void ofApp::draw(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key == 'c') {
-        dvs.loopColor(); //change color for dvs events
-    }
-    if (key == 'a') {
-        dvs.changeAps(); //enable/disable aps
-    }
-    if (key == 'd') {
-        dvs.changeDvs(); //enable/disable dvs
-    }
-    if (key == 'i') {
-        dvs.changeImu(); //enable/disable imu
-    }
-    if (key == 'p'){ //load file from disk
-        dvs.changePause();
-    }
-    if (key == 'r') {
+    /*if (key == 'r') {
         dvs.changeRecordingStatus(); //enable/disable recording
-    }
-    if (key == 'n'){ //load file from disk
+    }*/
+   /* if (key == 'n'){ //load file from disk
         dvs.loadFile();
     }
     if (key == 'l'){ //connect to device
         dvs.tryLive();
-    }
+    }*/
     if (key == '-') {
     	float tgc = dvs.getTargetSpeed();
         float change = tgc*0.1;
@@ -136,12 +145,42 @@ void ofApp::dragEvent(ofDragInfo dragInfo){
 
 void ofApp::onButtonEvent(ofxDatGuiButtonEvent e)
 {
-    cout << "onButtonEvent" << endl;
+	if(e.target->getLabel() == "Clear"){
+		dvs.clearDraw();
+	}else if( (e.target->getLabel() == "Pause") ||  (e.target->getLabel() == "Start")){
+		numPaused++;
+		if((numPaused % 2) == 0){
+			e.target->setLabel("Pause");
+		}else{
+			e.target->setLabel("Start");
+		}
+		dvs.changePause();
+	}else if( (e.target->getLabel() == "Start Recording") ||  (e.target->getLabel() == "Stop Recording")){
+		numPaused++;
+		if((numPaused % 2) == 0){
+			e.target->setLabel("Start Recording");
+		}else{
+			e.target->setLabel("Stop Recording");
+		}
+		dvs.changeRecordingStatus();
+	}else if(e.target->getLabel() == "Load Recording"){
+		dvs.loadFile();
+	}else if(e.target->getLabel() == "Live"){
+		dvs.tryLive();
+	}
 }
 
 void ofApp::onToggleEvent(ofxDatGuiToggleEvent e)
 {
-    cout << "onToggleEvent " << e.checked << endl;
+    //cout << "onToggleEvent " << e.target->getLabel() << e.checked << endl;
+    if(e.target->getLabel() == "APS"){
+    	dvs.changeAps();
+    }else if(e.target->getLabel() == "DVS"){
+    	dvs.changeDvs();
+    }else if(e.target->getLabel() == "IMU"){
+    	dvs.changeImu();
+    }
+
 }
 
 void ofApp::onSliderEvent(ofxDatGuiSliderEvent e)
@@ -167,6 +206,12 @@ void ofApp::onColorPickerEvent(ofxDatGuiColorPickerEvent e)
 
 void ofApp::onMatrixEvent(ofxDatGuiMatrixEvent e)
 {
-    cout << "onMatrixEvent" << endl;
+	e.target->setRadioMode(true);
+    //cout << "onMatrixEvent index " << e.child << " state " <<  e.enabled << endl;
+	for(size_t i = 0; i < 6 ; i++){
+		if(e.child == i){
+			dvs.changeColor(i);
+		}
+	}
 }
 
