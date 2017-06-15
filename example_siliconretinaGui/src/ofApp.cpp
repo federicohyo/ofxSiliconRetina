@@ -9,14 +9,11 @@ void ofApp::setup(){
     int y = 0;
     ofSetWindowPosition(0, 0);
 
-    vector<string> options = {"ONE", "TWO", "THREE", "FOUR"};
-
-
     f1 = new ofxDatGuiFolder("Control", ofColor::fromHex(0xFFD00B));
     f1->addBreak();
     f1->addFRM();
     f1->addBreak();
-    f1->addSlider("1/speed", 0, 3, 0.2);
+    f1->addSlider("1/speed", 0, 2, dvs.targetSpeed);
     f1->addToggle("APS", true);
     f1->addBreak();
     f1->addToggle("DVS", true);
@@ -35,6 +32,8 @@ void ofApp::setup(){
 	f1->addBreak();
     f1->addButton("Live");
 	f1->addBreak();
+    f1->addSlider("BA Filter dt", 1, 100000, dvs.BAdeltaT);
+    f1->addSlider("DVS Integration", -100, 100, dvs.fsint);
     f1->setPosition(x, y);
     f1->expand();
 
@@ -44,6 +43,7 @@ void ofApp::setup(){
     f1->onMatrixEvent(this, &ofApp::onMatrixEvent);
 
     numPaused = 0;
+    numPausedRec = 0;
 }
 
 //--------------------------------------------------------------
@@ -156,8 +156,8 @@ void ofApp::onButtonEvent(ofxDatGuiButtonEvent e)
 		}
 		dvs.changePause();
 	}else if( (e.target->getLabel() == "Start Recording") ||  (e.target->getLabel() == "Stop Recording")){
-		numPaused++;
-		if((numPaused % 2) == 0){
+		numPausedRec++;
+		if((numPausedRec % 2) == 0){
 			e.target->setLabel("Start Recording");
 		}else{
 			e.target->setLabel("Stop Recording");
@@ -185,8 +185,16 @@ void ofApp::onToggleEvent(ofxDatGuiToggleEvent e)
 
 void ofApp::onSliderEvent(ofxDatGuiSliderEvent e)
 {
-    cout << "onSliderEvent speed is : " << e.value << endl;
-    dvs.setTargetSpeed(e.value);
+    if(e.target->getLabel() == "1/speed"){
+        cout << "onSliderEvent speed is : " << e.value << endl;
+        dvs.setTargetSpeed(e.value);
+    }else if(e.target->getLabel() == "DVS Integration"){
+        cout << "Integration fsint is : " << e.value << endl;
+        dvs.changeFSInt(e.value);
+    }else if( e.target->getLabel() == "BA Filter dt"){
+        cout << "BackGround Filter dt : " << e.value << endl;
+        dvs.changeBAdeltat(e.value);
+    }
 }
 
 void ofApp::onTextInputEvent(ofxDatGuiTextInputEvent e)

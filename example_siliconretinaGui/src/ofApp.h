@@ -39,5 +39,5 @@ class ofApp : public ofBaseApp{
 
         //counters
         int numPaused;
-
+        int numPausedRec;
 };

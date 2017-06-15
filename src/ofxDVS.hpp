@@ -86,6 +86,61 @@ struct imu6 {
 };
 
 
+/*class alphaThread: public ofThread
+{
+public:
+    
+    //--------------------------
+    void initVisualizerMapTh(){
+        visualizerMap=new float*[sizeX];
+        for( int i=0; i<sizeX; ++i ) {
+            visualizerMap[i] = new float[sizeY];
+            for( int j=0; j<sizeY; ++j ) {
+                visualizerMap[i][j] -= 0.02;
+                if(visualizerMap[i][j] < 0){
+                    visualizerMap[i][j] = 0;
+                }
+            }
+        }
+    }
+    
+    //--------------------------
+    void threadedFunction()
+    {
+        // wait for size
+        LOCK_CHECK_ALPHA:
+        lock();
+        if(init != true){
+            unlock();
+            goto LOCK_CHECK_ALPHA;
+        }
+        initVisualizerMapTh();
+        unlock();
+
+        while(isThreadRunning())
+        {
+            lock();
+            // decay map
+            for (int x = 0; x < sizeX; x++) {
+                for (int y = 0; y < sizeY; y++) {
+                  //visualizerMap[x][y] = 0;
+                    ;
+                }
+            }
+            unlock();
+            // not busy loop
+            nanosleep((const struct timespec[]){{0, 5000000L}}, NULL);
+        }
+    }
+    
+    float **visualizerMap;
+    int sizeX;
+    int sizeY;
+    int fsint;
+    bool init = false;
+};*/
+
+
 class usbThread: public ofThread
 {
 public:
@@ -393,8 +448,8 @@ public:
             
             while(isThreadRunning())
             {
-                lock();
                 
+                lock();
                 packetContainerT = NULL;
                 packetContainerT = caerDeviceDataGet(camera_handle);
                 if (packetContainerT != NULL){
@@ -651,6 +706,7 @@ public:
     void updateImageGenerator();
     void initBAfilter();
     void updateBAFilter();
+    void initVisualizerMap();
     long **baFilterMap;
     void changePath();
     void changeTargetSpeed(float val);
@@ -658,7 +714,9 @@ public:
     void setTargetSpeed(float value);
     void changePause();
     void clearDraw();
-
+    float **visualizerMap;
+    void changeFSInt(float i);
+    void changeBAdeltat(float i);
     
     // color palette for spikes
     int spkOnR[8];
@@ -671,6 +729,8 @@ public:
     int spkOffA;
     int paletteSpike;
     int maxContainerQueued;
+    float fsint;
+    
     
     // thread usb
     usbThread thread;
@@ -679,6 +739,10 @@ public:
     bool imuStatus; // enable/disable imu
     bool statsStatus; // enable/disable stats
 
+    
+    // alpha usb
+    //alphaThread thread_alpha;
+    
     //size
     int sizeX;
     int sizeY;
@@ -690,6 +754,10 @@ public:
     bool rectifyPolarities;
     int numSpikes;
     int counterSpikes;
+    
+    // Ba filter
+    float BAdeltaT;
+    
     //File system
     int isRecording;
     string path;
@@ -703,6 +771,7 @@ public:
     vector<long> ofxTime;
     long ofxLastTs;
     float targetSpeed;   // real time speed
+    
 };
 
 

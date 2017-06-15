@@ -19,7 +19,8 @@ ofxDVS::ofxDVS() {
 
 //--------------------------------------------------------------
 void ofxDVS::setup() {
-        
+    
+    //thread_alpha.startThread();   // start usb thread
     thread.startThread();   // start usb thread
     
     // default behaviour is to start live mode
@@ -52,6 +53,15 @@ void ofxDVS::setup() {
     chipId = thread.chipId;
 	thread.unlock();
 
+    /*thread_alpha.lock();
+    thread.lock();
+    thread_alpha.sizeX = thread.sizeX;
+    thread_alpha.sizeY = thread.sizeY;
+    thread_alpha.fsint = fsint = 2;
+    thread_alpha.init = true;
+    thread.unlock();
+    thread_alpha.unlock();*/
+
 	// init framebuffer
     fbo.allocate(sizeX, sizeY, GL_RGBA32F);
     tex = &fbo.getTexture();
@@ -62,11 +72,14 @@ void ofxDVS::setup() {
     // start the thread
     initThreadVariables();
 
-    //init spikefeature/imagegenerator
+    // init spikefeature/imagegenerator
     initImageGenerator();
 
-    //init baFilterState
+    // init baFilterState
     initBAfilter();
+    
+    // init alpha map
+    initVisualizerMap();
     
     // reset timestamp
     ofResetElapsedTimeCounter();
@@ -221,11 +234,11 @@ void ofxDVS::initSpikeColors() {
     spkOffG[1] = 0;
     spkOffB[1] = 0;
     spkOnR[2] = 0;
-    spkOnG[2] = 255;
-    spkOnB[2] = 255;
-    spkOffR[2] = 255;
+    spkOnG[2] = 0;
+    spkOnB[2] = 0;
+    spkOffR[2] = 0;
     spkOffG[2] = 255;
-    spkOffB[2] = 0;
+    spkOffB[2] = 255;
     spkOnR[3] = 0;
     spkOnG[3] = 255;
     spkOnB[3] = 125;
@@ -275,6 +288,17 @@ vector<frame> ofxDVS::getFrames() {
 //--------------------------------------------------------------
 void ofxDVS::clearDraw(){
 
+    int clearCol = 0;
+    if(paletteSpike == 0){
+        clearCol = 0;
+    }else if(paletteSpike == 1){
+        clearCol = 127;
+    }else if(paletteSpike == 2){
+        clearCol = 150;
+    }else if(paletteSpike == 3){
+        clearCol = 0;
+    }
+    
 	// make a black frame
 	frame nuPackFrames;
 	nuPackFrames.exposureStart = 0;
@@ -286,7 +310,7 @@ void ofxDVS::clearDraw(){
 	nuPackFrames.singleFrame.allocate(nuPackFrames.lenghtX, nuPackFrames.lenghtY, OF_IMAGE_COLOR);
 	for (int32_t y = 0; y < nuPackFrames.lenghtY; y++) {
 		for (int32_t x = 0; x < nuPackFrames.lenghtX; x++) {
-			ofColor color= ofColor(0,0,0);
+			ofColor color= ofColor(clearCol,clearCol,clearCol);
 			nuPackFrames.singleFrame.setColor(x, y, color);
 		}
 	}
@@ -575,6 +599,21 @@ void ofxDVS::changeColor(int i) {
     }
 }
 
+void ofxDVS::changeFSInt(float i){
+    if(fsint == 0){
+        fsint = 0.00001;
+    }else{
+        fsint = i;
+    }
+    /*thread_alpha.lock();
+    thread_alpha.fsint  = fsint;
+    thread_alpha.unlock();*/
+}
+
+//--------------------------------------------------------------
+void ofxDVS::changeBAdeltat(float i){
+    BAdeltaT = i;
+}
 
 //--------------------------------------------------------------
 void ofxDVS::draw() {
@@ -655,13 +694,49 @@ void ofxDVS::drawSpikes() {
     float scaleFx,scaleFy;
     scaleFx = scalex/sizeX;
     scaleFy = scaley/sizeY;
+    
+    //thread_alpha.lock();
+    //float max_alpha=0;
     for (int i = 0; i < packetsPolarity.size(); i++) {
+        int x =(int)packetsPolarity[i].pos.x;
+        int y =(int)packetsPolarity[i].pos.y;
+        if(packetsPolarity[i].valid){
+            visualizerMap[x][y] += 65;
+        }
+        //thread_alpha.visualizerMap[x][y] = visualizerMap[x][y];
+    }
+    for( int i=0; i<sizeX; ++i ) {
+        for( int j=0; j<sizeY; ++j ) {
+            if(visualizerMap[i][j] != 0){
+                visualizerMap[i][j] -= fsint;
+                if(visualizerMap[i][j] < 0){
+                    visualizerMap[i][j] = 0;
+                }
+            }
+        }
+    }
+    //thread_alpha.unlock();
+    
+    for (int i = 0; i < packetsPolarity.size(); i++) {
+        if(packetsPolarity[i].valid == false){
+            continue;
+        }
         ofPushStyle();
+        //thread_alpha.lock();
+        int x = (int)packetsPolarity[i].pos.x;
+        int y = (int)packetsPolarity[i].pos.y;
+        int alpha = (int)ceil(visualizerMap[x][y]*2);//thread_alpha.visualizerMap[(int)packetsPolarity[i].pos.x][(int)packetsPolarity[i].pos.y]*255;
+        //thread_alpha.unlock();
+
+        if(alpha > 255){
+            alpha = 255;
+        }
+        //cout << alpha << endl;
         if(packetsPolarity[i].pol) {
-            ofSetColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],spkOnA);
+            ofSetColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha);
         }
         else {
-            ofSetColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],spkOffA);
+            ofSetColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha);
         }
         ofDrawCircle((int) packetsPolarity[i].pos.x*scaleFx, (int)packetsPolarity[i].pos.y*scaleFy, 1);
         ofPopStyle();
@@ -687,6 +762,19 @@ void ofxDVS::initBAfilter(){
             baFilterMap[i][j] = 0;
         }
     }
+    
+    BAdeltaT = 3000;
+}
+
+//--------------------------
+void ofxDVS::initVisualizerMap(){
+    visualizerMap=new float*[sizeX];
+    for( int i=0; i<sizeX; ++i ) {
+        visualizerMap[i] = new float[sizeY];
+        for( int j=0; j<sizeY; ++j ) {
+            visualizerMap[i][j] = 0.0;
+        }
+    }
 }
 
 //--------------------------
@@ -699,9 +787,8 @@ void ofxDVS::updateBAFilter(){
         // get last spike time
         int lastTS = baFilterMap[(int)pos.x][(int)pos.y];
         int ts = packetsPolarity[i].timestamp;
-        int deltaT = 7000;
         
-        if (( (ts - lastTS) >= deltaT) || (lastTS == 0)) {
+        if (( (ts - lastTS) >= BAdeltaT) || (lastTS == 0)) {
             // Filter out invalid, simply invalid them
             packetsPolarity[i].valid = false;
         }
