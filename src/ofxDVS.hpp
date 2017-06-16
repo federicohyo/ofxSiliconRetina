@@ -415,7 +415,7 @@ public:
             }else{
                 ofLog(OF_LOG_NOTICE,"Succesfully open a Dynamic Vision Sensor\n");
             }
-            
+            nanosleep((const struct timespec[]){{0, 500000L}}, NULL);
             
             // Send the default configuration before using the device.
             // No configuration is sent automatically!
@@ -681,6 +681,10 @@ public:
     void initThreadVariables();
     void tryLive();
     void changeColor(int i);
+    void setIMU(bool value);
+    void setAPS(bool value);
+	void setDVS(bool value);
+	void setPause(bool value);
 
     // Camera
     std::atomic_bool globalShutdown = ATOMIC_VAR_INIT(false);
@@ -730,7 +734,7 @@ public:
     int paletteSpike;
     int maxContainerQueued;
     float fsint;
-    
+    bool liveInput;
     
     // thread usb
     usbThread thread;

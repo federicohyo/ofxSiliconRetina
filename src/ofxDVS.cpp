@@ -30,6 +30,7 @@ void ofxDVS::setup() {
     
     // get camera size after ready
     LOCK_CHECK:
+    nanosleep((const struct timespec[]){{0, 50000000L}}, NULL);
     thread.lock();
     if(thread.deviceReady!=true && thread.fileInputReady!=true){
     	thread.unlock();
@@ -53,6 +54,7 @@ void ofxDVS::setup() {
     chipId = thread.chipId;
 	thread.unlock();
 
+	fsint = 2;
     /*thread_alpha.lock();
     thread.lock();
     thread_alpha.sizeX = thread.sizeX;
@@ -97,8 +99,6 @@ void ofxDVS::initThreadVariables(){
     isRecording = false;
 }
 
-
-
 void ofxDVS::tryLive(){
     thread.lock();
     // free al memory
@@ -127,8 +127,8 @@ void ofxDVS::tryLive(){
     thread.header_skipped  = true;
     thread.fileInput = false;
     thread.liveInput = true;
+    liveInput = thread.liveInput;
     thread.unlock();
-    
 }
 
 //--------------------------------------------------------------
@@ -159,6 +159,7 @@ void ofxDVS::changePath(){
         thread.container.clear();
         thread.container.shrink_to_fit();
     }
+    liveInput = false;
     thread.unlock();
 }
 
@@ -621,6 +622,27 @@ void ofxDVS::draw() {
 }
 
 //--------------------------------------------------------------
+void ofxDVS::setIMU(bool value) {
+    thread.lock();
+    thread.imuStatus = value;
+    thread.unlock();
+}
+
+//--------------------------------------------------------------
+void ofxDVS::setDVS(bool value) {
+    thread.lock();
+    thread.dvsStatus = value;
+    thread.unlock();
+}
+
+//--------------------------------------------------------------
+void ofxDVS::setAPS(bool value) {
+    thread.lock();
+    thread.apsStatus = value;
+    thread.unlock();
+}
+
+//--------------------------------------------------------------
 void ofxDVS::changeAps() {
     thread.lock();
     bool current_status = thread.apsStatus;
@@ -686,15 +708,16 @@ void ofxDVS::changeImu() {
 //--------------------------------------------------------------
 void ofxDVS::drawSpikes() {
     //fbo.begin();
-    //ofClear(0,255);
+    //ofClear(255,255,255, 0);
     //ofFill();
     //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
-    float scalex = (float) ofGetWidth();
-    float scaley = (float) ofGetHeight();
+    float scalex = (float) 1024;
+    float scaley = (float) 768;
     float scaleFx,scaleFy;
+
     scaleFx = scalex/sizeX;
     scaleFy = scaley/sizeY;
-    
+
     //thread_alpha.lock();
     //float max_alpha=0;
     for (int i = 0; i < packetsPolarity.size(); i++) {
@@ -725,7 +748,7 @@ void ofxDVS::drawSpikes() {
         //thread_alpha.lock();
         int x = (int)packetsPolarity[i].pos.x;
         int y = (int)packetsPolarity[i].pos.y;
-        int alpha = (int)ceil(visualizerMap[x][y]*2);//thread_alpha.visualizerMap[(int)packetsPolarity[i].pos.x][(int)packetsPolarity[i].pos.y]*255;
+        int alpha = (int)ceil(visualizerMap[x][y]);//thread_alpha.visualizerMap[(int)packetsPolarity[i].pos.x][(int)packetsPolarity[i].pos.y]*255;
         //thread_alpha.unlock();
 
         if(alpha > 255){
@@ -738,7 +761,7 @@ void ofxDVS::drawSpikes() {
         else {
             ofSetColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha);
         }
-        ofDrawCircle((int) packetsPolarity[i].pos.x*scaleFx, (int)packetsPolarity[i].pos.y*scaleFy, 1);
+        ofDrawCircle((int)(x*scaleFx), (int)(y*scaleFy), 1.0);
         ofPopStyle();
     }
     //fbo.end();
@@ -1127,6 +1150,13 @@ void ofxDVS::changePause(){
     }
 }
 
+//--------------------------------------------------------------
+void ofxDVS::setPause(bool value){
+	paused = value;
+	thread.lock();
+	thread.paused = paused;
+	thread.unlock();
+}
 
 //--------------------------------------------------------------
 ofImage ofxDVS:: getImageGenerator(){

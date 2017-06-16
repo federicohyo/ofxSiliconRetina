@@ -1,0 +1,3 @@
+ofxSiliconRetina
+ofxStats
+ofxGui
