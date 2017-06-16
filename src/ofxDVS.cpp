@@ -22,7 +22,12 @@ void ofxDVS::setup() {
     
     //thread_alpha.startThread();   // start usb thread
     thread.startThread();   // start usb thread
-    
+    /*thread.getPocoThread().setPriority(Poco::Thread::PRIO_HIGHEST);
+    cout << thread.getPocoThread().getPriority() << " min"
+    	<<thread.getPocoThread().getMinOSPriority() <<
+		" max" << thread.getPocoThread().getMaxOSPriority() << endl;
+     */
+
     // default behaviour is to start live mode
     // after 1 seconds of non finding the device we start in file mode
     ofResetElapsedTimeCounter();
