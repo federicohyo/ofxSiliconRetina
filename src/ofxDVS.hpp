@@ -694,6 +694,9 @@ public:
     ofFbo fbo;
     ofTexture* tex;
     ofTexture* getTextureRef();
+    // easycam
+    ofEasyCam myCam;
+    ofMesh mesh;
     
     // Data containers
     vector<polarity> packetsPolarity;
@@ -708,6 +711,8 @@ public:
     ofImage getImageGenerator();
     void initImageGenerator();
     void updateImageGenerator();
+    void setDrawImageGen(bool doDraw);
+    bool getDrawImageGen();
     void initBAfilter();
     void updateBAFilter();
     void initVisualizerMap();
@@ -721,6 +726,11 @@ public:
     float **visualizerMap;
     void changeFSInt(float i);
     void changeBAdeltat(float i);
+    void setImageAccumulatorSpikes(int i);
+    void setDrawSpikes(bool doDraw);
+    bool getDrawSpikes();
+    void set3DTime(int i);
+    void drawMouseDistanceToSpikes();
     
     // color palette for spikes
     int spkOnR[8];
@@ -735,6 +745,7 @@ public:
     int maxContainerQueued;
     float fsint;
     bool liveInput;
+    bool doDrawSpikes;
     
     // thread usb
     usbThread thread;
@@ -742,7 +753,6 @@ public:
     bool dvsStatus; // enable/disable dvs
     bool imuStatus; // enable/disable imu
     bool statsStatus; // enable/disable stats
-
     
     // alpha usb
     //alphaThread thread_alpha;
@@ -758,6 +768,7 @@ public:
     bool rectifyPolarities;
     int numSpikes;
     int counterSpikes;
+    bool drawImageGen;
     
     // Ba filter
     float BAdeltaT;
@@ -775,6 +786,21 @@ public:
     vector<long> ofxTime;
     long ofxLastTs;
     float targetSpeed;   // real time speed
+    
+    // timing information
+    long current;
+    long started;
+    bool isStarted;
+    long microseconds;
+    long seconds;
+    long minutes;
+    long hours;
+    char timeString[256];
+    
+    // mesh
+    long tmp;
+    long m;
+    long nus;
     
 };
 

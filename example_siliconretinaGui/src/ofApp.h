@@ -28,6 +28,7 @@ class ofApp : public ofBaseApp{
 
 	    //Gui
         string getHex(int hex);
+        void changeDrawGui();
         ofxDatGuiFolder* f1;
         void onButtonEvent(ofxDatGuiButtonEvent e);
         void onToggleEvent(ofxDatGuiToggleEvent e);
@@ -36,7 +37,10 @@ class ofApp : public ofBaseApp{
         void on2dPadEvent(ofxDatGui2dPadEvent e);
         void onTextInputEvent(ofxDatGuiTextInputEvent e);
         void onColorPickerEvent(ofxDatGuiColorPickerEvent e);
-
+        ofxDatGuiTextInput * myTextTimer;
+        ofxDatGuiValuePlotter * myIMU;
+        bool drawGui;
+    
         //counters
         int numPaused;
         int numPausedRec;

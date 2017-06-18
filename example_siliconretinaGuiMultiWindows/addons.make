@@ -1,3 +1,2 @@
-ofxSiliconRetina
-ofxStats
 ofxGui
+ofxSiliconRetina

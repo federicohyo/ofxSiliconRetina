@@ -70,9 +70,15 @@ void ofxDVS::setup() {
     thread_alpha.unlock();*/
 
 	// init framebuffer
+    ofSetVerticalSync(true);
+    ofSetBackgroundColor(255);
+    
+    //
     fbo.allocate(sizeX, sizeY, GL_RGBA32F);
     tex = &fbo.getTexture();
-
+    mesh.setMode(OF_PRIMITIVE_POINTS);
+    glEnable(GL_POINT_SMOOTH); // use circular points instead of square points
+    
     // init spike colors
     initSpikeColors();
 
@@ -93,6 +99,19 @@ void ofxDVS::setup() {
     ofxLastTs = 0;
     targetSpeed = 0.01; // real_time
     paused = false;
+    started = 0;
+    isStarted = false;
+    microseconds = 0;
+    seconds = 0;
+    minutes = 0;
+    hours = 0;
+    doDrawSpikes = true;
+    
+    // mesh
+    tmp = 0;
+    m = 0;
+    nus = 10000;
+    
 }
 
 void ofxDVS::initThreadVariables(){
@@ -523,6 +542,20 @@ void ofxDVS::update() {
                 //cout << "highestTs " << highestTs << " FirstTS " << firstTs << " ofxLastTs " << ofxLastTs << endl;
                 //cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;
                 delpc = organizeData(packetContainer);
+                
+                // update time information
+                long ts = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+                if(isStarted == false){
+                    started = ts;
+                    isStarted = true;
+                }
+                unsigned long current =  ts - started;
+                microseconds = current - (minutes*60)*1e6 - seconds*1e6;
+                minutes = (current / 60e6);
+                seconds = ( ((int)current % (int)60e6) / 1e6);
+                hours =  ((((int)current % (int)60e6) / 1e6) / 1e6);
+                //cout << hours << ":" << minutes << ":" << seconds << ":" << microseconds << endl;
+                sprintf(timeString, " %02lu:%02lu:%02lu:%04lu", hours, minutes, seconds, microseconds);
             }else{
                 // no deal
                 if(i>0){
@@ -572,6 +605,7 @@ void ofxDVS::update() {
             thread.container.shrink_to_fit();
         }
         thread.unlock();*/
+        
     }else{
         // we are paused..
         thread.lock();
@@ -622,8 +656,75 @@ void ofxDVS::changeBAdeltat(float i){
 }
 
 //--------------------------------------------------------------
+void ofxDVS::drawMouseDistanceToSpikes(){
+    
+    //ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
+    // Nearest Vertex
+    int n = mesh.getNumVertices();
+    float nearestDistance = 0;
+    ofVec3f nearestVertex;
+    ofVec3f nearestVertexCam;
+    int nearestIndex = 0;
+    int mouseX = ofGetMouseX();
+    int mouseY = ofGetMouseY();
+    ofVec2f mouse(mouseX, mouseY);
+    for(int i = 0; i < n; i++) {
+        ofVec3f cur = myCam.worldToScreen(mesh.getVertex(i));
+        ofVec3f camCur = mesh.getVertex(i);
+        float distance = cur.distance(mouse);
+        if(i == 0 || distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestVertex = cur;
+            nearestVertexCam = camCur;
+            nearestIndex = i;
+        }
+    }
+    
+    ofSetColor(ofColor::gray);
+    ofDrawLine(nearestVertex, mouse);
+    
+    ofNoFill();
+    ofSetColor(ofColor::yellow);
+    ofSetLineWidth(2);
+    ofDrawCircle(nearestVertex, 4);
+    ofSetLineWidth(1);
+    
+    ofVec2f offset(10, -10);
+    ofVec2f origXY = ofVec2f(ofMap(nearestVertexCam.x,0,fbo.getWidth(),0,sizeX),ofMap(nearestVertexCam.y,0,fbo.getHeight(),0,sizeY));
+    long zconv;
+    if(m > 0){
+        zconv = (long)(nearestVertexCam.z)<<m;
+    }else{
+        zconv = (long)nearestVertexCam.z;
+    }
+    string infos = "x:" + ofToString(origXY.x) + " y:" + ofToString(origXY.y) + " z: "+ofToString(zconv)+" us";
+    ofDrawBitmapStringHighlight(infos, mouse + offset);
+    
+
+}
+
+//--------------------------------------------------------------
 void ofxDVS::draw() {
-    drawSpikes();
+    
+    myCam.begin();
+    ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
+    drawFrames();
+    drawImageGenerator(); // if dvs.drawImageGen
+    drawSpikes();         // if dvs.doDrawSpikes
+    //drawImu6();
+    myCam.end();
+    
+    drawMouseDistanceToSpikes();
+}
+
+//--------------------------------------------------------------
+void ofxDVS::setDrawSpikes(bool doDraw){
+    doDrawSpikes = doDraw;
+}
+
+//--------------------------------------------------------------
+bool ofxDVS::getDrawSpikes(){
+    return doDrawSpikes;
 }
 
 //--------------------------------------------------------------
@@ -712,65 +813,136 @@ void ofxDVS::changeImu() {
 
 //--------------------------------------------------------------
 void ofxDVS::drawSpikes() {
-    //fbo.begin();
-    //ofClear(255,255,255, 0);
-    //ofFill();
-    //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
-    float scalex = (float) 1024;
-    float scaley = (float) 768;
-    float scaleFx,scaleFy;
-
-    scaleFx = scalex/sizeX;
-    scaleFy = scaley/sizeY;
-
-    //thread_alpha.lock();
-    //float max_alpha=0;
-    for (int i = 0; i < packetsPolarity.size(); i++) {
-        int x =(int)packetsPolarity[i].pos.x;
-        int y =(int)packetsPolarity[i].pos.y;
-        if(packetsPolarity[i].valid){
-            visualizerMap[x][y] += 65;
+    
+    if(doDrawSpikes){
+    
+        for (int i = 0; i < packetsPolarity.size(); i++) {
+            int x =(int)packetsPolarity[i].pos.x;
+            int y =(int)packetsPolarity[i].pos.y;
+            if(packetsPolarity[i].valid){
+                visualizerMap[x][y] += 65;
+            }
+            //thread_alpha.visualizerMap[x][y] = visualizerMap[x][y];
         }
-        //thread_alpha.visualizerMap[x][y] = visualizerMap[x][y];
-    }
-    for( int i=0; i<sizeX; ++i ) {
-        for( int j=0; j<sizeY; ++j ) {
-            if(visualizerMap[i][j] != 0){
-                visualizerMap[i][j] -= fsint;
-                if(visualizerMap[i][j] < 0){
-                    visualizerMap[i][j] = 0;
+        for( int i=0; i<sizeX; ++i ) {
+            for( int j=0; j<sizeY; ++j ) {
+                if(visualizerMap[i][j] != 0){
+                    visualizerMap[i][j] -= fsint;
+                    if(visualizerMap[i][j] < 0){
+                        visualizerMap[i][j] = 0;
+                    }
                 }
             }
         }
-    }
-    //thread_alpha.unlock();
-    
-    for (int i = 0; i < packetsPolarity.size(); i++) {
-        if(packetsPolarity[i].valid == false){
-            continue;
-        }
-        ofPushStyle();
-        //thread_alpha.lock();
-        int x = (int)packetsPolarity[i].pos.x;
-        int y = (int)packetsPolarity[i].pos.y;
-        int alpha = (int)ceil(visualizerMap[x][y]);//thread_alpha.visualizerMap[(int)packetsPolarity[i].pos.x][(int)packetsPolarity[i].pos.y]*255;
-        //thread_alpha.unlock();
 
-        if(alpha > 255){
-            alpha = 255;
+        
+        mesh.clear();
+        vector<polarity> packets = getPolarity();
+        for(int i=0;i < packets.size();i++) {
+            
+            int x = (int)packetsPolarity[i].pos.x;
+            int y = (int)packetsPolarity[i].pos.y;
+            int alpha = 255;//(int)ceil(visualizerMap[x][y]);
+            
+            //long tdiff = (int) ofRandom(1000) % 1000;//packets[i].timestamp - dvs.ofxLastTs;
+            long tdiff = 0;
+            if( packets[i].timestamp < tmp){
+                ofLog(OF_LOG_NOTICE, "Detected lower timestamp.. ");
+                tmp = packets[i].timestamp;
+            }
+            if(started == false){
+                tdiff = 0;
+                tmp = packets[i].timestamp;
+                started = true;
+            }else{
+                tdiff = packets[i].timestamp - tmp;
+            }
+            if(tdiff > nus){
+                mesh.clear();
+                tdiff = 0;
+                tmp = packets[i].timestamp;//tmp-nus;
+            }
+            long timeus = 0;
+            if(m == 0){
+                timeus = 0;
+            }else{
+                timeus = tdiff>>m;
+            }
+            mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,sizeX,0,ofGetWidth()),ofMap(packets[i].pos.y,sizeY,0,0,ofGetHeight()), timeus));
+            mesh.addTexCoord(ofVec2f(packets[i].pos.x,packets[i].pos.y));
+            //int alphaus = (int)ceil(((float)tdiff/(float)nus)*256);
+            if(packets[i].pol){
+                mesh.addColor(ofColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha));
+            }else{
+                mesh.addColor(ofColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha));
+            }
         }
-        //cout << alpha << endl;
-        if(packetsPolarity[i].pol) {
-            ofSetColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha);
+        mesh.setMode(OF_PRIMITIVE_POINTS);
+        ofPushMatrix();
+        mesh.draw();
+        ofPopMatrix();
+
+        /*fbo.begin();
+        ofClear(255,255,255, 0);
+        //ofFill();
+        //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
+        float scalex = (float) 1024;
+        float scaley = (float) 768;
+        float scaleFx,scaleFy;
+
+        scaleFx = scalex/sizeX;
+        scaleFy = scaley/sizeY;
+
+        //thread_alpha.lock();
+        //float max_alpha=0;
+        for (int i = 0; i < packetsPolarity.size(); i++) {
+            int x =(int)packetsPolarity[i].pos.x;
+            int y =(int)packetsPolarity[i].pos.y;
+            if(packetsPolarity[i].valid){
+                visualizerMap[x][y] += 65;
+            }
+            //thread_alpha.visualizerMap[x][y] = visualizerMap[x][y];
         }
-        else {
-            ofSetColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha);
+        for( int i=0; i<sizeX; ++i ) {
+            for( int j=0; j<sizeY; ++j ) {
+                if(visualizerMap[i][j] != 0){
+                    visualizerMap[i][j] -= fsint;
+                    if(visualizerMap[i][j] < 0){
+                        visualizerMap[i][j] = 0;
+                    }
+                }
+            }
         }
-        ofDrawCircle((int)(x*scaleFx), (int)(y*scaleFy), 1.0);
-        ofPopStyle();
+        //thread_alpha.unlock();
+        
+        for (int i = 0; i < packetsPolarity.size(); i++) {
+            if(packetsPolarity[i].valid == false){
+                continue;
+            }
+            ofPushStyle();
+            //thread_alpha.lock();
+            int x = (int)packetsPolarity[i].pos.x;
+            int y = (int)packetsPolarity[i].pos.y;
+            int alpha = (int)ceil(visualizerMap[x][y]);//thread_alpha.visualizerMap[(int)packetsPolarity[i].pos.x][(int)packetsPolarity[i].pos.y]*255;
+            //thread_alpha.unlock();
+
+            if(alpha > 255){
+                alpha = 255;
+            }
+            //cout << alpha << endl;
+            if(packetsPolarity[i].pol) {
+                ofSetColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha);
+            }
+            else {
+                ofSetColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha);
+            }
+            ofDrawCircle((int)(x), (int)(y), 1.0);
+            ofPopStyle();
+        }
+        fbo.end();
+        fbo.draw(0,0,ofGetWidth(),ofGetHeight());
+        //packetsPolarity.clear();*/
     }
-    //fbo.end();
-    //fbo.draw(0,0,ofGetWidth(),ofGetHeight());
 }
 
 //--------------------------------------------------------------
@@ -779,6 +951,7 @@ void ofxDVS::drawFrames() {
     for (int i = 0; i < packetsFrames.size(); i++) {
         packetsFrames[i].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
     }
+    //packetsFrames.clear();
 }
 
 //--------------------------
@@ -859,11 +1032,6 @@ void ofxDVS::updateBAFilter(){
     }
 }
 
-
-//--------------------------------------------------------------
-void ofxDVS::drawImu6() {
-
-}
 
 //--------------------------------------------------------------
 void ofxDVS::loadFile() {
@@ -1015,18 +1183,77 @@ void ofxDVS::initImageGenerator(){
             spikeFeatures[i][j] = 0.0;
         }
     }
-    imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
-    rectifyPolarities = true;
+    imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR_ALPHA);
+    rectifyPolarities = false;
     numSpikes = 2000;
     counterSpikes = 0;
+    drawImageGen = false;
 }
 
 //--------------------------------------------------------------
 void ofxDVS::drawImageGenerator() {
     
     // draw last imagegenerator frame
-    imageGenerator.draw(0,0,ofGetWidth(),ofGetHeight());
+    //ofEnableAlphaBlending();
+    //ofDisableAlphaBlending();
+    if(drawImageGen){
+        imageGenerator.draw(0,0,ofGetWidth(),ofGetHeight());
+    }
+}
+
+//--------------------------------------------------------------
+void ofxDVS::drawImu6() {
     
+    //fbo.begin();
+    ofPushStyle();
+    //ofSetColor(0,0,0);
+    ofVec3f arrowTailPoint = ofVec3f(100,100,0);
+    //ofVec3f arrowHeadPoint = ofVec3f(150,100,0);
+    //ofDrawArrow(arrowTailPoint, arrowHeadPoint, 20.0);
+
+    for(size_t i=0; i < packetsImu6.size(); i++){
+        cout << "x :" << packetsImu6[i].gyro.x << " y :" << packetsImu6[i].gyro.y <<
+        " z :" << packetsImu6[i].gyro.z << endl;
+         ofSetColor(0,0,0);
+       ofDrawArrow(arrowTailPoint,packetsImu6[i].gyro, 10.0);
+         ofSetColor(255,255,0);
+       ofDrawArrow(arrowTailPoint,packetsImu6[i].accel, 10.0);
+    }
+    ofPopStyle();
+    //fbo.end();
+    //fbo.draw(0,0,ofGetWidth(),ofGetHeight());
+    //packetsImu6.clear();
+}
+
+
+//--------------------------------------------------------------
+void ofxDVS::setDrawImageGen(bool doDraw){
+    drawImageGen = doDraw;
+}
+
+//--------------------------------------------------------------
+bool ofxDVS::getDrawImageGen(){
+    return drawImageGen;
+}
+
+//--------------------------------------------------------------
+void ofxDVS::setImageAccumulatorSpikes(int value){
+    numSpikes = value;
+}
+
+//--------------------------------------------------------------
+void ofxDVS::set3DTime(int i){
+    if(i == 0){
+        m = 0;
+    }else if(i == 1){
+        m = 8;
+    }else if(i == 2){
+        m = 6;
+    }else if(i == 3){
+        m = 4;
+    }else if(i == 4){
+        m = 2;
+    }
 }
 
 //--------------------------------------------------------------
@@ -1041,7 +1268,7 @@ void ofxDVS::updateImageGenerator(){
             if(packetsPolarity[i].pol){
                 spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
             }else{
-                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+                spikeFeatures[(int)pos.x][(int)pos.y] -= 1.0;
             }
             counterSpikes = counterSpikes+1;
         }
@@ -1092,7 +1319,7 @@ void ofxDVS::updateImageGenerator(){
         for (int col_idx = 0; col_idx < sizeX; col_idx++) {
             for (int row_idx = 0; row_idx < sizeY; row_idx++) {
                 ofColor this_pixel;
-                this_pixel.set(0,0,0);
+                this_pixel.set(0,0,0,1);
                 imageGenerator.setColor(col_idx,row_idx,this_pixel);
             }
         }
@@ -1109,8 +1336,9 @@ void ofxDVS::updateImageGenerator(){
                         f = 0;
                     }
                     ofColor this_pixel;
-                    this_pixel.set((int)floor(f),(int)floor(f),(int)floor(f));
-                    imageGenerator.setColor(col_idx,row_idx,ofColor(this_pixel.r, this_pixel.g, this_pixel.b));
+                    //spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike]
+                    this_pixel.set((int)floor(f), spkOnR[paletteSpike],spkOnG[paletteSpike], 125);
+                    imageGenerator.setColor(col_idx,row_idx,this_pixel);
                 }
             }
         }
