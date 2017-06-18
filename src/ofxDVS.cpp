@@ -658,7 +658,6 @@ void ofxDVS::changeBAdeltat(float i){
 //--------------------------------------------------------------
 void ofxDVS::drawMouseDistanceToSpikes(){
     
-    //ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
     // Nearest Vertex
     int n = mesh.getNumVertices();
     float nearestDistance = 0;
@@ -669,7 +668,10 @@ void ofxDVS::drawMouseDistanceToSpikes(){
     int mouseY = ofGetMouseY();
     ofVec2f mouse(mouseX, mouseY);
     for(int i = 0; i < n; i++) {
-        ofVec3f cur = myCam.worldToScreen(mesh.getVertex(i));
+        ofVec3f thisV = mesh.getVertex(i);
+        thisV.x = thisV.x-ofGetWidth()/2;     //ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
+        thisV.y = thisV.y-ofGetHeight()/2;
+        ofVec3f cur = myCam.worldToScreen(thisV);
         ofVec3f camCur = mesh.getVertex(i);
         float distance = cur.distance(mouse);
         if(i == 0 || distance < nearestDistance) {
