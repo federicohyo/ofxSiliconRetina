@@ -32,7 +32,9 @@ void ofApp::setup(){
 	f1->addBreak();
     f1->addButton("Live");
 	f1->addBreak();
+	f1->addToggle("Draw IMU", false);
     f1->addMatrix("3D Time", 4, true);
+    f1->addToggle("Pointer", false);
     f1->addToggle("Raw Spikes", true);
     f1->addToggle("DVS Image Gen", false);
     f1->addSlider("BA Filter dt", 1, 100000, dvs.BAdeltaT);
@@ -51,8 +53,8 @@ void ofApp::setup(){
     numPausedRec = 0;
     
     // alpha blend
-    glEnable(GL_BLEND);
-    glBlendFunc( GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA );
+    //glEnable(GL_BLEND);
+    //glBlendFunc( GL_DST_ALPHA, GL_ONE_MINUS_DST_ALPHA );
 }
 
 //--------------------------------------------------------------
@@ -184,6 +186,10 @@ void ofApp::onToggleEvent(ofxDatGuiToggleEvent e)
         dvs.setDrawImageGen(e.target->getChecked());
     }else if(e.target->getLabel() == "Raw Spikes"){
         dvs.setDrawSpikes(e.target->getChecked());
+    }else if(e.target->getLabel() == "Pointer"){
+        dvs.setPointer(e.target->getChecked());
+    }else if(e.target->getLabel() == "Draw IMU"){
+        dvs.setDrawImu(e.target->getChecked());
     }
 
 }

@@ -731,6 +731,8 @@ public:
     bool getDrawSpikes();
     void set3DTime(int i);
     void drawMouseDistanceToSpikes();
+    void setPointer(bool i);
+    void setDrawImu(bool i);
     
     // color palette for spikes
     int spkOnR[8];
@@ -802,6 +804,9 @@ public:
     long m;
     long nus;
     
+    bool drawDistanceMesh;
+    string chipName;
+    bool doDrawImu6;
 };
 
 

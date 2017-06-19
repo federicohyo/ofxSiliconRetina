@@ -57,6 +57,7 @@ void ofxDVS::setup() {
 	sizeX = thread.sizeX;
 	sizeY = thread.sizeY;
     chipId = thread.chipId;
+    chipName = chipIDToName(chipId, false);
 	thread.unlock();
 
 	fsint = 2;
@@ -78,7 +79,7 @@ void ofxDVS::setup() {
     tex = &fbo.getTexture();
     mesh.setMode(OF_PRIMITIVE_POINTS);
     glEnable(GL_POINT_SMOOTH); // use circular points instead of square points
-    
+
     // init spike colors
     initSpikeColors();
 
@@ -112,8 +113,21 @@ void ofxDVS::setup() {
     m = 0;
     nus = 10000;
     
+    drawDistanceMesh = false;
+    doDrawImu6 = false;
 }
 
+//--------------------------------------------------------------
+void ofxDVS::setPointer(bool i){
+	drawDistanceMesh = i;
+}
+
+//--------------------------------------------------------------
+void ofxDVS::setDrawImu(bool i){
+	doDrawImu6 = i;
+}
+
+//--------------------------------------------------------------
 void ofxDVS::initThreadVariables(){
     apsStatus = true;       // enable aps
     dvsStatus = true;       // enable dvs
@@ -123,6 +137,7 @@ void ofxDVS::initThreadVariables(){
     isRecording = false;
 }
 
+//--------------------------------------------------------------
 void ofxDVS::tryLive(){
     thread.lock();
     // free al memory
@@ -458,7 +473,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             nuPackFrames.positionX = caerFrameEventGetPositionX(caerFrameIteratorElement);
             nuPackFrames.positionY = caerFrameEventGetPositionY(caerFrameIteratorElement);
             nuPackFrames.frameChannels = caerFrameEventGetChannelNumber(caerFrameIteratorElement);
-            
+
             nuPackFrames.singleFrame.allocate(nuPackFrames.lenghtX, nuPackFrames.lenghtY, OF_IMAGE_COLOR);
             for (int32_t y = 0; y < nuPackFrames.lenghtY; y++) {
                 for (int32_t x = 0; x < nuPackFrames.lenghtX; x++) {
@@ -492,6 +507,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
                             
                             ofColor color= ofColor(nuColR,nuColB,nuColB,nuColA);
                             nuPackFrames.singleFrame.setColor(x, y, color);
+
                             break;
                         }
                             
@@ -658,50 +674,53 @@ void ofxDVS::changeBAdeltat(float i){
 //--------------------------------------------------------------
 void ofxDVS::drawMouseDistanceToSpikes(){
     
-    // Nearest Vertex
-    int n = mesh.getNumVertices();
-    float nearestDistance = 0;
-    ofVec3f nearestVertex;
-    ofVec3f nearestVertexCam;
-    int nearestIndex = 0;
-    int mouseX = ofGetMouseX();
-    int mouseY = ofGetMouseY();
-    ofVec2f mouse(mouseX, mouseY);
-    for(int i = 0; i < n; i++) {
-        ofVec3f thisV = mesh.getVertex(i);
-        thisV.x = thisV.x-ofGetWidth()/2;     //ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
-        thisV.y = thisV.y-ofGetHeight()/2;
-        ofVec3f cur = myCam.worldToScreen(thisV);
-        ofVec3f camCur = mesh.getVertex(i);
-        float distance = cur.distance(mouse);
-        if(i == 0 || distance < nearestDistance) {
-            nearestDistance = distance;
-            nearestVertex = cur;
-            nearestVertexCam = camCur;
-            nearestIndex = i;
-        }
-    }
-    
-    ofSetColor(ofColor::gray);
-    ofDrawLine(nearestVertex, mouse);
-    
-    ofNoFill();
-    ofSetColor(ofColor::yellow);
-    ofSetLineWidth(2);
-    ofDrawCircle(nearestVertex, 4);
-    ofSetLineWidth(1);
-    
-    ofVec2f offset(10, -10);
-    ofVec2f origXY = ofVec2f(ofMap(nearestVertexCam.x,0,fbo.getWidth(),0,sizeX),ofMap(nearestVertexCam.y,0,fbo.getHeight(),0,sizeY));
-    long zconv;
-    if(m > 0){
-        zconv = (long)(nearestVertexCam.z)<<m;
-    }else{
-        zconv = (long)nearestVertexCam.z;
-    }
-    string infos = "x:" + ofToString(origXY.x) + " y:" + ofToString(origXY.y) + " z: "+ofToString(zconv)+" us";
-    ofDrawBitmapStringHighlight(infos, mouse + offset);
-    
+	if(drawDistanceMesh){
+		// Nearest Vertex
+		int n = mesh.getNumVertices();
+		float nearestDistance = 0;
+		ofVec3f nearestVertex;
+		ofVec3f nearestVertexCam;
+		int nearestIndex = 0;
+		int mouseX = ofGetMouseX();
+		int mouseY = ofGetMouseY();
+		ofVec2f mouse(mouseX, mouseY);
+		for(int i = 0; i < n; i++) {
+			ofVec3f thisV = mesh.getVertex(i);
+			thisV.x = thisV.x-ofGetWidth()/2;     //ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
+			thisV.y = thisV.y-ofGetHeight()/2;
+			ofVec3f cur = myCam.worldToScreen(thisV);
+			ofVec3f camCur = mesh.getVertex(i);
+			float distance = cur.distance(mouse);
+			if(i == 0 || distance < nearestDistance) {
+				nearestDistance = distance;
+				nearestVertex = cur;
+				nearestVertexCam = camCur;
+				nearestIndex = i;
+			}
+		}
+
+		ofPushMatrix();
+		//ofSetColor(ofColor::gray);
+		ofDrawLine(nearestVertex, mouse);
+
+		ofNoFill();
+		//ofSetColor(ofColor::yellow);
+		ofSetLineWidth(2);
+		ofDrawCircle(nearestVertex, 4);
+		ofSetLineWidth(1);
+
+		ofVec2f offset(10, -10);
+		ofVec2f origXY = ofVec2f(ofMap(nearestVertexCam.x,0,fbo.getWidth(),0,sizeX),ofMap(nearestVertexCam.y,0,fbo.getHeight(),0,sizeY));
+		long zconv;
+		if(m > 0){
+			zconv = (long)(nearestVertexCam.z)<<m;
+		}else{
+			zconv = (long)nearestVertexCam.z;
+		}
+		string infos = "x:" + ofToString(origXY.x) + " y:" + ofToString(origXY.y) + " z: "+ofToString(zconv)+" us";
+		ofDrawBitmapStringHighlight(infos, mouse + offset);
+		ofPopMatrix();
+	}
 
 }
 
@@ -713,7 +732,7 @@ void ofxDVS::draw() {
     drawFrames();
     drawImageGenerator(); // if dvs.drawImageGen
     drawSpikes();         // if dvs.doDrawSpikes
-    //drawImu6();
+    drawImu6();
     myCam.end();
     
     drawMouseDistanceToSpikes();
@@ -817,7 +836,6 @@ void ofxDVS::changeImu() {
 void ofxDVS::drawSpikes() {
     
     if(doDrawSpikes){
-    
         for (int i = 0; i < packetsPolarity.size(); i++) {
             int x =(int)packetsPolarity[i].pos.x;
             int y =(int)packetsPolarity[i].pos.y;
@@ -836,7 +854,6 @@ void ofxDVS::drawSpikes() {
                 }
             }
         }
-
         
         mesh.clear();
         vector<polarity> packets = getPolarity();
@@ -849,7 +866,7 @@ void ofxDVS::drawSpikes() {
             //long tdiff = (int) ofRandom(1000) % 1000;//packets[i].timestamp - dvs.ofxLastTs;
             long tdiff = 0;
             if( packets[i].timestamp < tmp){
-                ofLog(OF_LOG_NOTICE, "Detected lower timestamp.. ");
+                //ofLog(OF_LOG_NOTICE, "Detected lower timestamp.. ");
                 tmp = packets[i].timestamp;
             }
             if(started == false){
@@ -884,66 +901,6 @@ void ofxDVS::drawSpikes() {
         mesh.draw();
         ofPopMatrix();
 
-        /*fbo.begin();
-        ofClear(255,255,255, 0);
-        //ofFill();
-        //ofSetColor(ofNoise( ofGetFrameNum() ) * 255 * 5, 255);
-        float scalex = (float) 1024;
-        float scaley = (float) 768;
-        float scaleFx,scaleFy;
-
-        scaleFx = scalex/sizeX;
-        scaleFy = scaley/sizeY;
-
-        //thread_alpha.lock();
-        //float max_alpha=0;
-        for (int i = 0; i < packetsPolarity.size(); i++) {
-            int x =(int)packetsPolarity[i].pos.x;
-            int y =(int)packetsPolarity[i].pos.y;
-            if(packetsPolarity[i].valid){
-                visualizerMap[x][y] += 65;
-            }
-            //thread_alpha.visualizerMap[x][y] = visualizerMap[x][y];
-        }
-        for( int i=0; i<sizeX; ++i ) {
-            for( int j=0; j<sizeY; ++j ) {
-                if(visualizerMap[i][j] != 0){
-                    visualizerMap[i][j] -= fsint;
-                    if(visualizerMap[i][j] < 0){
-                        visualizerMap[i][j] = 0;
-                    }
-                }
-            }
-        }
-        //thread_alpha.unlock();
-        
-        for (int i = 0; i < packetsPolarity.size(); i++) {
-            if(packetsPolarity[i].valid == false){
-                continue;
-            }
-            ofPushStyle();
-            //thread_alpha.lock();
-            int x = (int)packetsPolarity[i].pos.x;
-            int y = (int)packetsPolarity[i].pos.y;
-            int alpha = (int)ceil(visualizerMap[x][y]);//thread_alpha.visualizerMap[(int)packetsPolarity[i].pos.x][(int)packetsPolarity[i].pos.y]*255;
-            //thread_alpha.unlock();
-
-            if(alpha > 255){
-                alpha = 255;
-            }
-            //cout << alpha << endl;
-            if(packetsPolarity[i].pol) {
-                ofSetColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha);
-            }
-            else {
-                ofSetColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha);
-            }
-            ofDrawCircle((int)(x), (int)(y), 1.0);
-            ofPopStyle();
-        }
-        fbo.end();
-        fbo.draw(0,0,ofGetWidth(),ofGetHeight());
-        //packetsPolarity.clear();*/
     }
 }
 
@@ -953,7 +910,6 @@ void ofxDVS::drawFrames() {
     for (int i = 0; i < packetsFrames.size(); i++) {
         packetsFrames[i].singleFrame.draw(0,0,ofGetWidth(),ofGetHeight());
     }
-    //packetsFrames.clear();
 }
 
 //--------------------------
@@ -1055,7 +1011,6 @@ void ofxDVS::exit() {
     
     // stop the thread
     thread.stopThread();
-    
     if(isRecording){
         // close file
         myFile.close();
@@ -1206,25 +1161,75 @@ void ofxDVS::drawImageGenerator() {
 //--------------------------------------------------------------
 void ofxDVS::drawImu6() {
     
-    //fbo.begin();
-    ofPushStyle();
-    //ofSetColor(0,0,0);
-    ofVec3f arrowTailPoint = ofVec3f(100,100,0);
-    //ofVec3f arrowHeadPoint = ofVec3f(150,100,0);
-    //ofDrawArrow(arrowTailPoint, arrowHeadPoint, 20.0);
+	if(doDrawImu6){
+		float ap = 0.955;
+		double compAngleX, compAngleY,compAngleZ, timer;
+		double accXangle , accYangle, accZangle;
+		double gyroXrate , gyroYrate, gyroZrate;
+		double gyroXAngle, gyroYAngle, gyroZAngle;
+		ofPushStyle();
+		for(size_t i=0; i < packetsImu6.size(); i++){
 
-    for(size_t i=0; i < packetsImu6.size(); i++){
-        cout << "x :" << packetsImu6[i].gyro.x << " y :" << packetsImu6[i].gyro.y <<
-        " z :" << packetsImu6[i].gyro.z << endl;
-         ofSetColor(0,0,0);
-       ofDrawArrow(arrowTailPoint,packetsImu6[i].gyro, 10.0);
-         ofSetColor(255,255,0);
-       ofDrawArrow(arrowTailPoint,packetsImu6[i].accel, 10.0);
-    }
-    ofPopStyle();
-    //fbo.end();
-    //fbo.draw(0,0,ofGetWidth(),ofGetHeight());
-    //packetsImu6.clear();
+			//Complementary filter
+			accXangle = (atan2(packetsImu6[i].accel.y, packetsImu6[i].accel.z) * RAD_TO_DEG);
+			accYangle = (atan2(packetsImu6[i].accel.x, packetsImu6[i].accel.z) * RAD_TO_DEG);
+			accZangle = (atan2(packetsImu6[i].accel.x, packetsImu6[i].accel.y) * RAD_TO_DEG);
+			gyroXrate = packetsImu6[i].gyro.x / 16.5;
+			gyroYrate = packetsImu6[i].gyro.y / 16.5;
+			gyroZrate = packetsImu6[i].gyro.z / 16.5;
+			timer = ofGetElapsedTimeMillis();
+
+			gyroXAngle += gyroXrate * (ofGetElapsedTimeMillis() - timer) / 1000;
+			gyroYAngle += gyroYrate * (ofGetElapsedTimeMillis() - timer) / 1000;
+			gyroZAngle += gyroZrate * (ofGetElapsedTimeMillis() - timer) / 1000;
+			compAngleX = ap * (compAngleX + gyroXAngle) + (1 - ap) * accXangle;
+			compAngleY = ap * (compAngleY + gyroYAngle) + (1 - ap) * accYangle;
+			compAngleZ = ap * (compAngleZ + gyroZAngle) + (1 - ap) * accZangle;
+
+			ofSetColor(ofColor::red);
+			ofVec3f arrowHeadPoint = ofVec3f(ofGetHeight()/2,ofGetWidth()/2,0);
+			ofVec3f arrowTailPoint = ofVec3f(ofGetHeight()/2+packetsImu6[i].accel.x*3,ofGetWidth()/2+packetsImu6[i].accel.y*3,packetsImu6[i].accel.z*3);
+			ofDrawArrow(arrowTailPoint,arrowHeadPoint, 10.0);
+			ofSetColor(ofColor::black);
+
+			ofSetColor(ofColor::green);
+			arrowHeadPoint = ofVec3f(ofGetHeight()/1.5,ofGetWidth()/2,0);
+			arrowTailPoint = ofVec3f(ofGetHeight()/1.5+packetsImu6[i].gyro.x,ofGetWidth()/2+packetsImu6[i].gyro.y,packetsImu6[i].gyro.z);
+			ofDrawArrow(arrowTailPoint,arrowHeadPoint, 10.0);
+			ofSetColor(ofColor::black);
+
+			/*ofRotateX(compAngleX);
+			ofRotateY(compAngleY);
+			ofRotateZ(compAngleZ);
+			ofFill();
+			ofSetColor(ofColor::red);
+			ofDrawBox(500);
+			ofNoFill();
+			ofSetColor(ofColor::black);
+			ofDrawBox(500);*/
+
+		}
+		ofPopStyle();
+		//fbo.begin();
+		/*ofPushStyle();
+		//ofSetColor(0,0,0);
+		ofVec3f arrowTailPoint = ofVec3f(100,100,0);
+		//ofVec3f arrowHeadPoint = ofVec3f(150,100,0);
+		//ofDrawArrow(arrowTailPoint, arrowHeadPoint, 20.0);
+
+
+			cout << "x :" << packetsImu6[i].gyro.x << " y :" << packetsImu6[i].gyro.y <<
+			" z :" << packetsImu6[i].gyro.z << endl;
+			 ofSetColor(0,0,0);
+		   ofDrawArrow(arrowTailPoint,packetsImu6[i].gyro, 10.0);
+			 ofSetColor(255,255,0);
+		   ofDrawArrow(arrowTailPoint,packetsImu6[i].accel, 10.0);
+
+		ofPopStyle();*/
+		//fbo.end();
+		//fbo.draw(0,0,ofGetWidth(),ofGetHeight());
+		//packetsImu6.clear();
+	}
 }
 
 
