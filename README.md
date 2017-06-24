@@ -13,7 +13,7 @@ This shows the output of the mesh example. The image can be rotated and translat
 
 ![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/docs/example_siliconretinaGui.gif "GUI Example")
 
-This shows the GUI interface that can be used to check live data, load recordings or make recordings. Many parameters are available to the user; such as enable/disable APS,IMU,DVS events pause, playing speed etc..
+This shows the GUI interface that can be used to check live data, load recordings or make recordings. Many parameters are available to the user; such as enable/disable APS,IMU,DVS, pause, playing speed etc. The GUI can be hidden or displayed if the "c" key is pressed.
 
 
 Introduction
