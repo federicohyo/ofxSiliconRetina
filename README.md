@@ -11,6 +11,11 @@ The statistic panel shows the display running only at about 60 fps. Nonetheless,
 
 This shows the output of the mesh example. The image can be rotated and translated using the mouse, in addition several parameters can be tuned by using the hotkeys (m,k,j,h).
 
+![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/docs/example_siliconretinaGui.gif "GUI Example")
+
+This shows the GUI interface that can be used to check live data, load recordings or make recordings. Many parameters are available to the user; such as enable/disable APS,IMU,DVS events pause, playing speed etc..
+
+
 Introduction
 ------------
 This addon let you interface any Dynamic Vision Sensor to openframeworks.
