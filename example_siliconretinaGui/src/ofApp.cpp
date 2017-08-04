@@ -14,6 +14,7 @@ void ofApp::setup(){
     f1->addBreak();
     f1->addSlider("1/speed", 0, 2, dvs.targetSpeed);
     myTextTimer = f1->addTextInput("TIME", dvs.timeString);
+    myTempReader = f1->addTextInput("IMU TEMPERATURE", to_string((int)(dvs.imuTemp)));
     f1->addToggle("APS", true);
     f1->addBreak();
     f1->addToggle("DVS", true);
@@ -69,6 +70,7 @@ void ofApp::update(){
     //float val = ofRandom(0, 1);
     //cout << val << endl;
     //myIMU->setValue(val);
+    myTempReader->setText(to_string((int)(dvs.imuTemp)));
 }
 
 //--------------------------------------------------------------

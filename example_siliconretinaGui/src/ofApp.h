@@ -38,6 +38,7 @@ class ofApp : public ofBaseApp{
         void onTextInputEvent(ofxDatGuiTextInputEvent e);
         void onColorPickerEvent(ofxDatGuiColorPickerEvent e);
         ofxDatGuiTextInput * myTextTimer;
+        ofxDatGuiTextInput * myTempReader;
         ofxDatGuiValuePlotter * myIMU;
         bool drawGui;
     

@@ -107,6 +107,7 @@ void ofxDVS::setup() {
     minutes = 0;
     hours = 0;
     doDrawSpikes = true;
+    imuTemp = 35;
     
     // mesh
     tmp = 0;
@@ -115,6 +116,7 @@ void ofxDVS::setup() {
     
     drawDistanceMesh = false;
     doDrawImu6 = false;
+    
 }
 
 //--------------------------------------------------------------
@@ -419,6 +421,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
             nuPackImu6.accel.set(accelX,accelY,accelZ);
             nuPackImu6.gyro.set(gyroX,gyroY,gyroZ);
+            nuPackImu6.temperature = caerIMU6EventGetTemp(caerIMU6IteratorElement);
             nuPackImu6.timestamp = caerIMU6EventGetTimestamp(caerIMU6IteratorElement);
             nuPackImu6.valid = true ;
             packetsImu6.push_back(nuPackImu6);
@@ -428,6 +431,9 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             }
 
             CAER_IMU6_ITERATOR_VALID_END
+            
+            // keep track of IMU temp
+            imuTemp = nuPackImu6.temperature;
             
         }
         if (type == POLARITY_EVENT  && dvsStatus) {
@@ -735,6 +741,15 @@ void ofxDVS::draw() {
     drawImu6();
     myCam.end();
     
+    //if rotation and tranlation quaternions
+  //  ofMatrix4x4 matrix = 0;
+    //myCam.reset();
+    //myCam.rotate(rotationCam);
+    //myCam.setOrientation(rotationCam);
+//    }
+    //ofDrawBox(cameraPos.x*10, cameraPos.y*10, cameraPos.z*10, 20, 20, 20);
+    //myCam.setTarget(cameraPos*120);
+    //cout << "DVS class" << rotationCam << endl;
     drawMouseDistanceToSpikes();
 }
 
@@ -1128,6 +1143,31 @@ string ofxDVS::getUserHomeDir()
     return homeDir;
 }
 
+// 
+//--------------------------------------------------------------
+void ofxDVS::initMeanRate(){
+    frequencyMap = new float*[sizeX];
+    for(int i = 0; i < sizeX; ++i){
+        frequencyMap[i] = new float[sizeY];
+    }
+    for(int i = 0; i < sizeX; ++i){
+        for(int j = 0; j < sizeY; ++j){
+            frequencyMap[i][j] = 0.0;
+        }
+    }
+    spikeCountMap = new float*[sizeX];
+    for(int i = 0; i < sizeX; ++i){
+        spikeCountMap[i] = new float[sizeY];
+    }
+    for(int i = 0; i < sizeX; ++i){
+        for(int j = 0; j < sizeY; ++j){
+            spikeCountMap[i][j] = 0.0;
+        }
+    }
+    meanRateImage.allocate(sizeX, sizeY, OF_IMAGE_COLOR_ALPHA);
+    startedMeas = false;
+}
+
 // Image Generator
 //--------------------------------------------------------------
 void ofxDVS::initImageGenerator(){
@@ -1357,6 +1397,11 @@ void ofxDVS::updateImageGenerator(){
         }
         imageGenerator.update();
     }
+}
+
+//--------------------------------------------------------------
+float ofxDVS::getImuTemp(){
+    return(imuTemp);
 }
 
 //--------------------------------------------------------------

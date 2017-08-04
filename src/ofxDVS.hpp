@@ -83,6 +83,7 @@ struct imu6 {
     ofVec3f accel;
     ofVec3f gyro;
     bool valid;
+    float temperature;
 };
 
 
@@ -733,6 +734,8 @@ public:
     void drawMouseDistanceToSpikes();
     void setPointer(bool i);
     void setDrawImu(bool i);
+    void initMeanRate();
+    float getImuTemp();
     
     // color palette for spikes
     int spkOnR[8];
@@ -772,6 +775,14 @@ public:
     int counterSpikes;
     bool drawImageGen;
     
+    //Mean Rate
+    ofImage meanRateImage;
+    float** frequencyMap;
+    float** spikeCountMap;
+    bool startedMeas;
+    float measureMinTime;
+    float measureStartedAt;
+    
     // Ba filter
     float BAdeltaT;
     
@@ -799,6 +810,9 @@ public:
     long hours;
     char timeString[256];
     
+    // imu temperature
+    float imuTemp;
+    
     // mesh
     long tmp;
     long m;
@@ -807,6 +821,13 @@ public:
     bool drawDistanceMesh;
     string chipName;
     bool doDrawImu6;
+    
+    // cam rotation - translation
+    ofQuaternion rotationCam;
+    ofVec3f translationCam;
+    ofVec3f cameraPos;
+    
+    
 };
 
 
