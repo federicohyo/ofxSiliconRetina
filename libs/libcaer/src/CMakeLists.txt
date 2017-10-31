@@ -1,0 +1,45 @@
+SET(LIBCAER_SRC_FILES
+	ringbuffer.c
+	log.c
+	events.c
+	frame_utils.c
+	usb_utils.c
+	autoexposure.c
+	device.c
+	dvs128.c
+	davis.c
+	dynapse.c)
+
+IF (ENABLE_SERIALDEV)
+	# Add serial devices.
+	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} edvs.c)
+ENDIF()
+
+IF (ENABLE_OPENCV)
+	# Add C++ OpenCV support..
+	SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} frame_utils_opencv.cpp)
+ENDIF()
+
+# Set in parent scope for info printout.
+SET(LIBCAER_SRC_FILES ${LIBCAER_SRC_FILES} PARENT_SCOPE)
+
+IF (OS_UNIX AND NOT OS_MACOSX)
+	# Add --as-needed to linker flags for libraries.
+	SET(CMAKE_SHARED_LINKER_FLAGS "-Wl,--as-needed")
+ENDIF()
+
+ADD_LIBRARY(caer SHARED ${LIBCAER_SRC_FILES})
+
+SET_TARGET_PROPERTIES(caer
+	PROPERTIES
+	SOVERSION ${PROJECT_VERSION_MAJOR}
+	VERSION ${PROJECT_VERSION}
+)
+
+TARGET_LINK_LIBRARIES(caer ${LIBCAER_LIBS})
+
+IF (OS_WINDOWS)
+	INSTALL(TARGETS caer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ELSE()
+	INSTALL(TARGETS caer DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ENDIF()

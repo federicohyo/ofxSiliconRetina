@@ -3,8 +3,13 @@
 
 #include "libcaer.h"
 #include "events/frame.h"
+#include "devices/davis.h"
 
+#ifdef NDEBUG
 #define AUTOEXPOSURE_ENABLE_DEBUG_LOGGING 0
+#else
+#define AUTOEXPOSURE_ENABLE_DEBUG_LOGGING 1
+#endif
 
 #define AUTOEXPOSURE_HISTOGRAM_PIXELS 256
 #define AUTOEXPOSURE_HISTOGRAM_MSV 5
@@ -22,7 +27,9 @@ struct auto_exposure_state {
 
 typedef struct auto_exposure_state *autoExposureState;
 
-// Returns next exposure value in µs, or -1 if currently set is optimal.
-int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frame, uint32_t exposureFrameValue, uint32_t exposureLastSetValue);
+// Returns next exposure value in µs, or -1 if currently set is optimal/no change is desired.
+// Careful: frames can all be NULL!
+int32_t autoExposureCalculate(autoExposureState state, caerFrameEventConst frames[DAVIS_APS_ROI_REGIONS_MAX],
+	uint32_t exposureFrameValue, uint32_t exposureLastSetValue);
 
 #endif /* LIBCAER_SRC_AUTOEXPOSURE_H_ */

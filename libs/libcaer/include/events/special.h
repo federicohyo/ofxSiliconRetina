@@ -107,6 +107,38 @@ typedef const struct caer_special_event_packet *caerSpecialEventPacketConst;
 caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Special event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerSpecialEventPacket caerSpecialEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != SPECIAL_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSpecialEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Special event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerSpecialEventPacketConst caerSpecialEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != SPECIAL_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSpecialEventPacketConst) header);
+}
+
+/**
  * Get the special event at the given index from the event packet.
  *
  * @param packet a valid SpecialEventPacket pointer. Cannot be NULL.

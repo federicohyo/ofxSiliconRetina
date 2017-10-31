@@ -2,12 +2,13 @@
 #define LIBCAER_SRC_USB_UTILS_H_
 
 #include "libcaer.h"
+#include "devices/usb.h"
 #include <libusb.h>
 #include <stdatomic.h>
 
-//#if defined(HAVE_PTHREADS)
+#if defined(HAVE_PTHREADS)
 #include "c11threads_posix.h"
-//#endif
+#endif
 
 #define MAX_THREAD_NAME_LENGTH 15
 #define MAX_SERIAL_NUMBER_LENGTH 8
@@ -33,13 +34,14 @@ struct usb_state {
 	atomic_uint_fast32_t usbBufferNumber;
 	atomic_uint_fast32_t usbBufferSize;
 	uint8_t dataEndPoint;
-	atomic_bool dataTrasfersRun;
+	atomic_bool dataTransfersRun;
 	mtx_t dataTransfersLock;
 	struct libusb_transfer **dataTransfers; // LOCK PROTECTED.
 	uint32_t dataTransfersLength; // LOCK PROTECTED.
 	atomic_uint_fast32_t activeDataTransfers;
+	uint32_t failedDataTransfers;
 	// USB Data Transfers handling callback
-	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent);
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent);
 	void *usbDataCallbackPtr;
 	// USB Data Transfers shutdown callback
 	void (*usbShutdownCallback)(void *usbShutdownCallbackPtr);
@@ -61,7 +63,7 @@ void usbDeviceClose(usbState state);
 
 void usbSetThreadName(usbState state, const char *threadName);
 void usbSetDataCallback(usbState state,
-	void (*usbDataCallback)(void *usbDataCallbackPtr, uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr);
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr);
 void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr),
 	void *usbShutdownCallbackPtr);
 void usbSetDataEndpoint(usbState state, uint8_t dataEndPoint);
@@ -69,6 +71,42 @@ void usbSetTransfersNumber(usbState state, uint32_t transfersNumber);
 void usbSetTransfersSize(usbState state, uint32_t transfersSize);
 uint32_t usbGetTransfersNumber(usbState state);
 uint32_t usbGetTransfersSize(usbState state);
+
+static inline bool usbConfigSet(usbState state, uint8_t paramAddr, uint32_t param) {
+	switch (paramAddr) {
+		case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
+			usbSetTransfersNumber(state, param);
+			break;
+
+		case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
+			usbSetTransfersSize(state, param);
+			break;
+
+		default:
+			return (false);
+			break;
+	}
+
+	return (true);
+}
+
+static inline bool usbConfigGet(usbState state, uint8_t paramAddr, uint32_t *param) {
+	switch (paramAddr) {
+		case CAER_HOST_CONFIG_USB_BUFFER_NUMBER:
+			*param = usbGetTransfersNumber(state);
+			break;
+
+		case CAER_HOST_CONFIG_USB_BUFFER_SIZE:
+			*param = usbGetTransfersSize(state);
+			break;
+
+		default:
+			return (false);
+			break;
+	}
+
+	return (true);
+}
 
 struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID);
 
@@ -79,7 +117,7 @@ bool usbThreadStart(usbState state);
 void usbThreadStop(usbState state);
 
 static inline bool usbDataTransfersAreRunning(usbState state) {
-	return (atomic_load(&state->dataTrasfersRun));
+	return (atomic_load(&state->dataTransfersRun));
 }
 bool usbDataTransfersStart(usbState state);
 void usbDataTransfersStop(usbState state);
@@ -87,7 +125,7 @@ void usbDataTransfersStop(usbState state);
 bool usbControlTransferOutAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status), void *controlOutCallbackPtr);
 bool usbControlTransferInAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, size_t dataSize,
-	void (*controlInCallback)(void *controlInCallbackPtr, int status, uint8_t *buffer, size_t bufferSize),
+	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlInCallbackPtr);
 bool usbControlTransferOut(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize);

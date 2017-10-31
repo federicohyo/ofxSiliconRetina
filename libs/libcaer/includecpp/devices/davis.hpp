@@ -38,6 +38,14 @@ public:
 		return (caerDavisInfoGet(handle.get()));
 	}
 
+	void roiConfigure(uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
+		uint16_t endX, uint16_t endY) const {
+		bool success = caerDavisROIConfigure(handle.get(), roiRegion, enable, startX, startY, endX, endY);
+		if (!success) {
+			throw std::runtime_error("Failed to configure APS ROI region.");
+		}
+	}
+
 	// STATIC.
 	static uint16_t biasVDACGenerate(const struct caer_bias_vdac vdacBias) noexcept {
 		return (caerBiasVDACGenerate(vdacBias));

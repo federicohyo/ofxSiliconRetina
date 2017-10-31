@@ -102,4 +102,45 @@
 	#error platform not supported
 #endif
 
+#include <stdint.h>
+#include <string.h>
+
+// libcaer: define macros for floating-point conversions too.
+// Floats must be 4 bytes in size, so like a 32-bit integer, but their endianness
+// is undefined, so we use the 32bit conversion functions and memcpy() to do the
+// conversions safely (assumed integer and floating-point do have the same
+// endianness on the system, which is almost always true). For further details, see:
+// https://stackoverflow.com/questions/10620601/portable-serialisation-of-ieee754-floating-point-values
+static inline float htobeflt(float val) {
+    uint32_t rep;
+    memcpy(&rep, &val, sizeof(rep));
+    rep = htobe32(rep);
+    memcpy(&val, &rep, sizeof(rep));
+    return (val);
+}
+
+static inline float htoleflt(float val) {
+    uint32_t rep;
+    memcpy(&rep, &val, sizeof(rep));
+    rep = htole32(rep);
+    memcpy(&val, &rep, sizeof(rep));
+    return (val);
+}
+
+static inline float beflttoh(float val) {
+    uint32_t rep;
+    memcpy(&rep, &val, sizeof(rep));
+    rep = be32toh(rep);
+    memcpy(&val, &rep, sizeof(rep));
+    return (val);
+}
+
+static inline float leflttoh(float val) {
+    uint32_t rep;
+    memcpy(&rep, &val, sizeof(rep));
+    rep = le32toh(rep);
+    memcpy(&val, &rep, sizeof(rep));
+    return (val);
+}
+
 #endif /* PORTABLE_ENDIAN_H__ */

@@ -242,6 +242,55 @@ extern "C" {
  * them pile up at the input FIFOs.
  */
 #define DAVIS_CONFIG_MUX_DROP_MIC_ON_TRANSFER_STALL      8
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_MUX_HAS_STATISTICS              10
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * DVS events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_DVS_DROPPED      11
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * APS events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_APS_DROPPED      13
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * IMU events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_IMU_DROPPED      15
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * External Input events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_EXTINPUT_DROPPED 17
+/**
+ * Parameter address for module DAVIS_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * Microphone sample events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_MUX_STATISTICS_MIC_DROPPED      19
 
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
@@ -461,20 +510,20 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER    28
+#define DAVIS_CONFIG_DVS_HAS_BACKGROUND_ACTIVITY_FILTER  28
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * enable the background-activity filter, which tries to remove events
  * caused by transistor leakage, by rejecting uncorrelated events.
  */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY        29
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY      29
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * specify the time difference constant for the background-activity
  * filter in microseconds. Events that do correlated within this
  * time-frame are let through, while others are filtered out.
  */
-#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_DELTAT 30
+#define DAVIS_CONFIG_DVS_FILTER_BACKGROUND_ACTIVITY_TIME 30
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * read-only parameter, information about the presence of the
@@ -483,7 +532,7 @@ extern "C" {
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
-#define DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR          31
+#define DAVIS_CONFIG_DVS_HAS_TEST_EVENT_GENERATOR        31
 /**
  * Parameter address for module DAVIS_CONFIG_DVS:
  * enable the test event generator for debugging purposes.
@@ -493,7 +542,115 @@ extern "C" {
  * Both DAVIS_CONFIG_DVS_RUN and DAVIS_CONFIG_DVS_EXTERNAL_AER_CONTROL
  * have to be turned off for this to work.
  */
-#define DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE       32
+#define DAVIS_CONFIG_DVS_TEST_EVENT_GENERATOR_ENABLE     32
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * enable the refractory period filter, which limits the firing rate
+ * of pixels. This is supported together with the background-activity
+ * filter.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD        33
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * specify the time constant for the refractory period filter.
+ * Pixels will be inhibited from generating new events during this
+ * time after the last even has fired.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_REFRACTORY_PERIOD_TIME   34
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, information about the presence of the
+ * ROI filter feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_DVS_HAS_ROI_FILTER          35
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * start position on the X axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_X-1, and be smaller
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN 36
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * start position on the Y axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_Y-1, and be smaller
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW    37
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * end position on the X axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_X-1, and be greater
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_START_COLUMN.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_END_COLUMN   38
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * end position on the Y axis for Region of Interest.
+ * Must be between 0 and DVS_SIZE_Y-1, and be greater
+ * or equal to DAVIS_CONFIG_DVS_FILTER_ROI_START_ROW.
+ */
+#define DAVIS_CONFIG_DVS_FILTER_ROI_END_ROW      39
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_davis_info'
+ * documentation to get this information.
+ */
+#define DAVIS_CONFIG_DVS_HAS_STATISTICS             40
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of row event
+ * transactions completed on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_ROW      41
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of column event
+ * transactions completed on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_COLUMN   43
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * transaction sequences on the device due to full buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_EVENTS_DROPPED  45
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * events due to the pixel filter.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_PIXELS 47
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * events due to the background-activity filter.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_BACKGROUND_ACTIVITY 49
+/**
+ * Parameter address for module DAVIS_CONFIG_DVS:
+ * read-only parameter, representing the number of dropped
+ * events due to the refractory period filter.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DAVIS_CONFIG_DVS_STATISTICS_FILTERED_REFRACTORY_PERIOD   51
 
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
@@ -587,9 +744,7 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 0.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_0 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_0.
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_0         9
 /**
@@ -662,9 +817,7 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 1.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_1 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_1.
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_1         20
 /**
@@ -692,9 +845,7 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 2.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_2 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_2.
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_2         24
 /**
@@ -722,9 +873,7 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_APS:
  * start position on the X axis for Region of Interest 3.
  * Must be between 0 and APS_SIZE_X-1, and be smaller
- * or equal to DAVIS_CONFIG_APS_END_COLUMN_3 for the ROI
- * region to be enabled. Setting it to APS_SIZE_X itself
- * deactivates this ROI region completely.
+ * or equal to DAVIS_CONFIG_APS_END_COLUMN_3.
  */
 #define DAVIS_CONFIG_APS_START_COLUMN_3         28
 /**
@@ -751,28 +900,12 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * read-only parameter, information about the presence of an
- * external ADC to read the pixel values.
- * This is reserved for internal use and should not be used by
- * anything other than libcaer. Please see the 'struct caer_davis_info'
- * documentation to get this information.
- */
-#define DAVIS_CONFIG_APS_HAS_EXTERNAL_ADC       32
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * read-only parameter, information about the presence of an
  * internal, on-chip ADC to read the pixel values.
  * This is reserved for internal use and should not be used by
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
  */
 #define DAVIS_CONFIG_APS_HAS_INTERNAL_ADC       33
-/**
- * Parameter address for module DAVIS_CONFIG_APS:
- * use the internal, on-chip ADC instead of the external one.
- * This enables a much faster and more power-efficient readout
- * for the frames, and should as such always be preferred.
- */
-#define DAVIS_CONFIG_APS_USE_INTERNAL_ADC       34
 /**
  * Parameter address for module DAVIS_CONFIG_APS:
  * enable sampling of pixel voltage by the internal ADC circuitry.
@@ -804,6 +937,33 @@ extern "C" {
  * ADC, to minimize noise.
  */
 #define DAVIS_CONFIG_APS_ADC_TEST_MODE          39
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 0.
+ * ROI region 0 is always present.
+ */
+#define DAVIS_CONFIG_APS_ROI0_ENABLED           40
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 1.
+ * ROI region 1 is only available when apsHasQuadROI=true,
+ * see 'struct caer_davis_info' for more information.
+ */
+#define DAVIS_CONFIG_APS_ROI1_ENABLED           41
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 2.
+ * ROI region 2 is only available when apsHasQuadROI=true,
+ * see 'struct caer_davis_info' for more information.
+ */
+#define DAVIS_CONFIG_APS_ROI2_ENABLED           42
+/**
+ * Parameter address for module DAVIS_CONFIG_APS:
+ * Enable/disable ROI region 3.
+ * ROI region 3 is only available when apsHasQuadROI=true,
+ * see 'struct caer_davis_info' for more information.
+ */
+#define DAVIS_CONFIG_APS_ROI3_ENABLED           43
 
 // Extra timing settings for DAVISRGB APS module.
 /**
@@ -1188,9 +1348,7 @@ extern "C" {
 /**
  * Parameter address for module DAVIS_CONFIG_SYSINFO:
  * read-only parameter, the version of the logic currently
- * running on the device's FPGA/CPLD. It usually represents
- * a specific SVN revision, at which the logic code was
- * synthesized.
+ * running on the device's FPGA/CPLD.
  * This is reserved for internal use and should not be used by
  * anything other than libcaer. Please see the 'struct caer_davis_info'
  * documentation to get this information.
@@ -1243,11 +1401,11 @@ extern "C" {
  * Parameter address for module DAVIS_CONFIG_MICROPHONE:
  * allows setting the sample frequency of the stereo microphones,
  * by specifying the length of an SCK clock cycle in LogicClock cycles.
- * Value can be between 30 and 215 inclusive.
+ * Value can be between 30 and 219 inclusive.
  * The desired value can be calculated in the following way:
- * floor(100'000'000/64/<desired freq in Hz>)
+ * floor((100.8 * 1000)/(64 * <desired frequency in KHz>))
  * For example for 48 KHz sampling frequency, this would be 32.
- * For 44.1 KHz it would be 35, and for 16 KHz it would be 97.
+ * For 44.1 KHz it would be 35, and for 16 KHz it would be 98.
  */
 #define DAVIS_CONFIG_MICROPHONE_SAMPLE_FREQUENCY 1
 
@@ -1685,6 +1843,13 @@ extern "C" {
 //@}
 
 /**
+ * DAVIS: maximum number of APS Regions-of-Interest that
+ * can be produced by any DAVIS camera. See 'struct caer_davis_info'
+ * for actual number: 4 if apsHasQuadROI=true, else 1.
+ */
+#define DAVIS_APS_ROI_REGIONS_MAX 4
+
+/**
  * DAVIS device-related information.
  */
 struct caer_davis_info {
@@ -1714,7 +1879,7 @@ struct caer_davis_info {
 	int16_t dvsSizeY;
 	/// Feature test: DVS pixel-level filtering.
 	bool dvsHasPixelFilter;
-	/// Feature test: DVS Background Activity filter.
+	/// Feature test: DVS Background Activity filter (and Refractory Period filter).
 	bool dvsHasBackgroundActivityFilter;
 	/// Feature test: fake event generator (testing/debug).
 	bool dvsHasTestEventGenerator;
@@ -1736,6 +1901,12 @@ struct caer_davis_info {
 	bool extInputHasGenerator;
 	/// Feature test: External Input module supports extra detectors (1 & 2).
 	bool extInputHasExtraDetectors;
+	/// Feature test: DVS ROI filter.
+	bool dvsHasROIFilter;
+	/// Feature test: DVS statistics support.
+	bool dvsHasStatistics;
+	/// Feature test: Multiplexer statistics support (event drops).
+	bool muxHasStatistics;
 };
 
 /**
@@ -1878,6 +2049,23 @@ uint16_t caerBiasShiftedSourceGenerate(const struct caer_bias_shiftedsource shif
  * @return shifted-source bias structure.
  */
 struct caer_bias_shiftedsource caerBiasShiftedSourceParse(const uint16_t shiftedSourceBias);
+
+/**
+ * Configure an APS ROI region in one step. This function guarantees efficiency and
+ * atomicity (no intermediate-sized results possible).
+ *
+ * @param handle a valid device handle.
+ * @param roiRegion which ROI region to configure, 0 or [0,3] if 'apsHasQuadROI' is defined.
+ * @param enable whether to enable or disable this ROI region.
+ * @param startX start corner X coordinate (0, 0 is upper left of frame).
+ * @param startY start corner Y coordinate (0, 0 is upper left of frame).
+ * @param endX end corner X coordinate (0, 0 is upper left of frame). Must be bigger than start.
+ * @param endY end corner Y coordinate (0, 0 is upper left of frame). Must be bigger than start.
+ *
+ * @return true on success, false otherwise.
+ */
+bool caerDavisROIConfigure(caerDeviceHandle handle, uint8_t roiRegion, bool enable, uint16_t startX, uint16_t startY,
+	uint16_t endX, uint16_t endY);
 
 #ifdef __cplusplus
 }

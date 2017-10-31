@@ -11,6 +11,7 @@
 #include "events/point2d.h"
 #include "events/point3d.h"
 #include "events/point4d.h"
+#include "events/matrix4x4.h"
 #include "events/spike.h"
 
 caerEventPacketContainer caerEventPacketContainerAllocate(int32_t eventPacketsNumber) {
@@ -44,7 +45,9 @@ void caerEventPacketContainerFree(caerEventPacketContainer container) {
 	}
 
 	// Free packet container and ensure all subordinate memory is also freed.
-	for (int32_t i = 0; i < caerEventPacketContainerGetEventPacketsNumber(container); i++) {
+	int32_t eventPacketsNum = caerEventPacketContainerGetEventPacketsNumber(container);
+
+	for (int32_t i = 0; i < eventPacketsNum; i++) {
 		caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(container, i);
 
 		if (packetHeader != NULL) {
@@ -56,7 +59,7 @@ void caerEventPacketContainerFree(caerEventPacketContainer container) {
 }
 
 caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -85,7 +88,7 @@ caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -115,8 +118,8 @@ caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, i
 
 caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow,
 	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0 || maxLengthX <= 0 || maxLengthY <= 0
-		|| maxChannelNumber <= 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0) || (maxLengthX <= 0) || (maxLengthY <= 0)
+		|| (maxChannelNumber <= 0)) {
 		return (NULL);
 	}
 
@@ -147,7 +150,7 @@ caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t
 }
 
 caerIMU6EventPacket caerIMU6EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -176,7 +179,7 @@ caerIMU6EventPacket caerIMU6EventPacketAllocate(int32_t eventCapacity, int16_t e
 }
 
 caerIMU9EventPacket caerIMU9EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -205,7 +208,7 @@ caerIMU9EventPacket caerIMU9EventPacketAllocate(int32_t eventCapacity, int16_t e
 }
 
 caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -234,7 +237,7 @@ caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16
 }
 
 caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -264,7 +267,7 @@ caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eve
 
 caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventCapacity, int16_t eventSource,
 	int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -293,7 +296,7 @@ caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventC
 }
 
 caerPoint1DEventPacket caerPoint1DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -322,7 +325,7 @@ caerPoint1DEventPacket caerPoint1DEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPoint2DEventPacket caerPoint2DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -351,7 +354,7 @@ caerPoint2DEventPacket caerPoint2DEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPoint3DEventPacket caerPoint3DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -380,7 +383,7 @@ caerPoint3DEventPacket caerPoint3DEventPacketAllocate(int32_t eventCapacity, int
 }
 
 caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 
@@ -408,8 +411,37 @@ caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int
 	return (packet);
 }
 
+caerMatrix4x4EventPacket caerMatrix4x4EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
+		return (NULL);
+	}
+
+	size_t eventSize = sizeof(struct caer_matrix4x4_event);
+	size_t eventPacketSize = sizeof(struct caer_matrix4x4_event_packet) + ((size_t) eventCapacity * eventSize);
+
+	// Zero out event memory (all events invalid).
+	caerMatrix4x4EventPacket packet = calloc(1, eventPacketSize);
+	if (packet == NULL) {
+		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event",
+			"Failed to allocate %zu bytes of memory for Matrix4x4 Event Packet of capacity %"
+			PRIi32 " from source %" PRIi16 ". Error: %d.", eventPacketSize, eventCapacity, eventSource,
+			errno);
+		return (NULL);
+	}
+
+	// Fill in header fields.
+	caerEventPacketHeaderSetEventType(&packet->packetHeader, MATRIX4x4_EVENT);
+	caerEventPacketHeaderSetEventSource(&packet->packetHeader, eventSource);
+	caerEventPacketHeaderSetEventSize(&packet->packetHeader, I32T(eventSize));
+	caerEventPacketHeaderSetEventTSOffset(&packet->packetHeader, offsetof(struct caer_matrix4x4_event, timestamp));
+	caerEventPacketHeaderSetEventTSOverflow(&packet->packetHeader, tsOverflow);
+	caerEventPacketHeaderSetEventCapacity(&packet->packetHeader, eventCapacity);
+
+	return (packet);
+}
+
 caerSpikeEventPacket caerSpikeEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
-	if (eventCapacity <= 0 || eventSource < 0 || tsOverflow < 0) {
+	if ((eventCapacity <= 0) || (eventSource < 0) || (tsOverflow < 0)) {
 		return (NULL);
 	}
 

@@ -94,6 +94,38 @@ caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventC
 	int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Configuration event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerConfigurationEventPacket caerConfigurationEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != CONFIG_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerConfigurationEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Configuration event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerConfigurationEventPacketConst caerConfigurationEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != CONFIG_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerConfigurationEventPacketConst) header);
+}
+
+/**
  * Get the configuration event at the given index from the event packet.
  *
  * @param packet a valid ConfigurationEventPacket pointer. Cannot be NULL.

@@ -87,7 +87,7 @@
 #
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
-# PROJECT_DEFINES = 
+PROJECT_DEFINES = HAVE_PTHREADS _DEFAULT_SOURCE
 
 ################################################################################
 # PROJECT CFLAGS
@@ -104,7 +104,7 @@
 #
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
-# PROJECT_CFLAGS = 
+PROJECT_CFLAGS = -std=c99 -D_XOPEN_SOURCE=700
 
 ################################################################################
 # PROJECT OPTIMIZATION CFLAGS

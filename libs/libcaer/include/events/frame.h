@@ -9,6 +9,8 @@
  * The (0, 0) pixel is in the upper left corner of the screen,
  * like in OpenCV/computer graphics. The pixel array is laid out row by row
  * (increasing X axis), going from top to bottom (increasing Y axis).
+ * To copy a frame event, the usual assignment operator = cannot be used.
+ * Please use caerGenericEventCopy() to copy frame events!
  */
 
 #ifndef LIBCAER_EVENTS_FRAME_H_
@@ -77,6 +79,8 @@ enum caer_frame_event_color_filter {
  * Signed integers are used for fields that are to be interpreted
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
+ * To copy a frame event, the usual assignment operator = cannot be used.
+ * Please use caerGenericEventCopy() to copy frame events!
  */
 PACKED_STRUCT(
 struct caer_frame_event {
@@ -100,7 +104,7 @@ struct caer_frame_event {
 	int32_t positionY;
 	/// Pixel array, 16 bit unsigned integers, normalized to 16 bit depth.
 	/// The pixel array is laid out row by row (increasing X axis), going
-	/// from top to bottom (increasing Y axis).
+	/// from top to bottom (increasing Y axis). This prevents simple copy!
 	uint16_t pixels[1]; // size 1 here for C++ compatibility.
 });
 
@@ -156,7 +160,41 @@ caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t
 	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber);
 
 /**
+ * Transform a generic event packet header into a Frame event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerFrameEventPacket caerFrameEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != FRAME_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerFrameEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Frame event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerFrameEventPacketConst caerFrameEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != FRAME_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerFrameEventPacketConst) header);
+}
+
+/**
  * Get the frame event at the given index from the event packet.
+ * To copy a frame event, the usual assignment operator = cannot be used.
+ * Please use caerGenericEventCopy() to copy frame events!
  *
  * @param packet a valid FrameEventPacket pointer. Cannot be NULL.
  * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.
@@ -180,6 +218,8 @@ static inline caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket p
 /**
  * Get the frame event at the given index from the event packet.
  * This is a read-only event, do not change its contents in any way!
+ * To copy a frame event, the usual assignment operator = cannot be used.
+ * Please use caerGenericEventCopy() to copy frame events!
  *
  * @param packet a valid FrameEventPacket pointer. Cannot be NULL.
  * @param n the index of the returned event. Must be within [0,eventCapacity[ bounds.

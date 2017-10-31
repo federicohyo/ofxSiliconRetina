@@ -60,14 +60,6 @@ struct SpikeEvent: public caer_spike_event {
 	void setNeuronID(uint32_t neuronID) noexcept {
 		caerSpikeEventSetNeuronID(this, neuronID);
 	}
-
-	uint16_t getX() const noexcept {
-		return (caerSpikeEventGetX(this));
-	}
-
-	uint16_t getY() const noexcept {
-		return (caerSpikeEventGetY(this));
-	}
 };
 
 static_assert(std::is_pod<SpikeEvent>::value, "SpikeEvent is not POD.");

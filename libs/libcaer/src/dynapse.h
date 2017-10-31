@@ -2,14 +2,15 @@
 #define LIBCAER_SRC_DYNAPSE_H_
 
 #include "devices/dynapse.h"
-#include "ringbuffer/ringbuffer.h"
+#include "data_exchange.h"
+#include "container_generation.h"
 #include "usb_utils.h"
 
 #define DYNAPSE_DEVICE_NAME "Dynap-se"
 
 #define DYNAPSE_DEVICE_PID 0x841D
 
-#define DYNAPSE_REQUIRED_LOGIC_REVISION 3
+#define DYNAPSE_REQUIRED_LOGIC_REVISION 5 
 #define DYNAPSE_REQUIRED_FIRMWARE_VERSION 3
 
 #define VENDOR_REQUEST_FPGA_CONFIG_AER          0xC5
@@ -21,36 +22,31 @@
 #define DYNAPSE_SPIKE_DEFAULT_SIZE 4096
 #define DYNAPSE_SPECIAL_DEFAULT_SIZE 128
 
+#define DYNAPSE_FX2_USB_CLOCK_FREQ 30
+
+// Chip ID 0 cannot be used for USB output, so we have to shift it by
+// adding 1, and also adding that to all others.
+#define DYNAPSE_CHIPID_SHIFT 1
+
 struct dynapse_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
-	RingBuffer dataExchangeBuffer;
-	atomic_uint_fast32_t dataExchangeBufferSize; // Only takes effect on DataStart() calls!
-	atomic_bool dataExchangeBlocking;
-	atomic_bool dataExchangeStartProducers;
-	atomic_bool dataExchangeStopProducers;
-	void (*dataNotifyIncrease)(void *ptr);
-	void (*dataNotifyDecrease)(void *ptr);
-	void *dataNotifyUserPtr;
+	struct data_exchange dataExchange;
 	// USB Device State
 	struct usb_state usbState;
 	// Timestamp fields
-	int32_t wrapOverflow;
-	int32_t wrapAdd;
-	int32_t lastTimestamp;
-	int32_t currentTimestamp;
+	struct timestamps_state_new_logic timestamps;
 	// Packet Container state
-	caerEventPacketContainer currentPacketContainer;
-	atomic_uint_fast32_t maxPacketContainerPacketSize;
-	atomic_uint_fast32_t maxPacketContainerInterval;
-	int64_t currentPacketContainerCommitTimestamp;
-	// Spike Packet state
-	caerSpikeEventPacket currentSpikePacket;
-	int32_t currentSpikePacketPosition;
-	// Special Packet state
-	caerSpecialEventPacket currentSpecialPacket;
-	int32_t currentSpecialPacketPosition;
+	struct container_generation container;
+	struct {
+		// Spike Packet state
+		caerSpikeEventPacket spike;
+		int32_t spikePosition;
+		// Special Packet state
+		caerSpecialEventPacket special;
+		int32_t specialPosition;
+	} currentPackets;
 };
 
 typedef struct dynapse_state *dynapseState;

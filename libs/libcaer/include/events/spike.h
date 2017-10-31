@@ -88,6 +88,38 @@ typedef const struct caer_spike_event_packet *caerSpikeEventPacketConst;
 caerSpikeEventPacket caerSpikeEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Spike event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerSpikeEventPacket caerSpikeEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != SPIKE_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSpikeEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Spike event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerSpikeEventPacketConst caerSpikeEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != SPIKE_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSpikeEventPacketConst) header);
+}
+
+/**
  * Get the Spike event at the given index from the event packet.
  *
  * @param packet a valid SpikeEventPacket pointer. Cannot be NULL.
@@ -302,49 +334,6 @@ static inline void caerSpikeEventSetNeuronID(caerSpikeEvent event, uint32_t neur
 	CLEAR_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK);
 	SET_NUMBITS32(event->data, SPIKE_NEURON_ID_SHIFT, SPIKE_NEURON_ID_MASK, neuronID);
 }
-
-/**
- * Get the Y (row) address for a spike event, in pixels.
- * The (0, 0) address is in the upper left corner.
- *
- * @param event a valid SpikeEvent pointer. Cannot be NULL.
- *
- * @return the event Y address in pixels.
- */
-static inline uint16_t caerSpikeEventGetY(caerSpikeEventConst event) {
-	uint8_t chipId = caerSpikeEventGetChipID(event);
-	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
-	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
-
-	uint16_t columnId = (neuronId & 0x0F);
-	bool addColumn = (coreId & 0x01);
-	bool addColumnChip = (chipId & (0x01 << 2));
-	columnId = U16T(columnId + (addColumn) * 16 + (addColumnChip) * 32);
-
-	return (columnId);
-}
-
-/**
- * Get the X (column) address for a spike event, in pixels.
- * The (0, 0) address is in the upper left corner.
- *
- * @param event a valid SpikeEvent pointer. Cannot be NULL.
- *
- * @return the event X address in pixels.
- */
-static inline uint16_t caerSpikeEventGetX(caerSpikeEventConst event) {
-	uint8_t chipId = caerSpikeEventGetChipID(event);
-	uint8_t coreId = caerSpikeEventGetSourceCoreID(event);
-	uint32_t neuronId = caerSpikeEventGetNeuronID(event);
-
-	uint16_t rowId = ((neuronId >> 4) & 0x0F);
-	bool addRow = (coreId & (0x01 << 1));
-	bool addRowChip = (chipId & (0x01 << 3));
-	rowId = U16T(rowId + (addRow) * 16 + (addRowChip) * 32);
-
-	return (rowId);
-}
-
 
 /**
  * Iterator over all Spike events in a packet.

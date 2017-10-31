@@ -98,6 +98,38 @@ typedef const struct caer_point4d_event_packet *caerPoint4DEventPacketConst;
 caerPoint4DEventPacket caerPoint4DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Point4D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerPoint4DEventPacket caerPoint4DEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT4D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint4DEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Point4D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerPoint4DEventPacketConst caerPoint4DEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT4D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint4DEventPacketConst) header);
+}
+
+/**
  * Get the Point4D event at the given index from the event packet.
  *
  * @param packet a valid Point4DEventPacket pointer. Cannot be NULL.
@@ -309,7 +341,7 @@ static inline void caerPoint4DEventSetScale(caerPoint4DEvent event, int8_t scale
  * @return X axis measurement.
  */
 static inline float caerPoint4DEventGetX(caerPoint4DEventConst event) {
-	return (le32toh(event->x));
+	return (leflttoh(event->x));
 }
 
 /**
@@ -319,7 +351,7 @@ static inline float caerPoint4DEventGetX(caerPoint4DEventConst event) {
  * @param x X axis measurement.
  */
 static inline void caerPoint4DEventSetX(caerPoint4DEvent event, float x) {
-	event->x = htole32(x);
+	event->x = htoleflt(x);
 }
 
 /**
@@ -330,7 +362,7 @@ static inline void caerPoint4DEventSetX(caerPoint4DEvent event, float x) {
  * @return Y axis measurement.
  */
 static inline float caerPoint4DEventGetY(caerPoint4DEventConst event) {
-	return (le32toh(event->y));
+	return (leflttoh(event->y));
 }
 
 /**
@@ -340,7 +372,7 @@ static inline float caerPoint4DEventGetY(caerPoint4DEventConst event) {
  * @param y Y axis measurement.
  */
 static inline void caerPoint4DEventSetY(caerPoint4DEvent event, float y) {
-	event->y = htole32(y);
+	event->y = htoleflt(y);
 }
 
 /**
@@ -351,7 +383,7 @@ static inline void caerPoint4DEventSetY(caerPoint4DEvent event, float y) {
  * @return Z axis measurement.
  */
 static inline float caerPoint4DEventGetZ(caerPoint4DEventConst event) {
-	return (le32toh(event->z));
+	return (leflttoh(event->z));
 }
 
 /**
@@ -361,7 +393,7 @@ static inline float caerPoint4DEventGetZ(caerPoint4DEventConst event) {
  * @param z Z axis measurement.
  */
 static inline void caerPoint4DEventSetZ(caerPoint4DEvent event, float z) {
-	event->z = htole32(z);
+	event->z = htoleflt(z);
 }
 
 /**
@@ -372,7 +404,7 @@ static inline void caerPoint4DEventSetZ(caerPoint4DEvent event, float z) {
  * @return W axis measurement.
  */
 static inline float caerPoint4DEventGetW(caerPoint4DEventConst event) {
-	return (le32toh(event->w));
+	return (leflttoh(event->w));
 }
 
 /**
@@ -382,7 +414,7 @@ static inline float caerPoint4DEventGetW(caerPoint4DEventConst event) {
  * @param w W axis measurement.
  */
 static inline void caerPoint4DEventSetW(caerPoint4DEvent event, float w) {
-	event->w = htole32(w);
+	event->w = htoleflt(w);
 }
 
 /**

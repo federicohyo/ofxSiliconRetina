@@ -61,39 +61,42 @@ extern "C" {
  */
 #define DYNAPSE_CONFIG_USB      9
 /**
- * Clear CAM content
- * Output USB data packets in streams of 512 bytes using libusb
- * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_CLEAR_CAM, 0, 0); //0,0 not used
+ * Clear CAM content, on all cores of a chip.
+ * No arguments are used.
+ * Remember to select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_CLEAR_CAM 10
 /**
- * Clear SRAM content, use one SRAM cell to monitor neurons
- * Output USB data packets in streams of 512 bytes using libusb
- * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0); // zero not used
+ * Clear SRAM content, use one SRAM cell (cell 0, out of the four available)
+ * to monitor neurons via USB.
+ * 'paramAddr' is the chip ID on which to operate, other arguments are unused.
+ * Remember to also select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM 11
 /**
- * Used to monitor neurons , example usage:
- * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_MONITOR_NEU, 1, 0);  // core 1 neuron 0
- *
- * */
+ * Setup analog neuron monitoring via SMA connectors.
+ * 'paramAddr' takes the core ID to be monitored, 'param' the neuron ID.
+ * Remember to select the chip you want to configure before this!
+ */
 #define DYNAPSE_CONFIG_MONITOR_NEU 12
 /**
- * Clear SRAM content, route nothing outside
- * Output USB data packets in streams of 512 bytes using libusb
- * es: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_DEFAULT_SRAM, DYNAPSE_CONFIG_DYNAPSE_U2, 0); // zero not used
+ * Clear SRAM content, route nothing outside (all four SRAM cells zero).
+ * No arguments are used.
+ * Remember to select the chip you want to configure before this!
  */
 #define DYNAPSE_CONFIG_DEFAULT_SRAM_EMPTY 13
 
 /**
- * Module address: device side SRAM controller configuration.
- * The module holds an address, a word to be written to SRAM
+ * Module address: Device side SRAM controller configuration.
+ * The module holds an address, a word to be written to SRAM,
  * the most recent word read using a read command, and a read/write command.
- * Reads/writes are triggered when the address field is changed
- * ex: caerDynapseWriteSramWords(moduleData->moduleState, SRAMData, baseAddr, numWords);
+ * Reads/writes are triggered when the address field is changed.
+ * Example: caerDynapseWriteSramWords(devHandle, SRAMData, baseAddr, numWords);
  * Writes numWords words from array SRAMData to the SRAM, starting at baseAddr.
+ * This define is for internal use of caerDynapseWriteSramWords(); it can be
+ * used on its own, but we recommend using the above function that hides all
+ * the internal details of writing to the FPGA SRAM.
  */
-
 #define DYNAPSE_CONFIG_SRAM 14
 
 /**
@@ -108,49 +111,114 @@ extern "C" {
 /**
  * Module address: Device side spike generator module configuration.
  * Provides start/stop control of spike train application and selection
- * of fixed/variable interspike intervals and their location in memory.
+ * of fixed/variable inter-spike intervals and their location in memory.
  */
 #define DYNAPSE_CONFIG_SPIKEGEN 16
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
- * Instructs the spike generator to start applying the configurated
+ * Set certain neurons of a core to use the TAU2 neuron leak bias.
+ * By default neurons use the TAU1 neuron leak bias. You can also use
+ * DYNAPSE_CONFIG_TAU1_RESET and DYNAPSE_CONFIG_TAU2_RESET to reset
+ * all neurons in a core to the same bias.
+ * 'paramAddr' takes the core ID to be set, 'param' the neuron ID.
+ * Remember to select the chip you want to configure before this!
+ */
+#define DYNAPSE_CONFIG_TAU2_SET 17
+
+/**
+ * Module address: Device side poisson generator configuration
+ * Provides run/stop control of poisson spike generation and
+ * rate setting for 1024 sources.
+ */
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN 18
+
+/**
+ * Reset all neurons of a core to use the TAU1 neuron leak bias.
+ * 'paramAddr' takes the core ID to be reset, other arguments are unused.
+ * Remember to select the chip you want to configure before this!
+ */
+#define DYNAPSE_CONFIG_TAU1_RESET 19
+
+/**
+ * Reset all neurons of a core to use the TAU2 neuron leak bias.
+ * 'paramAddr' takes the core ID to be reset, other arguments are unused.
+ * Remember to select the chip you want to configure before this!
+ */
+#define DYNAPSE_CONFIG_TAU2_RESET 20
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN:
+ * Enables or disables generation of poisson spike trains.
+ */
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN_RUN 0
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN:
+ * Selects the address of a poisson spike train source. Writing
+ * to this parameter will apply the rate previously written to the
+ * WRITEDATA field.
+ */
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEADDRESS 1
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN:
+ * Holds data that will be written to the address specified by
+ * WRITEADDRESS.
+ */
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN_WRITEDATA 2
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_POISSONSPIKEGEN:
+ * Chip ID of the chip that will receive events generated by the
+ * poisson spike generator.
+ */
+#define DYNAPSE_CONFIG_POISSONSPIKEGEN_CHIPID 3
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN:
+ * Instructs the spike generator to start applying the configured
  * spike train when the parameter changes from false to true.
  */
 #define DYNAPSE_CONFIG_SPIKEGEN_RUN 0
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
- * Selects variable interspike interval mode (true) or fixed interspike
- * interval (false).
+ * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN:
+ * Selects variable inter-spike interval mode (true) or fixed inter-spike
+ * interval mode (false).
  */
 #define DYNAPSE_CONFIG_SPIKEGEN_VARMODE 1
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
+ * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN:
  * Sets the start address of a spike train in memory.
  */
 #define DYNAPSE_CONFIG_SPIKEGEN_BASEADDR 2
 
 /**
- * Paramter address for module DYNAPSE_CONFIG_SPIKEGEN.
+ * Paramter address for module DYNAPSE_CONFIG_SPIKEGEN:
  * Sets the number of events to read from memory for a single application
  * of a spike train.
  */
 #define DYNAPSE_CONFIG_SPIKEGEN_STIMCOUNT 3
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
- * Sets the interspike interval that will be used in fixed ISI mode (VARMODE false).
+ * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN:
+ * Sets the inter-spike interval that will be used in fixed ISI mode (VARMODE false).
  */
 #define DYNAPSE_CONFIG_SPIKEGEN_ISI 4
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN.
- * Sets the time base resolution for interspike intervals as the number
+ * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN:
+ * Sets the time base resolution for inter-spike intervals as the number
  * of FPGA clock cycles.
  */
 #define DYNAPSE_CONFIG_SPIKEGEN_ISIBASE 5
+
+/**
+ * Parameter address for module DYNAPSE_CONFIG_SPIKEGEN:
+ * Sets repeat mode to true or false.
+ */
+#define DYNAPSE_CONFIG_SPIKEGEN_REPEAT 6
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
@@ -159,7 +227,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_RUN 0
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
+ * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
  * Bits 16 down to 12 select the address in the global kernel table
  * and bits 11 down to 0 specify the data.
  * The 12 data bits are split into 4*3 synaptic weight bits which map
@@ -168,22 +236,22 @@ extern "C" {
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_GLOBALKERNEL 1
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
+ * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
  * Boolean parameter for selecting between using kernels stored in
- * SRAM or the global kernel table. 1 for SRAM, 0 for global kernel table
+ * SRAM or the global kernel table. 1 for SRAM, 0 for global kernel table.
  */
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_USESRAMKERNELS 2
 
 /**
- * Parameter address for moudle DYNAPSE_CONFIG_SYNAPSERECONFIG
- * Output chip select using chip identifiers from this document
+ * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
+ * Select which chip outputs should go to.
  */
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_CHIPSELECT 3
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG
+ * Parameter address for module DYNAPSE_CONFIG_SYNAPSERECONFIG:
  * SRAM base address configuration in increments of 32 Kib.
- * Setting this to N will place the SRAM kernel LUT in the range [N*2^15,(N+1)*2^15-1]
+ * Setting this to N will place the SRAM kernel LUT in the range [N*2^15,((N+1)*2^15)-1]
  */
 #define DYNAPSE_CONFIG_SYNAPSERECONFIG_SRAMBASEADDR 4
 
@@ -191,23 +259,24 @@ extern "C" {
  * Parameter address for module DYNAPSE_CONFIG_SRAM:
  * Holds the address that will be used for the next read/write.
  * Writing or reading this field will trigger the command contained
- * in the command register to be executed.
+ * in the command register to be executed on the FPGA.
  */
 #define DYNAPSE_CONFIG_SRAM_ADDRESS 1
 
 /**
- *Parameter address for module DYNAPSE_CONFIG_SRAM:
+ * Parameter address for module DYNAPSE_CONFIG_SRAM:
  * Holds the most recently read data from the SRAM.
- * Read only parameter.
+ * Read-only parameter.
  */
 #define DYNAPSE_CONFIG_SRAM_READDATA 2
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_SRAM:
  * Holds the data that will be written on the next write.
- * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, wData);
- *     caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
- *     caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, wAddr);
+ * Example:
+ *   caerDeviceConfigSet(devHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_WRITEDATA, wData);
+ *   caerDeviceConfigSet(devHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+ *   caerDeviceConfigSet(devHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_ADDRESS, wAddr);
  * Writes wData to the address specified by wAddr.
  */
 #define DYNAPSE_CONFIG_SRAM_WRITEDATA 3
@@ -215,26 +284,30 @@ extern "C" {
 /**
  * Parameter address for module DYNAPSE_CONFIG_SRAM:
  * Holds the command that will be executed when the address field is written to.
- * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+ * Example:
+ *   caerDeviceConfigSet(devHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
  * Sets the SRAM controller up for doing writes.
+ * DYNAPSE_CONFIG_SRAM_READ and DYNAPSE_CONFIG_SRAM_WRITE are supported.
  */
 #define DYNAPSE_CONFIG_SRAM_RWCOMMAND 4
 
 /**
  * Command for module DYNAPSE_CONFIG_SRAM:
- * Write command for the RWCOMMAND field.
- * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
- * Sets the SRAM controller up for doing writes.
- */
-#define DYNAPSE_CONFIG_SRAM_WRITE 1
-
-/**
- * Command for module DYNAPSE_CONFIG_SRAM:
  * Read command for the RWCOMMAND field.
- * ex: caerConfigSet(moduleData->moduleState, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_READ);
+ * Example:
+ *   caerDeviceConfigSet(devHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_READ);
  * Sets the SRAM controller up for doing reads.
  */
 #define DYNAPSE_CONFIG_SRAM_READ 0
+
+/**
+ * Command for module DYNAPSE_CONFIG_SRAM:
+ * Write command for the RWCOMMAND field.
+ * Example:
+ *   caerDeviceConfigSet(devHandle, DYNAPSE_CONFIG_SRAM, DYNAPSE_CONFIG_SRAM_RWCOMMAND, DYNAPSE_CONFIG_SRAM_WRITE);
+ * Sets the SRAM controller up for doing writes.
+ */
+#define DYNAPSE_CONFIG_SRAM_WRITE 1
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_SRAM:
@@ -277,6 +350,23 @@ extern "C" {
  * them pile up at the input FIFOs.
  */
 #define DYNAPSE_CONFIG_MUX_DROP_AER_ON_TRANSFER_STALL      4
+/**
+ * Parameter address for module DYNAPSE_CONFIG_MUX:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_dynapse_info'
+ * documentation to get this information.
+ */
+#define DYNAPSE_CONFIG_MUX_HAS_STATISTICS                    10
+/**
+ * Parameter address for module DYNAPSE_CONFIG_MUX:
+ * read-only parameter, representing the number of dropped
+ * AER (spike) events on the device due to full USB buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DYNAPSE_CONFIG_MUX_STATISTICS_AER_DROPPED            11
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_AER:
@@ -312,6 +402,31 @@ extern "C" {
  * DYNAPSE_CONFIG_AER_RUN has to be turned off for this to work.
  */
 #define DYNAPSE_CONFIG_AER_EXTERNAL_AER_CONTROL   10
+/**
+ * Parameter address for module DYNAPSE_CONFIG_AER:
+ * read-only parameter, information about the presence of the
+ * statistics feature.
+ * This is reserved for internal use and should not be used by
+ * anything other than libcaer. Please see the 'struct caer_dynapse_info'
+ * documentation to get this information.
+ */
+#define DYNAPSE_CONFIG_AER_HAS_STATISTICS            40
+/**
+ * Parameter address for module DYNAPSE_CONFIG_AER:
+ * read-only parameter, representing the number of event
+ * transactions completed on the device.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DYNAPSE_CONFIG_AER_STATISTICS_EVENTS         41
+/**
+ * Parameter address for module DYNAPSE_CONFIG_AER:
+ * read-only parameter, representing the number of dropped
+ * transaction sequences on the device due to full buffers.
+ * This is a 64bit value, and should always be read using the
+ * function: caerDeviceConfigGet64().
+ */
+#define DYNAPSE_CONFIG_AER_STATISTICS_EVENTS_DROPPED 45
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_CHIP:
@@ -348,9 +463,7 @@ extern "C" {
 /**
  * Parameter address for module DYNAPSE_CONFIG_SYSINFO:
  * read-only parameter, the version of the logic currently
- * running on the device's FPGA/CPLD. It usually represents
- * a specific SVN revision, at which the logic code was
- * synthesized.
+ * running on the device's FPGA/CPLD.
  * This is reserved for internal use and should not be used by
  * anything other than libcaer. Please see the 'struct caer_dynapse_info'
  * documentation to get this information.
@@ -403,13 +516,7 @@ extern "C" {
 #define DYNAPSE_CONFIG_USB_EARLY_PACKET_DELAY 1
 
 /**
- * Parameter address for module DYNAPSE_CONFIG_USB:
- * the time delay after which a packet of data is committed to
- * USB, even if it is not full yet (short USB packet).
- * The value is in 125µs time-slices, corresponding to how
- * USB schedules its operations (a value of 4 for example
- * would mean waiting at most 0.5ms until sending a short
- * USB packet to the host).
+ * On-chip SRAM for spike routing.
  */
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_POS 0
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_NEG 1
@@ -420,68 +527,73 @@ extern "C" {
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST 1
 
 /**
- * Parameter address for module DYNAPSE_X4BOARD_NEUX:
- * Number of neurons in the x direction of the board
+ * Number of chips on the board.
+ */
+#define DYNAPSE_X4BOARD_NUMCHIPS 4
+/**
+ * Number of neurons in the x direction of the board.
  */
 #define DYNAPSE_X4BOARD_NEUX 64
 /**
- * Parameter address for module DYNAPSE_X4BOARD_NEUY:
- * Number of neurons in the x direction of the board
+ * Number of neurons in the y direction of the board.
  */
 #define DYNAPSE_X4BOARD_NEUY 64
 /**
- * Parameter address for module DYNAPSE_X4BOARD_COREX:
- * Number of cores in the x direction of the board
+ * Number of cores in the x direction of the board.
  */
 #define DYNAPSE_X4BOARD_COREX 4
 /**
- * Parameter address for module DYNAPSE_X4BOARD_COREY:
- * Number of cores in the x direction of the board
+ * Number of cores in the y direction of the board.
  */
 #define DYNAPSE_X4BOARD_COREY 4
 
+/// Chip 0 ID.
 #define DYNAPSE_CONFIG_DYNAPSE_U0	0
-#define DYNAPSE_CONFIG_DYNAPSE_U1	8
-#define DYNAPSE_CONFIG_DYNAPSE_U2	4
-#define DYNAPSE_CONFIG_DYNAPSE_U3	12
+/// Chip 1 ID.
+#define DYNAPSE_CONFIG_DYNAPSE_U1	1
+/// Chip 2 ID.
+#define DYNAPSE_CONFIG_DYNAPSE_U2	2
+/// Chip 3 ID.
+#define DYNAPSE_CONFIG_DYNAPSE_U3	3
 
-#define DYNAPSE_CONFIG_NUMNEURONS			1024
-#define DYNAPSE_CONFIG_SRAMROW				1024
-#define DYNAPSE_CONFIG_CAMCOL				16
-#define DYNAPSE_CONFIG_NUMNEURONS_CORE	 	256
+/// Number of cores per chip.
 #define DYNAPSE_CONFIG_NUMCORES				4
-#define DYNAPSE_CONFIG_NUMSRAM_NEU	    	4
+/// Number of neurons in single chip.
+#define DYNAPSE_CONFIG_NUMNEURONS			1024
+/// Number of neurons per core.
+#define DYNAPSE_CONFIG_NUMNEURONS_CORE	 	256
+/// Number of columns of neurons in a chip.
 #define DYNAPSE_CONFIG_XCHIPSIZE   			32
+/// Number of rows of neurons in a core.
 #define DYNAPSE_CONFIG_YCHIPSIZE   			32
-#define DYNAPSE_CONFIG_NEUROW				16
+/// Number of columns of neurons in a core.
 #define DYNAPSE_CONFIG_NEUCOL				16
-#define DYNAPSE_CONFIG_NUMCAM				64
+/// Number of rows of neurons in a core.
+#define DYNAPSE_CONFIG_NEUROW				16
+/// Number of columns of CAMs in a core.
+#define DYNAPSE_CONFIG_CAMCOL				16
+/// Number of CAMs per neuron.
+#define DYNAPSE_CONFIG_NUMCAM_NEU			64
+/// Number of SRAM cells per neuron.
+#define DYNAPSE_CONFIG_NUMSRAM_NEU	    	4
 
+/// Fast excitatory synapse.
 #define DYNAPSE_CONFIG_CAMTYPE_F_EXC		3
+/// Slow excitatory synapse.
 #define DYNAPSE_CONFIG_CAMTYPE_S_EXC		2
+/// Fast inhibitory synapse.
 #define DYNAPSE_CONFIG_CAMTYPE_F_INH		1
+/// Slow inhibitory synapse.
 #define DYNAPSE_CONFIG_CAMTYPE_S_INH		0
-
-/*
- *  maximum user memory per query, libusb will digest it in chuncks of max 512 bytes per single transfer
- * */
-#define DYNAPSE_MAX_USER_USB_PACKET_SIZE	1024
-/*
- *  libusb max 512 bytes per single transfer
- * */
-#define DYNAPSE_CONFIG_MAX_USB_TRANSFER 512
-/*
- *  maximum number of 6 bytes configuration parameters, it needs to fit in 512
- * */
-#define DYNAPSE_CONFIG_MAX_PARAM_SIZE 85
 
 /**
  * Parameter address for module DYNAPSE_CONFIG_BIAS:
  * DYNAPSE chip biases.
  * Bias configuration values must be generated using the proper
  * functions, which are:
- * - convertBias() for coarse-fine (current) biases.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * - caerBiasDynapseGenerate() for Dynap-se coarse-fine (current) biases.
+ * See 'https://inilabs.com/support/hardware/user-guide-dynap-se/'
+ * section 'Neuron’s behaviors and parameters tuning'.
  */
 #define DYNAPSE_CONFIG_BIAS_C0_PULSE_PWLK_P             	0
 #define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_S_N            2
@@ -617,30 +729,11 @@ struct caer_dynapse_info {
 	int16_t logicClock;
 	/// Chip identifier/type.
 	int16_t chipID;
+	/// Feature test: AER (spikes) statistics support.
+	bool aerHasStatistics;
+	/// Feature test: Multiplexer statistics support (event drops).
+	bool muxHasStatistics;
 };
-
-/**
- * On-chip coarse-fine bias current configuration.
- * See 'http://inilabs.com/support/biasing/' for more details.
- */
-struct caer_bias_dynapse {
-	/// Coarse current, from 0 to 7, creates big variations in output current.
-	uint8_t coarseValue;
-	/// Fine current, from 0 to 255, creates small variations in output current.
-	uint8_t fineValue;
-	/// Whether this bias is enabled or not.
-	bool enabled;
-	/// Bias sex: true for 'N' type, false for 'P' type.
-	bool sexN;
-	/// Bias current level: true for 'Normal, false for 'Low'.
-	bool currentLevelNormal;
-	/// Bias current level: true for 'HighBias', false for 'LowBias'.
-	bool BiasLowHi;
-	/// whether this is a special bias.
-	bool special;
-};
-// TODO: what? precise biasLowHi, currentLevel really, special?
-// TODO: add generate/parse functions.
 
 /**
  * Return basic information on the device, such as its ID, the logic
@@ -654,75 +747,242 @@ struct caer_bias_dynapse {
  */
 struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 
-/*
- * @param cdh a valid device handle
- * Transfer numWords 16 bit words from *data to SRAM start at
- * address baseAddr in SRAM.
- * @return true on success, false otherwise
+/**
+ * On-chip coarse-fine bias current configuration for Dynap-se.
+ * See 'https://inilabs.com/support/hardware/user-guide-dynap-se/'
+ * section 'Neuron’s behaviors and parameters tuning'.
  */
-bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, uint32_t numWords);
+struct caer_bias_dynapse {
+	/// Address of bias to configure, see DYNAPSE_CONFIG_BIAS_* defines.
+	uint8_t biasAddress;
+	/// Coarse current, from 0 to 7, creates big variations in output current.
+	uint8_t coarseValue;
+	/// Fine current, from 0 to 255, creates small variations in output current.
+	uint8_t fineValue;
+	/// Whether this bias is enabled or not.
+	bool enabled;
+	/// Bias sex: true for 'N' type, false for 'P' type.
+	bool sexN;
+	/// Bias type: true for 'Normal', false for 'Cascode'.
+	bool typeNormal;
+	/// Bias current level: true for 'HighBias', false for 'LowBias'.
+	bool biasHigh;
+};
 
-/*
+/**
+ * Transform coarse-fine bias structure into internal integer representation,
+ * suited for sending directly to the device via caerDeviceConfigSet().
  *
- *  Remember to Select the chip before calling this function
- * @param handle a valid device handle.
+ * @param dynapseBias coarse-fine bias structure.
  *
- *  coreId [0,3]
- *  neuronId [0,255], virtualCoreId [0,3],
- *  sx [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST], dx,
- *  sy[DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH], dy,
- *  sramId [0,3],
- *  destinationCore [0,0,0,0]...[1,1,1,1] hot coded 15 (all cores)
- *
- * @return true on success, false otherwise
+ * @return internal integer representation for device configuration.
  */
-bool caerDynapseWriteSram(caerDeviceHandle handle, uint16_t coreId, uint32_t neuronId, uint16_t virtualCoreId, bool sx,
-	uint8_t dx, bool sy, uint8_t dy, uint16_t sramId, uint16_t destinationCore);
+uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias);
+/**
+ * Transform internal integer representation, as received by calls to
+ * caerDeviceConfigGet(), into a coarse-fine bias structure, for easier
+ * handling and understanding of the various parameters.
+ *
+ * @param dynapseBias internal integer representation from device.
+ *
+ * @return coarse-fine bias structure.
+ */
+struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
 
-/*
- * Remember to Select the chip before calling this function
+/**
+ * Transfer 16bit words from memory to device SRAM, with configurable
+ * starting address and number of words. This works on the FPGA SRAM!
  *
  * @param handle a valid device handle.
- *  int *data , pointer to array of integers bits
- *  numConfig , number of configurations to sends
+ * @param data array from which to read data to send to SRAM.
+ * @param baseAddr SRAM start address where to put the data.
+ * @param numWords number of 16bit words to transfer.
  *
- *  Copy send data[numConfig] via usb
- *  NB: Make sure that data has max size data[DYNAPSE_SPIKE_DEFAULT_SIZE]
+ * @return true on success, false otherwise.
+ */
+bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, size_t numWords);
+
+/**
+ * Specifies the poisson spike generator's spike rate.
  *
- * @return true on success, false otherwise
+ * @param handle a valid device handle.
+ * @param neuronAddr The target neuron of the poisson spike train, range [0,1023].
+ * @param rateHz The rate in Hz of the spike train, this will be quantized to the
+ *               nearest supported level, range [0,4300].
+ *
+ * @return true on success, false otherwise.
+ */
+bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAddr, float rateHz);
+
+/**
+ * THIS FUNCTION IS DEPRECATED. USE caerDynapseWriteSramN() INSTEAD!
+ * The new function uses the global neuron ID (range [0,1023]) like all others, instead of
+ * the separate core ID/neuron ID syntax. Also the arguments are in the same order as
+ * caerDynapseGenerateSramBits(), in particular the 'sramId' comes right after 'neuronId'.
+ *
+ * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
+ * address of where the spikes will be routed to. This works on the on-chip SRAM!
+ *
+ * Remember to select the chip you want to configure before calling this function!
+ *
+ * @param handle a valid device handle.
+ * @param coreId the chip's core ID, range [0,3].
+ * @param neuronAddrCore the neuron's address within this core, range [0,255].
+ * @param virtualCoreId fake source core ID, set it to this value instead of the actual source core ID, range [0,3].
+ * @param sx X direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST].
+ * @param dx X delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param sy Y direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH].
+ * @param dy Y delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param sramId SRAM address (one of four cells), range [0,3].
+ * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
+ *                        [C3,C2,C1,C0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
+ *
+ * @return true on success, false otherwise.
+ */
+DEPRECATED_FUNCTION("Replaced by caerDynapseWriteSramN(), which has an improved interface.")
+bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId,
+	bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore);
+
+/**
+ * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
+ * address of where the spikes will be routed to. This works on the on-chip SRAM!
+ *
+ * Remember to select the chip you want to configure before calling this function!
+ *
+ * @param handle a valid device handle.
+ * @param neuronAddr the neuron to program, range [0,1023] (use caerDynapseCoreXYToNeuronId() for a 2D mapping).
+ * @param sramId SRAM address (one of four cells), range [0,3].
+ * @param virtualCoreId fake source core ID, set it to this value instead of the actual source core ID, range [0,3].
+ * @param sx X direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST].
+ * @param dx X delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param sy Y direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH].
+ * @param dy Y delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
+ *                        [C3,C2,C1,C0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
+ *
+ * @return true on success, false otherwise.
+ */
+bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx,
+	uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
+
+/**
+ * Write a single CAM, to specify which spikes are allowed as input into a neuron.
+ *
+ * Remember to select the chip you want to configure before calling this function!
+ *
+ * @param handle a valid device handle.
+ * @param inputNeuronAddr the neuron address that should be let in as input to this neuron, range [0,1023].
+ * @param neuronAddr the neuron address whose CAM should be programmed, range [0,1023].
+ * @param camId CAM address (synapse), each neuron has 64, range [0,63].
+ * @param synapseType one of the four possible synaptic weights:
+ *     [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,DYNAPSE_CONFIG_CAMTYPE_F_INH,DYNAPSE_CONFIG_CAMTYPE_S_INH].
+ *
+ * @return true on success, false otherwise.
+ */
+bool caerDynapseWriteCam(caerDeviceHandle handle, uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId,
+	uint8_t synapseType);
+
+/**
+ * Send array of configuration parameters to the device via USB.
+ *
+ * Remember to select the chip you want to configure before calling this function!
+ *
+ * @param handle a valid device handle.
+ * @param data an array of integers holding configuration data.
+ * @param numConfig number of configuration parameters to send.
+ *
+ * @return true on success, false otherwise.
  */
 bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, size_t numConfig);
 
-/*
- * Remember to Select the chip before calling this function
+/**
+ * Generate bits to write a single CAM, to specify which spikes are allowed as input into a neuron.
  *
- * @param handle a valid device handle.
- *  Write a single CAM
+ * @param inputNeuronAddr the neuron address that should be let in as input to this neuron, range [0,1023]
+ *     (use caerDynapseCoreXYToNeuronId() for a 2D mapping).
+ * @param neuronAddr the neuron to program, range [0,1023] (use caerDynapseCoreXYToNeuronId() for a 2D mapping).
+ * @param camId CAM address (synapse), each neuron has 64, range [0,63].
+ * @param synapseType one of the four possible synaptic weights:
+ *     [DYNAPSE_CONFIG_CAMTYPE_F_EXC,DYNAPSE_CONFIG_CAMTYPE_S_EXC,DYNAPSE_CONFIG_CAMTYPE_F_INH,DYNAPSE_CONFIG_CAMTYPE_S_INH].
  *
- *  parameters:
- *	usb_handle, preNeuron [0,1023], postNeuron [0,1023], camId [0,63], synapseType [DYNAPSE_CONFIG_CAMTYPE_F_EXC
- *																					DYNAPSE_CONFIG_CAMTYPE_S_EXC
- *																					DYNAPSE_CONFIG_CAMTYPE_F_INH
- *																					DYNAPSE_CONFIG_CAMTYPE_S_INH]
- * @return true on success, false otherwise
+ * @return bits to send to device.
  */
-bool caerDynapseWriteCam(caerDeviceHandle handle, uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId,
-	int16_t synapseType);
+uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
 
-/*
- * @param handle a valid device handle.
- *  Return addres for writing CAM
+/**
+ * Generate bits to write one of the 4 SRAMs of a single neuron.
+ * Writing the SRAM means writing the destination address of where
+ * the spikes will be routed to. This works on the on-chip SRAM!
  *
- *  parameters:
- *	usb_handle, preNeuron [0,1023], postNeuron [0,1023], camId [0,63], synapseType [DYNAPSE_CONFIG_CAMTYPE_F_EXC
- *																					DYNAPSE_CONFIG_CAMTYPE_S_EXC
- *																					DYNAPSE_CONFIG_CAMTYPE_F_INH
- *																					DYNAPSE_CONFIG_CAMTYPE_S_INH]
+ * @param neuronAddr the neuron to program, range [0,1023] (use caerDynapseCoreXYToNeuronId() for a 2D mapping).
+ * @param sramId SRAM address (one of four cells), range [0,3].
+ * @param virtualCoreId fake source core ID, set it to this value instead of the actual source core ID, range [0,3].
+ * @param sx X direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST,DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST].
+ * @param dx X delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param sy Y direction, can be one of: [DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH,DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH].
+ * @param dy Y delta, number of chips to jumps before reaching destination, range is [0,3].
+ * @param destinationCore spike destination core, uses one-hot coding for the 4 cores:
+ *                        [C3,C2,C1,C0] -> [0,0,0,0] (0 decimal) no core, [1,1,1,1] (15 decimal) all cores
  *
- * @return bits that would make the connection
+ * @return bits to send to device.
  */
-uint32_t caerDynapseGenerateCamBits(uint32_t preNeuronAddr, uint32_t postNeuronAddr, uint32_t camId,
-	int16_t synapseType);
+uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx,
+	bool sy, uint8_t dy, uint8_t destinationCore);
+
+/**
+ * Map core ID and column/row address to the correct chip global neuron address.
+ *
+ * @param coreId the chip's core ID, range [0,3].
+ * @param columnX the neuron's column address, range [0,15].
+ * @param rowY the neuron's row address, range [0,15].
+ *
+ * @return chip global neuron address.
+ */
+uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY);
+
+/**
+ * Map core ID and per-core neuron address to the correct chip global neuron address.
+ *
+ * @param coreId the chip's core ID, range [0,3].
+ * @param neuronAddrCore the neuron's address within this core, range [0,255].
+ *
+ * @return chip global neuron address.
+ */
+uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
+
+/**
+ * Get the X (column) address for a spike event, in pixels.
+ * The (0, 0) address is in the upper left corner.
+ *
+ * @param event a valid SpikeEvent pointer. Cannot be NULL.
+ *
+ * @return the event X address in pixels.
+ */
+uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
+
+/**
+ * Get the Y (row) address for a spike event, in pixels.
+ * The (0, 0) address is in the upper left corner.
+ *
+ * @param event a valid SpikeEvent pointer. Cannot be NULL.
+ *
+ * @return the event Y address in pixels.
+ */
+uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
+
+/**
+ * Get the chip ID, core ID and neuron ID from the X and Y
+ * coordinates. This is the reverse transform to:
+ * caerDynapseSpikeEventGetX() / caerDynapseSpikeEventGetY().
+ * The return value is a 'struct caer_spike_event' because it
+ * already has functions to get/set all the needed values.
+ *
+ * @param x a X coordinate as returned by caerDynapseSpikeEventGetX().
+ * @param y a Y coordinate as returned by caerDynapseSpikeEventGetY().
+ *
+ * @return a SpikeEvent struct holding chip ID, core ID and neuron ID.
+ */
+struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y);
 
 #ifdef __cplusplus
 }

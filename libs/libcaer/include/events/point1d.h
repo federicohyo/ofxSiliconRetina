@@ -91,6 +91,38 @@ typedef const struct caer_point1d_event_packet *caerPoint1DEventPacketConst;
 caerPoint1DEventPacket caerPoint1DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Point1D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerPoint1DEventPacket caerPoint1DEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT1D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint1DEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Point1D event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerPoint1DEventPacketConst caerPoint1DEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != POINT1D_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPoint1DEventPacketConst) header);
+}
+
+/**
  * Get the Point1D event at the given index from the event packet.
  *
  * @param packet a valid Point1DEventPacket pointer. Cannot be NULL.
@@ -302,7 +334,7 @@ static inline void caerPoint1DEventSetScale(caerPoint1DEvent event, int8_t scale
  * @return X axis measurement.
  */
 static inline float caerPoint1DEventGetX(caerPoint1DEventConst event) {
-	return (le32toh(event->x));
+	return (leflttoh(event->x));
 }
 
 /**
@@ -312,7 +344,7 @@ static inline float caerPoint1DEventGetX(caerPoint1DEventConst event) {
  * @param x X axis measurement.
  */
 static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
-	event->x = htole32(x);
+	event->x = htoleflt(x);
 }
 
 /**

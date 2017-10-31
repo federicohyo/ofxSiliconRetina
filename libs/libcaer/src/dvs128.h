@@ -2,7 +2,8 @@
 #define LIBCAER_SRC_DVS128_H_
 
 #include "devices/dvs128.h"
-#include "ringbuffer/ringbuffer.h"
+#include "data_exchange.h"
+#include "container_generation.h"
 #include "usb_utils.h"
 
 #define DVS_DEVICE_NAME "DVS128"
@@ -36,37 +37,32 @@ struct dvs128_state {
 	// Per-device log-level
 	atomic_uint_fast8_t deviceLogLevel;
 	// Data Acquisition Thread -> Mainloop Exchange
-	RingBuffer dataExchangeBuffer;
-	atomic_uint_fast32_t dataExchangeBufferSize; // Only takes effect on DataStart() calls!
-	atomic_bool dataExchangeBlocking;
-	atomic_bool dataExchangeStartProducers;
-	atomic_bool dataExchangeStopProducers;
-	void (*dataNotifyIncrease)(void *ptr);
-	void (*dataNotifyDecrease)(void *ptr);
-	void *dataNotifyUserPtr;
+	struct data_exchange dataExchange;
 	// USB Device State
 	struct usb_state usbState;
 	// Timestamp fields
-	int32_t wrapOverflow;
-	int32_t wrapAdd;
-	int32_t lastTimestamp;
-	int32_t currentTimestamp;
+	struct {
+		int32_t wrapOverflow;
+		int32_t wrapAdd;
+		int32_t last;
+		int32_t current;
+	} timestamps;
 	// Packet Container state
-	caerEventPacketContainer currentPacketContainer;
-	atomic_uint_fast32_t maxPacketContainerPacketSize;
-	atomic_uint_fast32_t maxPacketContainerInterval;
-	int64_t currentPacketContainerCommitTimestamp;
-	// Polarity Packet State
-	caerPolarityEventPacket currentPolarityPacket;
-	int32_t currentPolarityPacketPosition;
-	// Special Packet State
-	caerSpecialEventPacket currentSpecialPacket;
-	int32_t currentSpecialPacketPosition;
-	// Camera bias and settings memory (for getter operations)
-	// TODO: replace with real device calls once DVS128 logic rewritten.
-	uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
-	atomic_bool dvsRunning;
-	atomic_bool dvsIsMaster;
+	struct container_generation container;
+	struct {
+		// Polarity Packet State
+		caerPolarityEventPacket polarity;
+		int32_t polarityPosition;
+		// Special Packet state
+		caerSpecialEventPacket special;
+		int32_t specialPosition;
+	} currentPackets;
+	struct {
+		// Camera bias and settings memory (for getter operations)
+		uint8_t biases[BIAS_NUMBER][BIAS_LENGTH];
+		atomic_bool running;
+		atomic_bool isMaster;
+	} dvs;
 };
 
 typedef struct dvs128_state *dvs128State;

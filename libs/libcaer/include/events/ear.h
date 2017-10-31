@@ -89,6 +89,38 @@ typedef const struct caer_ear_event_packet *caerEarEventPacketConst;
 caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into an Ear event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerEarEventPacket caerEarEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != EAR_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerEarEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Ear event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerEarEventPacketConst caerEarEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != EAR_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerEarEventPacketConst) header);
+}
+
+/**
  * Get the ear (cochlea) event at the given index from the event packet.
  *
  * @param packet a valid EarEventPacket pointer. Cannot be NULL.

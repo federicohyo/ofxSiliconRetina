@@ -374,7 +374,34 @@ public:
 		bool isValid() const noexcept {
 			return (caerGenericEventIsValid(event));
 		}
+
+		// C variant.
+		void copy(void *eventPtrDestination, caerEventPacketHeaderConst headerPtrDestination) const {
+			if (caerEventPacketHeaderGetEventType(headerPtrDestination) != caerEventPacketHeaderGetEventType(header)) {
+				throw std::invalid_argument("Event type must be the same.");
+			}
+			if (caerEventPacketHeaderGetEventSize(headerPtrDestination) != caerEventPacketHeaderGetEventSize(header)) {
+				throw std::invalid_argument("Event size must be the same.");
+			}
+			if (caerEventPacketHeaderGetEventTSOverflow(headerPtrDestination)
+				!= caerEventPacketHeaderGetEventTSOverflow(header)) {
+				throw std::invalid_argument("Event TS overflow must be the same.");
+			}
+
+			caerGenericEventCopy(eventPtrDestination, event, headerPtrDestination, header);
+		}
+
+		// C++ variants.
+		void copy(struct GenericEvent &destinationEvent) const {
+			copy(const_cast<void *>(destinationEvent.event), destinationEvent.header);
+		}
+
+		void copy(struct GenericEvent *destinationEvent) const {
+			copy(const_cast<void *>(destinationEvent->event), destinationEvent->header);
+		}
 	};
+
+	static_assert(std::is_pod<GenericEvent>::value, "GenericEvent is not POD.");
 
 	// Container traits.
 	using value_type = GenericEvent;

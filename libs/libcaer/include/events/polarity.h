@@ -89,6 +89,38 @@ typedef const struct caer_polarity_event_packet *caerPolarityEventPacketConst;
 caerPolarityEventPacket caerPolarityEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Polarity event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerPolarityEventPacket caerPolarityEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != POLARITY_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPolarityEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Polarity event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerPolarityEventPacketConst caerPolarityEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != POLARITY_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerPolarityEventPacketConst) header);
+}
+
+/**
  * Get the polarity event at the given index from the event packet.
  *
  * @param packet a valid PolarityEventPacket pointer. Cannot be NULL.

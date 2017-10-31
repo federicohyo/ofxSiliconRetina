@@ -47,7 +47,17 @@
 #elif defined(_MSC_VER)
 	#define PACKED_STRUCT(STRUCT_DECLARATION) __pragma(pack(push, 1)) STRUCT_DECLARATION __pragma(pack(pop))
 #else
-	#error "Unable to ensure structures are properly packed."
+	#define PACKED_STRUCT(STRUCT_DECLARATION) STRUCT_DECLARATION
+	#warning "Unable to ensure structures are properly packed."
+#endif
+
+// Function deprecation.
+#if defined(__GNUC__) || defined(__clang__)
+	#define DEPRECATED_FUNCTION(DEPR_MSG) __attribute__((__deprecated__(DEPR_MSG)))
+#elif defined(_MSC_VER)
+	#define DEPRECATED_FUNCTION(DEPR_MSG) __declspec(deprecated(DEPR_MSG))
+#else
+	#define DEPRECATED_FUNCTION(DEPR_MSG)
 #endif
 
 #ifdef __cplusplus
@@ -57,7 +67,7 @@ extern "C" {
 /**
  * libcaer version (MAJOR * 10000 + MINOR * 100 + PATCH).
  */
-#define LIBCAER_VERSION ((2 * 10000) + (1 * 100) + 4)
+#define LIBCAER_VERSION ((2 * 10000) + (4 * 100) + 0)
 /**
  * libcaer name string.
  */
@@ -65,12 +75,17 @@ extern "C" {
 /**
  * libcaer version string.
  */
-#define LIBCAER_VERSION_STRING "2.1.4"
+#define LIBCAER_VERSION_STRING "2.4.0"
+
+/**
+ * libcaer serial devices support.
+ */
+#define LIBCAER_HAVE_SERIALDEV 0
 
 /**
  * libcaer OpenCV support.
  */
-#define LIBCAER_HAVE_OPENCV 0
+#define LIBCAER_HAVE_OPENCV 1
 
 /**
  * Cast argument to uint8_t (8bit unsigned integer).

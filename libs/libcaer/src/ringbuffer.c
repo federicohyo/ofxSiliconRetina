@@ -1,42 +1,31 @@
-/*
- * ringbuffer.c
- *
- *  Created on: Dec 10, 2013
- *      Author: llongi
- */
-
 #include "ringbuffer.h"
 #include "portable_aligned_alloc.h"
 #include <stdatomic.h>
 #include <stdalign.h> // To get alignas() macro.
 
 // Alignment specification support (with defines for cache line alignment).
-#undef CACHELINE_ALIGNED
-#undef CACHELINE_ALONE
-
 #if !defined(CACHELINE_SIZE)
-	#define CACHELINE_SIZE 64 // Default (big enough for almost all processors).
-	// Must be power of two!
+#define CACHELINE_SIZE 64 // Default (big enough for most processors), must be power of two!
 #endif
 
-#define CACHELINE_ALIGNED alignas(CACHELINE_SIZE)
-#define CACHELINE_ALONE(t, v) CACHELINE_ALIGNED t v; uint8_t PAD_##v[CACHELINE_SIZE - (sizeof(t) & (CACHELINE_SIZE - 1))]
-
-struct ring_buffer {
-	CACHELINE_ALONE(size_t, putPos);
-	CACHELINE_ALONE(size_t, getPos);
-	CACHELINE_ALONE(size_t, size);
+struct caer_ring_buffer {
+	alignas(CACHELINE_SIZE) size_t putPos;
+	uint8_t PAD_putPos[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
+	alignas(CACHELINE_SIZE) size_t getPos;
+	uint8_t PAD_getPos[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
+	alignas(CACHELINE_SIZE) size_t size;
+	uint8_t PAD_size[CACHELINE_SIZE - (sizeof(size_t) & (size_t)(CACHELINE_SIZE - 1))];
 	atomic_uintptr_t elements[];
 };
 
-RingBuffer ringBufferInit(size_t size) {
+caerRingBuffer caerRingBufferInit(size_t size) {
 	// Force multiple of two size for performance.
-	if (size == 0 || (size & (size - 1)) != 0) {
+	if ((size == 0) || ((size & (size - 1)) != 0)) {
 		return (NULL);
 	}
 
-	RingBuffer rBuf = portable_aligned_alloc(CACHELINE_SIZE,
-		sizeof(struct ring_buffer) + (size * sizeof(atomic_uintptr_t)));
+	caerRingBuffer rBuf = portable_aligned_alloc(CACHELINE_SIZE,
+		sizeof(struct caer_ring_buffer) + (size * sizeof(atomic_uintptr_t)));
 	if (rBuf == NULL) {
 		return (NULL);
 	}
@@ -56,11 +45,11 @@ RingBuffer ringBufferInit(size_t size) {
 	return (rBuf);
 }
 
-void ringBufferFree(RingBuffer rBuf) {
+void caerRingBufferFree(caerRingBuffer rBuf) {
 	portable_aligned_free(rBuf);
 }
 
-bool ringBufferPut(RingBuffer rBuf, void *elem) {
+bool caerRingBufferPut(caerRingBuffer rBuf, void *elem) {
 	if (elem == NULL) {
 		// NULL elements are disallowed (used as place-holders).
 		// Critical error, should never happen -> exit!
@@ -84,7 +73,20 @@ bool ringBufferPut(RingBuffer rBuf, void *elem) {
 	return (false);
 }
 
-void *ringBufferGet(RingBuffer rBuf) {
+bool caerRingBufferFull(caerRingBuffer rBuf) {
+	void *curr = (void *) atomic_load_explicit(&rBuf->elements[rBuf->putPos], memory_order_acquire);
+
+	// If the place where we want to put a new element is not NULL,
+	// there is no place to put new data, so the buffer is full.
+	if (curr != NULL) {
+		return (true);
+	}
+
+	// Else, buffer is not full.
+	return (false);
+}
+
+void *caerRingBufferGet(caerRingBuffer rBuf) {
 	void *curr = (void *) atomic_load_explicit(&rBuf->elements[rBuf->getPos], memory_order_acquire);
 
 	// If the place where we want to get an element from is not NULL, there
@@ -102,7 +104,7 @@ void *ringBufferGet(RingBuffer rBuf) {
 	return (NULL);
 }
 
-void *ringBufferLook(RingBuffer rBuf) {
+void *caerRingBufferLook(caerRingBuffer rBuf) {
 	void *curr = (void *) atomic_load_explicit(&rBuf->elements[rBuf->getPos], memory_order_acquire);
 
 	// If the place where we want to get an element from is not NULL, there

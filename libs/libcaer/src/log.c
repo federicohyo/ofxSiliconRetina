@@ -50,12 +50,12 @@ void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *
 void caerLogVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, enum caer_log_level logLevel,
 	const char *subSystem, const char *format, va_list args) {
 	// Check that subSystem and format are defined correctly.
-	if (subSystem == NULL || format == NULL) {
+	if ((subSystem == NULL) || (format == NULL)) {
 		caerLog(CAER_LOG_ERROR, "Logger", "Missing subSystem or format strings. Neither can be NULL.");
 		return;
 	}
 
-	if (logFileDescriptor1 < 0 && logFileDescriptor2 < 0) {
+	if ((logFileDescriptor1 < 0) && (logFileDescriptor2 < 0)) {
 		// Logging is disabled.
 		return;
 	}

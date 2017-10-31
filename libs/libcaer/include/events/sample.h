@@ -85,6 +85,38 @@ typedef const struct caer_sample_event_packet *caerSampleEventPacketConst;
 caerSampleEventPacket caerSampleEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
 
 /**
+ * Transform a generic event packet header into a Sample event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid event packet header pointer. Cannot be NULL.
+ * @return a properly converted, typed event packet pointer.
+ */
+static inline caerSampleEventPacket caerSampleEventPacketFromPacketHeader(caerEventPacketHeader header) {
+	if (caerEventPacketHeaderGetEventType(header) != SAMPLE_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSampleEventPacket) header);
+}
+
+/**
+ * Transform a generic read-only event packet header into a read-only Sample event packet.
+ * This takes care of proper casting and checks that the packet type really matches
+ * the intended conversion type.
+ *
+ * @param header a valid read-only event packet header pointer. Cannot be NULL.
+ * @return a properly converted, read-only typed event packet pointer.
+ */
+static inline caerSampleEventPacketConst caerSampleEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+	if (caerEventPacketHeaderGetEventType(header) != SAMPLE_EVENT) {
+		return (NULL);
+	}
+
+	return ((caerSampleEventPacketConst) header);
+}
+
+/**
  * Get the ADC sample event at the given index from the event packet.
  *
  * @param packet a valid SampleEventPacket pointer. Cannot be NULL.

@@ -1,13 +1,26 @@
 #include "frame_utils.h"
 
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+// Use C++ OpenCV demosaic and contrast functions, defined
+// separately in 'frame_utils_opencv.cpp'.
+extern caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
+	enum caer_frame_utils_demosaic_types demosaicType);
+extern void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
+	enum caer_frame_utils_contrast_types contrastType);
+#endif
+
 enum pixelColorEnum {
-	PXR, PXB, PXG1, PXG2, PXW
+	PXR,
+	PXB,
+	PXG1,
+	PXG2,
+	PXW
 };
 
 static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame);
 
-static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_color_filter colorFilter, int32_t x,
-	int32_t y) {
+static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_color_filter colorFilter, uint32_t x,
+	uint32_t y) {
 	switch (colorFilter) {
 		case RGBG:
 			if (x & 0x01) {
@@ -195,7 +208,7 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 			int32_t idxLEFTDOWN = idxCENTERDOWN - 1;
 			int32_t idxRIGHTDOWN = idxCENTERDOWN + 1;
 
-			enum pixelColorEnum pixelColor = determinePixelColor(colorFilter, x, y);
+			enum pixelColorEnum pixelColor = determinePixelColor(colorFilter, U32T(x), U32T(y));
 			int32_t RComp;
 			int32_t GComp;
 			int32_t BComp;
@@ -514,6 +527,10 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 
 					break;
 				}
+
+				default:
+					// Do nothing, all colors are examined above.
+					break;
 			}
 
 			// Set color frame pixel values for all color channels.
@@ -528,9 +545,19 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 	}
 }
 
-caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket) {
+caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket,
+	enum caer_frame_utils_demosaic_types demosaicType) {
 	if (framePacket == NULL) {
 		return (NULL);
+	}
+
+	if (demosaicType != DEMOSAIC_STANDARD) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+		return (caerFrameUtilsOpenCVDemosaic(framePacket, demosaicType));
+#else
+		caerLog(CAER_LOG_WARNING, __func__,
+			"Selected OpenCV demosaic type, but OpenCV support is disabled. Either enable it or change to use 'DEMOSAIC_STANDARD'.");
+#endif
 	}
 
 	int32_t countValid = 0;
@@ -540,8 +567,8 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 	// This only works on valid frames coming from a camera: only one color channel,
 	// but with color filter information defined.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
-			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
+		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
 			countValid++;
 
 			if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
@@ -571,10 +598,11 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 
 	// Now that we have a valid new color frame packet, we can convert the frames one by one.
 	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE
-			&& caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO) {
+		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
+			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
 			// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
-			caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex++);
+			caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
+			colorIndex++;
 
 			// First copy all the metadata.
 			caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
@@ -600,9 +628,19 @@ caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacke
 	return (colorFramePacket);
 }
 
-void caerFrameUtilsContrast(caerFrameEventPacket framePacket) {
+void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType) {
 	if (framePacket == NULL) {
 		return;
+	}
+
+	if (contrastType != CONTRAST_STANDARD) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+		caerFrameUtilsOpenCVContrast(framePacket, contrastType);
+		return;
+#else
+		caerLog(CAER_LOG_WARNING, __func__,
+			"Selected OpenCV contrast enhancement type, but OpenCV support is disabled. Either enable it or change to use 'CONTRAST_STANDARD'.");
+#endif
 	}
 
 	// O(x, y) = alpha * I(x, y) + beta, where alpha maximizes the range
@@ -646,7 +684,7 @@ void caerFrameUtilsContrast(caerFrameEventPacket framePacket) {
 		}
 		else {
 			caerLog(CAER_LOG_WARNING, __func__,
-				"Standard contrast enhancement only works with grayscale images. For color image support, please use caerFrameUtilsOpenCVContrast().");
+				"Standard contrast enhancement only works with grayscale images. For color images support, please use one of the OpenCV contrast enhancement types.");
 		}
 	CAER_FRAME_ITERATOR_VALID_END
 }

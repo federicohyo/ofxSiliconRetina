@@ -16,28 +16,27 @@
 extern "C" {
 #endif
 
-caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket);
-void caerFrameUtilsContrast(caerFrameEventPacket framePacket);
-
+enum caer_frame_utils_demosaic_types {
+	DEMOSAIC_STANDARD = 0,
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
-
-// DEMOSAIC_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
-enum caer_frame_utils_opencv_demosaic {
-	DEMOSAIC_NORMAL = 0,
-	DEMOSAIC_EDGE_AWARE = 1,
-};
-
-enum caer_frame_utils_opencv_contrast {
-	CONTRAST_NORMALIZATION = 0,
-	CONTRAST_HISTOGRAM_EQUALIZATION = 1,
-	CONTRAST_CLAHE = 2,
-};
-
-caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_opencv_demosaic demosaicType);
-void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_opencv_contrast contrastType);
-
+	DEMOSAIC_OPENCV_NORMAL = 1,
+	DEMOSAIC_OPENCV_EDGE_AWARE = 2,
+	// DEMOSAIC_OPENCV_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
 #endif
+};
+
+enum caer_frame_utils_contrast_types {
+	CONTRAST_STANDARD = 0,
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+	CONTRAST_OPENCV_NORMALIZATION = 1,
+	CONTRAST_OPENCV_HISTOGRAM_EQUALIZATION = 2,
+	CONTRAST_OPENCV_CLAHE = 3,
+#endif
+};
+
+caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket,
+	enum caer_frame_utils_demosaic_types demosaicType);
+void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType);
 
 #ifdef __cplusplus
 }

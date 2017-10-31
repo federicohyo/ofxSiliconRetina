@@ -65,6 +65,7 @@ enum caer_default_event_types {
 	POINT3D_EVENT = 10, //!< 3D measurement events.
 	POINT4D_EVENT = 11, //!< 4D measurement events.
 	SPIKE_EVENT = 12,   //!< Spike events.
+	MATRIX4x4_EVENT = 13, //!< 4D matrix events.
 };
 
 /**
@@ -446,6 +447,28 @@ static inline bool caerGenericEventIsValid(const void *eventPtr) {
 	// This should always work since first event member must contain the valid mark
 	// and memory is little-endian, so lowest bit must be in first byte of memory.
 	return (*((const uint8_t *) eventPtr) & VALID_MARK_MASK);
+}
+
+/**
+ * Copy a given event's content to another location in memory.
+ *
+ * @param eventPtrDestination a generic pointer to an event to copy to. Cannot be NULL.
+ * @param eventPtrSource a generic pointer to an event to copy from. Cannot be NULL.
+ * @param headerPtrDestination a valid EventPacket header pointer from the destination packet. Cannot be NULL.
+ * @param headerPtrSource a valid EventPacket header pointer from the source packet. Cannot be NULL.
+ *
+ * @return true on successful copy, false otherwise.
+ */
+static inline bool caerGenericEventCopy(void *eventPtrDestination, const void *eventPtrSource,
+	caerEventPacketHeaderConst headerPtrDestination, caerEventPacketHeaderConst headerPtrSource) {
+	if ((caerEventPacketHeaderGetEventType(headerPtrDestination) != caerEventPacketHeaderGetEventType(headerPtrSource))
+		|| (caerEventPacketHeaderGetEventSize(headerPtrDestination) != caerEventPacketHeaderGetEventSize(headerPtrSource))
+		|| (caerEventPacketHeaderGetEventTSOverflow(headerPtrDestination) != caerEventPacketHeaderGetEventTSOverflow(headerPtrSource))) {
+		return (false);
+	}
+
+	memcpy(eventPtrDestination, eventPtrSource, (size_t) caerEventPacketHeaderGetEventSize(headerPtrDestination));
+	return (true);
 }
 
 /**
