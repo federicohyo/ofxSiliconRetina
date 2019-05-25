@@ -18,13 +18,6 @@ struct usb_data_completion_struct {
 
 typedef struct usb_data_completion_struct *usbDataCompletion;
 
-struct usb_config_receive_struct {
-	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param);
-	void *configReceiveCallbackPtr;
-};
-
-typedef struct usb_config_receive_struct *usbConfigReceive;
-
 static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) ATTRIBUTE_FORMAT(3);
 static int usbThreadRun(void *usbStatePtr);
 static bool usbAllocateTransfers(usbState state);
@@ -38,19 +31,228 @@ static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer);
 static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer);
 static void syncControlOutCallback(void *controlOutCallbackPtr, int status);
 static void syncControlInCallback(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
-static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize);
+
+static inline bool checkActiveConfigAndClaim(libusb_device_handle *devHandle) {
+	// Check that the active configuration is set to number 1. If not, do so.
+	int activeConfiguration;
+	if (libusb_get_configuration(devHandle, &activeConfiguration) != LIBUSB_SUCCESS) {
+		return (false);
+	}
+
+	if (activeConfiguration != 1) {
+		if (libusb_set_configuration(devHandle, 1) != LIBUSB_SUCCESS) {
+			return (false);
+		}
+	}
+
+	// Claim interface 0 (default).
+	if (libusb_claim_interface(devHandle, 0) != LIBUSB_SUCCESS) {
+		return (false);
+	}
+
+	return (true);
+}
 
 static void caerUSBLog(enum caer_log_level logLevel, usbState state, const char *format, ...) {
+	// Only log messages above the specified severity level.
+	uint8_t systemLogLevel = atomic_load_explicit(&state->usbLogLevel, memory_order_relaxed);
+
+	if (logLevel > systemLogLevel) {
+		return;
+	}
+
 	va_list argumentList;
 	va_start(argumentList, format);
-	caerLogVAFull(caerLogFileDescriptorsGetFirst(), caerLogFileDescriptorsGetSecond(),
-		atomic_load_explicit(&state->usbLogLevel, memory_order_relaxed), logLevel, state->usbThreadName, format,
-		argumentList);
+	caerLogVAFull(systemLogLevel, logLevel, state->usbThreadName, format, argumentList);
 	va_end(argumentList);
 }
 
+ssize_t usbDeviceFind(uint16_t devVID, uint16_t devPID, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
+	struct usb_info **foundUSBDevices) {
+	// Set to NULL initially (for error return).
+	*foundUSBDevices = NULL;
+
+	// libusb may create its own threads at this stage, so we temporarily set
+	// a different thread name.
+	char originalThreadName[MAX_THREAD_NAME_LENGTH + 1]; // +1 for terminating NUL character.
+	thrd_get_name(originalThreadName, MAX_THREAD_NAME_LENGTH);
+	originalThreadName[MAX_THREAD_NAME_LENGTH] = '\0';
+
+	thrd_set_name("USBDiscovery");
+
+	int res = libusb_init(NULL);
+
+	thrd_set_name(originalThreadName);
+
+	if (res != LIBUSB_SUCCESS) {
+		return (-1);
+	}
+
+	libusb_device **devicesList;
+
+	ssize_t result = libusb_get_device_list(NULL, &devicesList);
+
+	if (result < 0) {
+		libusb_exit(NULL);
+
+		return (-1);
+	}
+
+	// Cycle thorough all discovered devices and count matches.
+	size_t matches = 0;
+
+	for (size_t i = 0; i < (size_t) result; i++) {
+		struct libusb_device_descriptor devDesc;
+
+		if (libusb_get_device_descriptor(devicesList[i], &devDesc) != LIBUSB_SUCCESS) {
+			continue;
+		}
+
+		// Check if this is the device we want (VID/PID).
+		if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
+			matches++;
+		}
+	}
+
+	// No matches?
+	if (matches == 0) {
+		libusb_free_device_list(devicesList, true);
+		libusb_exit(NULL);
+
+		return (0);
+	}
+
+	// Now that we know how many there are, we can allocate the proper
+	// amount of memory to hold the result.
+	*foundUSBDevices = calloc(matches, sizeof(struct usb_info));
+	if (*foundUSBDevices == NULL) {
+		libusb_free_device_list(devicesList, true);
+		libusb_exit(NULL);
+
+		return (-1);
+	}
+
+	matches = 0; // Use as counter again.
+
+	for (size_t i = 0; i < (size_t) result; i++) {
+		struct libusb_device_descriptor devDesc;
+
+		if (libusb_get_device_descriptor(devicesList[i], &devDesc) != LIBUSB_SUCCESS) {
+			continue;
+		}
+
+		// Check if this is the device we want (VID/PID).
+		if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
+			// Get USB bus number and device address from descriptors.
+			(*foundUSBDevices)[matches].busNumber  = libusb_get_bus_number(devicesList[i]);
+			(*foundUSBDevices)[matches].devAddress = libusb_get_device_address(devicesList[i]);
+
+			libusb_device_handle *devHandle = NULL;
+
+			if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
+				(*foundUSBDevices)[matches].errorOpen = true;
+				matches++;
+				continue;
+			}
+
+			// Get serial number.
+			char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
+			int getStringDescResult                         = libusb_get_string_descriptor_ascii(
+                devHandle, 3, (unsigned char *) serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+			// Check serial number success and length.
+			if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+				libusb_close(devHandle);
+
+				(*foundUSBDevices)[matches].errorOpen = true;
+				matches++;
+				continue;
+			}
+
+			strncpy((*foundUSBDevices)[matches].serialNumber, serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+			// Check that the active configuration is set to number 1. If not, do so.
+			// Then claim interface 0 (default).
+			if (!checkActiveConfigAndClaim(devHandle)) {
+				libusb_close(devHandle);
+
+				(*foundUSBDevices)[matches].errorOpen = true;
+				matches++;
+				continue;
+			}
+
+			// Verify device firmware version.
+			bool firmwareVersionOK = true;
+
+			if (requiredFirmwareVersion >= 0) {
+				if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
+					firmwareVersionOK = false;
+				}
+
+				(*foundUSBDevices)[matches].firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
+			}
+
+			// Verify device logic version.
+			bool logicVersionOK = true;
+
+			if (requiredLogicRevision >= 0) {
+				// Communication with device open, get logic version information.
+				uint32_t param32 = 0;
+
+				// Get logic version from generic SYSINFO module.
+				uint8_t spiConfig[4] = {0};
+
+				if (libusb_control_transfer(devHandle,
+						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+						VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0)
+					!= sizeof(spiConfig)) {
+					libusb_release_interface(devHandle, 0);
+					libusb_close(devHandle);
+
+					(*foundUSBDevices)[matches].errorVersion = true;
+					matches++;
+					continue;
+				}
+
+				param32 |= U32T(spiConfig[0] << 24);
+				param32 |= U32T(spiConfig[1] << 16);
+				param32 |= U32T(spiConfig[2] << 8);
+				param32 |= U32T(spiConfig[3] << 0);
+
+				// Verify device logic version.
+				if (param32 != U32T(requiredLogicRevision)) {
+					logicVersionOK = false;
+				}
+
+				(*foundUSBDevices)[matches].logicVersion = I16T(param32);
+			}
+
+			// If any of the version checks failed, stop.
+			if (!firmwareVersionOK || !logicVersionOK) {
+				(*foundUSBDevices)[matches].errorVersion = true;
+			}
+
+			libusb_release_interface(devHandle, 0);
+			libusb_close(devHandle);
+
+			matches++;
+		}
+	}
+
+	libusb_free_device_list(devicesList, true);
+	libusb_exit(NULL);
+
+	return ((ssize_t) matches);
+}
+
 bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t busNumber, uint8_t devAddress,
-	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion) {
+	const char *serialNumber, int32_t requiredLogicRevision, int32_t requiredFirmwareVersion,
+	struct usb_info *deviceUSBInfo) {
+	errno = 0;
+
+	// Ensure no content.
+	memset(deviceUSBInfo, 0, sizeof(struct usb_info));
+
 	// Search for device and open it.
 	// Initialize libusb using a separate context for each device.
 	// This is to correctly support one thread per device.
@@ -68,8 +270,12 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 
 	if (res != LIBUSB_SUCCESS) {
 		caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize libusb context. Error: %d.", res);
+		errno = CAER_ERROR_RESOURCE_ALLOCATION;
 		return (false);
 	}
+
+	bool openingSpecificUSBAddr = ((busNumber > 0) && (devAddress > 0));
+	bool openingSpecificSerial  = ((serialNumber != NULL) && !caerStrEquals(serialNumber, ""));
 
 	libusb_device_handle *devHandle = NULL;
 	libusb_device **devicesList;
@@ -88,104 +294,119 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 			// Check if this is the device we want (VID/PID).
 			if ((devDesc.idVendor == devVID) && (devDesc.idProduct == devPID)) {
 				// If a USB port restriction is given, honor it first.
-				if ((busNumber > 0) && (libusb_get_bus_number(devicesList[i]) != busNumber)) {
-					caerUSBLog(CAER_LOG_ERROR, state,
+				uint8_t devBusNumber = libusb_get_bus_number(devicesList[i]);
+				if ((busNumber > 0) && (devBusNumber != busNumber)) {
+					caerUSBLog(CAER_LOG_DEBUG, state,
 						"USB bus number restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						busNumber, libusb_get_bus_number(devicesList[i]));
+						busNumber, devBusNumber);
 
 					continue;
 				}
+				deviceUSBInfo->busNumber = devBusNumber;
 
-				if ((devAddress > 0) && (libusb_get_device_address(devicesList[i]) != devAddress)) {
-					caerUSBLog(CAER_LOG_ERROR, state,
-						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8 ").",
-						devAddress, libusb_get_device_address(devicesList[i]));
-
-					continue;
-				}
-
-				// Verify device firmware version (after port restriction).
-				if ((requiredFirmwareVersion >= 0) && (U8T(devDesc.bcdDevice & 0x00FF) < U16T(requiredFirmwareVersion))) {
-					caerUSBLog(CAER_LOG_CRITICAL, state,
-						"Device firmware version too old. You have version %" PRIu8 "; but at least version %" PRIu16 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
-						U8T(devDesc.bcdDevice & 0x00FF), U16T(requiredFirmwareVersion));
+				uint8_t devDevAddress = libusb_get_device_address(devicesList[i]);
+				if ((devAddress > 0) && (devDevAddress != devAddress)) {
+					caerUSBLog(CAER_LOG_DEBUG, state,
+						"USB device address restriction is present (%" PRIu8 "), this device didn't match it (%" PRIu8
+						").",
+						devAddress, devDevAddress);
 
 					continue;
 				}
+				deviceUSBInfo->devAddress = devDevAddress;
 
 				if (libusb_open(devicesList[i], &devHandle) != LIBUSB_SUCCESS) {
 					devHandle = NULL;
+
+					caerUSBLog((openingSpecificUSBAddr) ? (CAER_LOG_ERROR) : (CAER_LOG_INFO), state,
+						"Failed to open USB device. This usually happens due to permission or driver issues, or "
+						"because the device is already in use.");
+
+					continue;
+				}
+
+				// Get the device's serial number.
+				char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = {0};
+				int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
+					(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+
+				// Check serial number success and length.
+				if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
+					libusb_close(devHandle);
+					devHandle = NULL;
+
+					caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get a valid USB serial number.");
 
 					continue;
 				}
 
 				// Check the serial number restriction, if any is present.
-				if ((serialNumber != NULL) && (!caerStrEquals(serialNumber, ""))) {
-					char deviceSerialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = { 0 };
-					int getStringDescResult = libusb_get_string_descriptor_ascii(devHandle, devDesc.iSerialNumber,
-						(unsigned char *) deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
+				if (openingSpecificSerial && !caerStrEquals(serialNumber, deviceSerialNumber)) {
+					libusb_close(devHandle);
+					devHandle = NULL;
 
-					// Check serial number success and length.
-					if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
-						libusb_close(devHandle);
-						devHandle = NULL;
+					caerUSBLog(CAER_LOG_INFO, state,
+						"USB serial number restriction is present (%s), this device didn't match it (%s).",
+						serialNumber, deviceSerialNumber);
 
-						continue;
-					}
-
-					// Now check if the Serial Number matches.
-					if (!caerStrEquals(serialNumber, deviceSerialNumber)) {
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						caerUSBLog(CAER_LOG_ERROR, state,
-							"USB serial number restriction is present (%s), this device didn't match it (%s).",
-							serialNumber, deviceSerialNumber);
-
-						continue;
-					}
+					continue;
 				}
+
+				// Copy serial number over.
+				strncpy((char *) &deviceUSBInfo->serialNumber, deviceSerialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
 
 				// Check that the active configuration is set to number 1. If not, do so.
-				int activeConfiguration;
-				if (libusb_get_configuration(devHandle, &activeConfiguration) != LIBUSB_SUCCESS) {
+				// Then claim interface 0 (default).
+				if (!checkActiveConfigAndClaim(devHandle)) {
 					libusb_close(devHandle);
 					devHandle = NULL;
+
+					caerUSBLog((openingSpecificUSBAddr || openingSpecificSerial) ? (CAER_LOG_ERROR) : (CAER_LOG_INFO),
+						state,
+						"Failed to claim USB interface. This usually happens because the device is already in use.");
 
 					continue;
 				}
 
-				if (activeConfiguration != 1) {
-					if (libusb_set_configuration(devHandle, 1) != LIBUSB_SUCCESS) {
-						libusb_close(devHandle);
-						devHandle = NULL;
+				// Verify device firmware version.
+				bool firmwareVersionOK = true;
 
-						continue;
+				if (requiredFirmwareVersion >= 0) {
+					if (U8T(devDesc.bcdDevice & 0x00FF) != U8T(requiredFirmwareVersion)) {
+						caerUSBLog(CAER_LOG_ERROR, state,
+							"Device firmware version incorrect. You have version %" PRIu8 "; but version %" PRIu8
+							" is required. Please update by following the Flashy documentation at "
+							"'https://inivation.com/support/software/reflashing/'.",
+							U8T(devDesc.bcdDevice & 0x00FF), U8T(requiredFirmwareVersion));
+
+						firmwareVersionOK = false;
+						errno             = CAER_ERROR_FW_VERSION;
 					}
+
+					deviceUSBInfo->firmwareVersion = I16T(U8T(devDesc.bcdDevice & 0x00FF));
 				}
 
-				// Claim interface 0 (default).
-				if (libusb_claim_interface(devHandle, 0) != LIBUSB_SUCCESS) {
-					libusb_close(devHandle);
-					devHandle = NULL;
-
-					continue;
-				}
+				// Verify device logic version.
+				bool logicVersionOK = true;
 
 				if (requiredLogicRevision >= 0) {
 					// Communication with device open, get logic version information.
 					uint32_t param32 = 0;
 
 					// Get logic version from generic SYSINFO module.
-					uint8_t spiConfig[4] = { 0 };
+					uint8_t spiConfig[4] = {0};
 
 					if (libusb_control_transfer(devHandle,
-						LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-						VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0) != sizeof(spiConfig)) {
+							LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+							VENDOR_REQUEST_FPGA_CONFIG, 6, 0, spiConfig, sizeof(spiConfig), 0)
+						!= sizeof(spiConfig)) {
 						libusb_release_interface(devHandle, 0);
 						libusb_close(devHandle);
 						devHandle = NULL;
 
+						caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to get current logic version.");
+
+						errno = CAER_ERROR_COMMUNICATION;
 						continue;
 					}
 
@@ -195,17 +416,27 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					param32 |= U32T(spiConfig[3] << 0);
 
 					// Verify device logic version.
-					if (param32 < U32T(requiredLogicRevision)) {
-						libusb_release_interface(devHandle, 0);
-						libusb_close(devHandle);
-						devHandle = NULL;
-
-						caerUSBLog(CAER_LOG_CRITICAL, state,
-							"Device logic revision too old. You have revision %" PRIu32 "; but at least revision %" PRIu32 " is required. Please updated by following the Flashy upgrade documentation at 'http://inilabs.com/support/reflashing/'.",
+					if (param32 != U32T(requiredLogicRevision)) {
+						caerUSBLog(CAER_LOG_ERROR, state,
+							"Device logic version incorrect. You have version %" PRIu32 "; but version %" PRIu32
+							" is required. Please update by following the Flashy documentation at "
+							"'https://inivation.com/support/software/reflashing/'.",
 							param32, U32T(requiredLogicRevision));
 
-						continue;
+						logicVersionOK = false;
+						errno          = CAER_ERROR_LOGIC_VERSION;
 					}
+
+					deviceUSBInfo->logicVersion = I16T(param32);
+				}
+
+				// If any of the version checks failed, stop.
+				if (!firmwareVersionOK || !logicVersionOK) {
+					libusb_release_interface(devHandle, 0);
+					libusb_close(devHandle);
+					devHandle = NULL;
+
+					continue;
 				}
 
 				// Initialize transfers mutex.
@@ -214,6 +445,9 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 					libusb_close(devHandle);
 					devHandle = NULL;
 
+					caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to initialize USB transfer mutex.");
+
+					errno = CAER_ERROR_RESOURCE_ALLOCATION;
 					continue;
 				}
 
@@ -227,12 +461,26 @@ bool usbDeviceOpen(usbState state, uint16_t devVID, uint16_t devPID, uint8_t bus
 	// Found and configured it!
 	if (devHandle != NULL) {
 		state->deviceHandle = devHandle;
+		errno               = 0; // Ensure reset on success.
 		return (true);
 	}
 
 	// Didn't find anything.
 	libusb_exit(state->deviceContext);
 	state->deviceContext = NULL;
+
+	// Filter errno due to libusb setting it to other values even if everything
+	// above returns no errors (like EAGAIN(11)). All errnos we want to set
+	// and track are negative, so any positive errnos are wrong.
+	if (errno > 0) {
+		errno = 0;
+	}
+
+	// If not set previously to a more precise error,
+	// set here to the generic open error.
+	if (errno == 0) {
+		errno = CAER_ERROR_OPEN_ACCESS;
+	}
 
 	return (false);
 }
@@ -254,14 +502,15 @@ void usbSetThreadName(usbState state, const char *threadName) {
 }
 
 void usbSetDataCallback(usbState state,
-	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent), void *usbDataCallbackPtr) {
-	state->usbDataCallback = usbDataCallback;
+	void (*usbDataCallback)(void *usbDataCallbackPtr, const uint8_t *buffer, size_t bytesSent),
+	void *usbDataCallbackPtr) {
+	state->usbDataCallback    = usbDataCallback;
 	state->usbDataCallbackPtr = usbDataCallbackPtr;
 }
 
-void usbSetShutdownCallback(usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr),
-	void *usbShutdownCallbackPtr) {
-	state->usbShutdownCallback = usbShutdownCallback;
+void usbSetShutdownCallback(
+	usbState state, void (*usbShutdownCallback)(void *usbShutdownCallbackPtr), void *usbShutdownCallbackPtr) {
+	state->usbShutdownCallback    = usbShutdownCallback;
 	state->usbShutdownCallbackPtr = usbShutdownCallbackPtr;
 
 	atomic_thread_fence(memory_order_seq_cst);
@@ -313,51 +562,27 @@ uint32_t usbGetTransfersSize(usbState state) {
 	return (U32T(atomic_load(&state->usbBufferSize)));
 }
 
-struct usb_info usbGenerateInfo(usbState state, const char *deviceName, uint16_t deviceID) {
+char *usbGenerateDeviceString(struct usb_info usbInfo, const char *deviceName, uint16_t deviceID) {
 	// At this point we can get some more precise data on the device and update
 	// the logging string to reflect that and be more informative.
-	uint8_t busNumber = libusb_get_bus_number(libusb_get_device(state->deviceHandle));
-	uint8_t devAddress = libusb_get_device_address(libusb_get_device(state->deviceHandle));
-
-	char serialNumber[MAX_SERIAL_NUMBER_LENGTH + 1] = { 0 };
-	int getStringDescResult = libusb_get_string_descriptor_ascii(state->deviceHandle, 3, (unsigned char *) serialNumber,
-	MAX_SERIAL_NUMBER_LENGTH + 1);
-
-	// Check serial number success and length.
-	if ((getStringDescResult < 0) || (getStringDescResult > MAX_SERIAL_NUMBER_LENGTH)) {
-		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to get serial number for %s device.", deviceName);
-
-		struct usb_info emptyInfo = { 0, .deviceString = NULL };
-		return (emptyInfo);
-	}
-
 	size_t fullLogStringLength = (size_t) snprintf(NULL, 0, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]",
-		deviceName, deviceID, serialNumber, busNumber, devAddress);
+		deviceName, deviceID, usbInfo.serialNumber, usbInfo.busNumber, usbInfo.devAddress);
 
 	char *fullLogString = malloc(fullLogStringLength + 1);
 	if (fullLogString == NULL) {
-		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate memory for %s device info string.", deviceName);
-
-		struct usb_info emptyInfo = { 0, .deviceString = NULL };
-		return (emptyInfo);
+		return (NULL);
 	}
 
 	snprintf(fullLogString, fullLogStringLength + 1, "%s ID-%" PRIu16 " SN-%s [%" PRIu8 ":%" PRIu8 "]", deviceName,
-		deviceID, serialNumber, busNumber, devAddress);
+		deviceID, usbInfo.serialNumber, usbInfo.busNumber, usbInfo.devAddress);
 
-	struct usb_info usbInfo;
-
-	usbInfo.busNumber = busNumber;
-	usbInfo.devAddress = devAddress;
-	strncpy(usbInfo.serialNumber, serialNumber, MAX_SERIAL_NUMBER_LENGTH + 1);
-	usbInfo.deviceString = fullLogString;
-
-	return (usbInfo);
+	return (fullLogString);
 }
 
 bool usbThreadStart(usbState state) {
 	// Start USB thread.
 	if ((errno = thrd_create(&state->usbThread, &usbThreadRun, state)) != thrd_success) {
+		caerUSBLog(CAER_LOG_CRITICAL, state, "Failed to create USB thread. Error: %d.", errno);
 		return (false);
 	}
 
@@ -395,8 +620,8 @@ static int usbThreadRun(void *usbStatePtr) {
 
 	caerUSBLog(CAER_LOG_DEBUG, state, "USB thread running.");
 
-	// Handle USB events (1 second timeout).
-	struct timeval te = { .tv_sec = 1, .tv_usec = 0 };
+	// Handle USB events (10 millisecond timeout).
+	struct timeval te = {.tv_sec = 0, .tv_usec = 10000};
 
 	while (atomic_load_explicit(&state->usbThreadRun, memory_order_relaxed)) {
 		libusb_handle_events_timeout(state->deviceContext, &te);
@@ -411,7 +636,7 @@ bool usbDataTransfersStart(usbState state) {
 	mtx_lock(&state->dataTransfersLock);
 	bool retVal = usbAllocateTransfers(state);
 	if (retVal) {
-		atomic_store(&state->dataTransfersRun, true);
+		atomic_store(&state->dataTransfersRun, TRANS_RUNNING);
 	}
 	mtx_unlock(&state->dataTransfersLock);
 
@@ -420,14 +645,14 @@ bool usbDataTransfersStart(usbState state) {
 
 void usbDataTransfersStop(usbState state) {
 	mtx_lock(&state->dataTransfersLock);
-	atomic_store(&state->dataTransfersRun, false);
+	atomic_store(&state->dataTransfersRun, TRANS_STOPPED);
 	usbCancelAndDeallocateTransfers(state);
 	mtx_unlock(&state->dataTransfersLock);
 }
 
 // MUST LOCK ON 'dataTransfersLock'.
 static bool usbAllocateTransfers(usbState state) {
-	uint32_t bufferNum = usbGetTransfersNumber(state);
+	uint32_t bufferNum  = usbGetTransfersNumber(state);
 	uint32_t bufferSize = usbGetTransfersSize(state);
 
 	// Set number of transfers and allocate memory for the main transfer array.
@@ -452,8 +677,8 @@ static bool usbAllocateTransfers(usbState state) {
 		state->dataTransfers[i]->length = (int) bufferSize;
 		state->dataTransfers[i]->buffer = malloc(bufferSize);
 		if (state->dataTransfers[i]->buffer == NULL) {
-			caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate buffer for libusb transfer %zu. Error: %d.", i,
-			errno);
+			caerUSBLog(
+				CAER_LOG_CRITICAL, state, "Unable to allocate buffer for libusb transfer %zu. Error: %d.", i, errno);
 
 			libusb_free_transfer(state->dataTransfers[i]);
 			state->dataTransfers[i] = NULL;
@@ -463,12 +688,12 @@ static bool usbAllocateTransfers(usbState state) {
 
 		// Initialize Transfer.
 		state->dataTransfers[i]->dev_handle = state->deviceHandle;
-		state->dataTransfers[i]->endpoint = state->dataEndPoint;
-		state->dataTransfers[i]->type = LIBUSB_TRANSFER_TYPE_BULK;
-		state->dataTransfers[i]->callback = &usbDataTransferCallback;
-		state->dataTransfers[i]->user_data = state;
-		state->dataTransfers[i]->timeout = 0;
-		state->dataTransfers[i]->flags = LIBUSB_TRANSFER_FREE_BUFFER;
+		state->dataTransfers[i]->endpoint   = state->dataEndPoint;
+		state->dataTransfers[i]->type       = LIBUSB_TRANSFER_TYPE_BULK;
+		state->dataTransfers[i]->callback   = &usbDataTransferCallback;
+		state->dataTransfers[i]->user_data  = state;
+		state->dataTransfers[i]->timeout    = 0;
+		state->dataTransfers[i]->flags      = LIBUSB_TRANSFER_FREE_BUFFER;
 
 		if ((errno = libusb_submit_transfer(state->dataTransfers[i])) == LIBUSB_SUCCESS) {
 			atomic_fetch_add(&state->activeDataTransfers, 1);
@@ -487,7 +712,7 @@ static bool usbAllocateTransfers(usbState state) {
 	if (atomic_load(&state->activeDataTransfers) == 0) {
 		// Didn't manage to allocate any USB transfers, free array memory and log failure.
 		free(state->dataTransfers);
-		state->dataTransfers = NULL;
+		state->dataTransfers       = NULL;
 		state->dataTransfersLength = 0;
 
 		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate any libusb transfers.");
@@ -500,7 +725,7 @@ static bool usbAllocateTransfers(usbState state) {
 // MUST LOCK ON 'dataTransfersLock'.
 static void usbCancelAndDeallocateTransfers(usbState state) {
 	// Wait for all transfers to go away.
-	struct timespec waitForTerminationSleep = { .tv_sec = 0, .tv_nsec = 1000000 };
+	struct timespec waitForTerminationSleep = {.tv_sec = 0, .tv_nsec = 1000000};
 
 	while (atomic_load(&state->activeDataTransfers) > 0) {
 		// Continue trying to cancel all transfers until there are none left.
@@ -530,7 +755,7 @@ static void usbCancelAndDeallocateTransfers(usbState state) {
 
 	// And lastly free the transfers array.
 	free(state->dataTransfers);
-	state->dataTransfers = NULL;
+	state->dataTransfers       = NULL;
 	state->dataTransfersLength = 0;
 }
 
@@ -581,7 +806,7 @@ static void LIBUSB_CALL usbDataTransferCallback(struct libusb_transfer *transfer
 	// reads here are correct.
 	if ((atomic_load(&state->activeDataTransfers) == 1) && (state->failedDataTransfers > 0)) {
 		// Ensure run is set to false on exceptional shut-down.
-		atomic_store(&state->dataTransfersRun, false);
+		atomic_store(&state->dataTransfersRun, TRANS_STOPPED);
 
 		// We make sure to first set 'dataTransfersRun' to false on exceptional
 		// shut-down, before doing the subtraction, so that anyone waiting on
@@ -624,11 +849,11 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 	}
 
 	// Create data buffer.
-	uint8_t *controlTransferBuffer = calloc(1,
-		(LIBUSB_CONTROL_SETUP_SIZE + dataSize + sizeof(struct usb_control_struct)));
+	uint8_t *controlTransferBuffer
+		= calloc(1, (LIBUSB_CONTROL_SETUP_SIZE + dataSize + sizeof(struct usb_control_struct)));
 	if (controlTransferBuffer == NULL) {
-		caerUSBLog(CAER_LOG_CRITICAL, state, "Unable to allocate buffer for libusb control transfer. Error: %d.",
-		errno);
+		caerUSBLog(
+			CAER_LOG_CRITICAL, state, "Unable to allocate buffer for libusb control transfer. Error: %d.", errno);
 
 		libusb_free_transfer(controlTransfer);
 
@@ -653,8 +878,8 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 		bRequest, wValue, wIndex, U16T(dataSize));
 
 	libusb_transfer_cb_fn controlCallback = (directionOut) ? (&usbControlOutCallback) : (&usbControlInCallback);
-	libusb_fill_control_transfer(controlTransfer, state->deviceHandle, controlTransferBuffer, controlCallback,
-		extraControlData, 0);
+	libusb_fill_control_transfer(
+		controlTransfer, state->deviceHandle, controlTransferBuffer, controlCallback, extraControlData, 0);
 
 	controlTransfer->flags = LIBUSB_TRANSFER_FREE_BUFFER;
 
@@ -676,15 +901,15 @@ static bool usbControlTransferAsync(usbState state, uint8_t bRequest, uint16_t w
 
 bool usbControlTransferOutAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
 	size_t dataSize, void (*controlOutCallback)(void *controlOutCallbackPtr, int status), void *controlOutCallbackPtr) {
-	return (usbControlTransferAsync(state, bRequest, wValue, wIndex, data, dataSize, controlOutCallback, NULL,
-		controlOutCallbackPtr, true));
+	return (usbControlTransferAsync(
+		state, bRequest, wValue, wIndex, data, dataSize, controlOutCallback, NULL, controlOutCallbackPtr, true));
 }
 
 bool usbControlTransferInAsync(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, size_t dataSize,
 	void (*controlInCallback)(void *controlInCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize),
 	void *controlInCallbackPtr) {
-	return (usbControlTransferAsync(state, bRequest, wValue, wIndex, NULL, dataSize, NULL, controlInCallback,
-		controlInCallbackPtr, false));
+	return (usbControlTransferAsync(
+		state, bRequest, wValue, wIndex, NULL, dataSize, NULL, controlInCallback, controlInCallbackPtr, false));
 }
 
 // Async USB control exists to avoid the problem described in
@@ -694,7 +919,7 @@ static void LIBUSB_CALL usbControlOutCallback(struct libusb_transfer *transfer) 
 	usbControl extraControlData = transfer->user_data;
 
 	if (extraControlData->controlOutCallback != NULL) {
-		(*extraControlData->controlOutCallback)(extraControlData->controlCallbackPtr, transfer->status);
+		(*extraControlData->controlOutCallback)(extraControlData->controlCallbackPtr, (int) transfer->status);
 	}
 
 	libusb_free_transfer(transfer);
@@ -704,7 +929,7 @@ static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer) {
 	usbControl extraControlData = transfer->user_data;
 
 	if (extraControlData->controlInCallback != NULL) {
-		(*extraControlData->controlInCallback)(extraControlData->controlCallbackPtr, transfer->status,
+		(*extraControlData->controlInCallback)(extraControlData->controlCallbackPtr, (int) transfer->status,
 			libusb_control_transfer_get_data(transfer), (size_t) transfer->actual_length);
 	}
 
@@ -714,19 +939,19 @@ static void LIBUSB_CALL usbControlInCallback(struct libusb_transfer *transfer) {
 // Implement synchronous API over asynchronous one: wait till callbacks are done.
 // This is done again here because the libusb API is unsuitable as it does its
 // own event handling, which we want to fully delegate to the USB thread.
-bool usbControlTransferOut(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
-	size_t dataSize) {
+bool usbControlTransferOut(
+	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize) {
 	atomic_uint_fast32_t completed = ATOMIC_VAR_INIT(0);
 
-	bool retVal = usbControlTransferOutAsync(state, bRequest, wValue, wIndex, data, dataSize, &syncControlOutCallback,
-		&completed);
+	bool retVal = usbControlTransferOutAsync(
+		state, bRequest, wValue, wIndex, data, dataSize, &syncControlOutCallback, &completed);
 	if (!retVal) {
 		// Failed to send out async request.
 		return (false);
 	}
 
 	// Request is out and will be handled at some point by USB thread, wait on that.
-	struct timespec waitForCompletionSleep = { .tv_sec = 0, .tv_nsec = 100000 };
+	struct timespec waitForCompletionSleep = {.tv_sec = 0, .tv_nsec = 100000};
 
 	while (!atomic_load(&completed)) {
 		// Sleep for 100µs to avoid busy loop.
@@ -743,19 +968,19 @@ bool usbControlTransferOut(usbState state, uint8_t bRequest, uint16_t wValue, ui
 	}
 }
 
-bool usbControlTransferIn(usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data,
-	size_t dataSize) {
-	struct usb_data_completion_struct dataCompletion = { ATOMIC_VAR_INIT(0), data, dataSize };
+bool usbControlTransferIn(
+	usbState state, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint8_t *data, size_t dataSize) {
+	struct usb_data_completion_struct dataCompletion = {ATOMIC_VAR_INIT(0), data, dataSize};
 
-	bool retVal = usbControlTransferInAsync(state, bRequest, wValue, wIndex, dataSize, &syncControlInCallback,
-		&dataCompletion);
+	bool retVal
+		= usbControlTransferInAsync(state, bRequest, wValue, wIndex, dataSize, &syncControlInCallback, &dataCompletion);
 	if (!retVal) {
 		// Failed to send out async request.
 		return (false);
 	}
 
 	// Request is out and will be handled at some point by USB thread, wait on that.
-	struct timespec waitForCompletionSleep = { .tv_sec = 0, .tv_nsec = 100000 };
+	struct timespec waitForCompletionSleep = {.tv_sec = 0, .tv_nsec = 100000};
 
 	while (!atomic_load(&dataCompletion.completed)) {
 		// Sleep for 100µs to avoid busy loop.
@@ -795,86 +1020,4 @@ static void syncControlInCallback(void *controlInCallbackPtr, int status, const 
 	else {
 		atomic_store(&dataCompletion->completed, 2);
 	}
-}
-
-bool spiConfigSend(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param) {
-	uint8_t spiConfig[4] = { 0 };
-
-	spiConfig[0] = U8T(param >> 24);
-	spiConfig[1] = U8T(param >> 16);
-	spiConfig[2] = U8T(param >> 8);
-	spiConfig[3] = U8T(param >> 0);
-
-	return (usbControlTransferOut(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig,
-		sizeof(spiConfig)));
-}
-
-bool spiConfigSendAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t param,
-	void (*configSendCallback)(void *configSendCallbackPtr, int status), void *configSendCallbackPtr) {
-	uint8_t spiConfig[4] = { 0 };
-
-	spiConfig[0] = U8T(param >> 24);
-	spiConfig[1] = U8T(param >> 16);
-	spiConfig[2] = U8T(param >> 8);
-	spiConfig[3] = U8T(param >> 0);
-
-	return (usbControlTransferOutAsync(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig,
-		sizeof(spiConfig), configSendCallback, configSendCallbackPtr));
-}
-
-bool spiConfigReceive(usbState state, uint8_t moduleAddr, uint8_t paramAddr, uint32_t *param) {
-	uint8_t spiConfig[4] = { 0 };
-
-	if (!usbControlTransferIn(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, spiConfig, sizeof(spiConfig))) {
-		return (false);
-	}
-
-	*param = 0;
-	*param |= U32T(spiConfig[0] << 24);
-	*param |= U32T(spiConfig[1] << 16);
-	*param |= U32T(spiConfig[2] << 8);
-	*param |= U32T(spiConfig[3] << 0);
-
-	return (true);
-}
-
-bool spiConfigReceiveAsync(usbState state, uint8_t moduleAddr, uint8_t paramAddr,
-	void (*configReceiveCallback)(void *configReceiveCallbackPtr, int status, uint32_t param),
-	void *configReceiveCallbackPtr) {
-	usbConfigReceive config = calloc(1, sizeof(*config));
-	if (config == NULL) {
-		return (false);
-	}
-
-	config->configReceiveCallback = configReceiveCallback;
-	config->configReceiveCallbackPtr = configReceiveCallbackPtr;
-
-	bool retVal = usbControlTransferInAsync(state, VENDOR_REQUEST_FPGA_CONFIG, moduleAddr, paramAddr, sizeof(uint32_t),
-		&spiConfigReceiveCallback, config);
-	if (!retVal) {
-		free(config);
-
-		return (false);
-	}
-
-	return (true);
-}
-
-static void spiConfigReceiveCallback(void *configReceiveCallbackPtr, int status, const uint8_t *buffer, size_t bufferSize) {
-	usbConfigReceive config = configReceiveCallbackPtr;
-
-	uint32_t param = 0;
-
-	if ((status == LIBUSB_TRANSFER_COMPLETED) && (bufferSize == sizeof(uint32_t))) {
-		param |= U32T(buffer[0] << 24);
-		param |= U32T(buffer[1] << 16);
-		param |= U32T(buffer[2] << 8);
-		param |= U32T(buffer[3] << 0);
-	}
-
-	if (config->configReceiveCallback != NULL) {
-		(*config->configReceiveCallback)(config->configReceiveCallbackPtr, status, param);
-	}
-
-	free(config);
 }

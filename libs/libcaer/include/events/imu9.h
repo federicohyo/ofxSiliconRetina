@@ -31,8 +31,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_imu9_event {
+PACKED_STRUCT(struct caer_imu9_event {
 	/// Event information. First because of valid mark.
 	uint32_t info;
 	/// Event timestamp.
@@ -71,8 +70,7 @@ typedef const struct caer_imu9_event *caerIMU9EventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_imu9_event_packet {
+PACKED_STRUCT(struct caer_imu9_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -95,7 +93,11 @@ typedef const struct caer_imu9_event_packet *caerIMU9EventPacketConst;
  *
  * @return a valid IMU9EventPacket handle or NULL on error.
  */
-caerIMU9EventPacket caerIMU9EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerIMU9EventPacket caerIMU9EventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerIMU9EventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, IMU9_EVENT,
+		sizeof(struct caer_imu9_event), offsetof(struct caer_imu9_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into an IMU 9-axes event packet.
@@ -140,8 +142,9 @@ static inline caerIMU9EventPacketConst caerIMU9EventPacketFromPacketHeaderConst(
 static inline caerIMU9Event caerIMU9EventPacketGetEvent(caerIMU9EventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event",
-			"Called caerIMU9EventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event",
+			"Called caerIMU9EventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -162,8 +165,9 @@ static inline caerIMU9Event caerIMU9EventPacketGetEvent(caerIMU9EventPacket pack
 static inline caerIMU9EventConst caerIMU9EventPacketGetEventConst(caerIMU9EventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event",
-			"Called caerIMU9EventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event",
+			"Called caerIMU9EventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -185,7 +189,7 @@ static inline caerIMU9EventConst caerIMU9EventPacketGetEventConst(caerIMU9EventP
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerIMU9EventGetTimestamp(caerIMU9EventConst event) {
-	return (le32toh(event->timestamp));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -199,8 +203,8 @@ static inline int32_t caerIMU9EventGetTimestamp(caerIMU9EventConst event) {
  * @return this event's 64bit microsecond timestamp.
  */
 static inline int64_t caerIMU9EventGetTimestamp64(caerIMU9EventConst event, caerIMU9EventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerIMU9EventGetTimestamp(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerIMU9EventGetTimestamp(event))));
 }
 
 /**
@@ -212,11 +216,11 @@ static inline int64_t caerIMU9EventGetTimestamp64(caerIMU9EventConst event, caer
 static inline void caerIMU9EventSetTimestamp(caerIMU9Event event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventSetTimestamp() with negative value!");
 		return;
 	}
 
-	event->timestamp = htole32(timestamp);
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**
@@ -246,13 +250,13 @@ static inline void caerIMU9EventValidate(caerIMU9Event event, caerIMU9EventPacke
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventValidate() on already valid event.");
 	}
 }
 
@@ -271,11 +275,11 @@ static inline void caerIMU9EventInvalidate(caerIMU9Event event, caerIMU9EventPac
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "IMU9 Event", "Called caerIMU9EventInvalidate() on already invalid event.");
 	}
 }
 
@@ -517,10 +521,10 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_ITERATOR_ALL_START(IMU9_PACKET) \
-	for (int32_t caerIMU9IteratorCounter = 0; \
-		caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
-		caerIMU9IteratorCounter++) { \
+#define CAER_IMU9_ITERATOR_ALL_START(IMU9_PACKET)                                                     \
+	for (int32_t caerIMU9IteratorCounter = 0;                                                         \
+		 caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
+		 caerIMU9IteratorCounter++) {                                                                 \
 		caerIMU9Event caerIMU9IteratorElement = caerIMU9EventPacketGetEvent(IMU9_PACKET, caerIMU9IteratorCounter);
 
 /**
@@ -531,11 +535,12 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_CONST_ITERATOR_ALL_START(IMU9_PACKET) \
-	for (int32_t caerIMU9IteratorCounter = 0; \
-		caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
-		caerIMU9IteratorCounter++) { \
-		caerIMU9EventConst caerIMU9IteratorElement = caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter);
+#define CAER_IMU9_CONST_ITERATOR_ALL_START(IMU9_PACKET)                                               \
+	for (int32_t caerIMU9IteratorCounter = 0;                                                         \
+		 caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
+		 caerIMU9IteratorCounter++) {                                                                 \
+		caerIMU9EventConst caerIMU9IteratorElement                                                    \
+			= caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter);
 
 /**
  * Iterator close statement.
@@ -550,12 +555,14 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_ITERATOR_VALID_START(IMU9_PACKET) \
-	for (int32_t caerIMU9IteratorCounter = 0; \
-		caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
-		caerIMU9IteratorCounter++) { \
+#define CAER_IMU9_ITERATOR_VALID_START(IMU9_PACKET)                                                                \
+	for (int32_t caerIMU9IteratorCounter = 0;                                                                      \
+		 caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader);              \
+		 caerIMU9IteratorCounter++) {                                                                              \
 		caerIMU9Event caerIMU9IteratorElement = caerIMU9EventPacketGetEvent(IMU9_PACKET, caerIMU9IteratorCounter); \
-		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) { continue; } // Skip invalid IMU9 events.
+		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) {                                                      \
+			continue;                                                                                              \
+		} // Skip invalid IMU9 events.
 
 /**
  * Const-Iterator over only the valid IMU9 events in a packet.
@@ -565,12 +572,15 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_CONST_ITERATOR_VALID_START(IMU9_PACKET) \
-	for (int32_t caerIMU9IteratorCounter = 0; \
-		caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
-		caerIMU9IteratorCounter++) { \
-		caerIMU9EventConst caerIMU9IteratorElement = caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter); \
-		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) { continue; } // Skip invalid IMU9 events.
+#define CAER_IMU9_CONST_ITERATOR_VALID_START(IMU9_PACKET)                                             \
+	for (int32_t caerIMU9IteratorCounter = 0;                                                         \
+		 caerIMU9IteratorCounter < caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader); \
+		 caerIMU9IteratorCounter++) {                                                                 \
+		caerIMU9EventConst caerIMU9IteratorElement                                                    \
+			= caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter);                 \
+		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) {                                         \
+			continue;                                                                                 \
+		} // Skip invalid IMU9 events.
 
 /**
  * Iterator close statement.
@@ -585,10 +595,9 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_REVERSE_ITERATOR_ALL_START(IMU9_PACKET) \
+#define CAER_IMU9_REVERSE_ITERATOR_ALL_START(IMU9_PACKET)                                                         \
 	for (int32_t caerIMU9IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader) - 1; \
-		caerIMU9IteratorCounter >= 0; \
-		caerIMU9IteratorCounter--) { \
+		 caerIMU9IteratorCounter >= 0; caerIMU9IteratorCounter--) {                                               \
 		caerIMU9Event caerIMU9IteratorElement = caerIMU9EventPacketGetEvent(IMU9_PACKET, caerIMU9IteratorCounter);
 /**
  * Const-Reverse iterator over all IMU9 events in a packet.
@@ -598,11 +607,11 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_CONST_REVERSE_ITERATOR_ALL_START(IMU9_PACKET) \
+#define CAER_IMU9_CONST_REVERSE_ITERATOR_ALL_START(IMU9_PACKET)                                                   \
 	for (int32_t caerIMU9IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader) - 1; \
-		caerIMU9IteratorCounter >= 0; \
-		caerIMU9IteratorCounter--) { \
-		caerIMU9EventConst caerIMU9IteratorElement = caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter);
+		 caerIMU9IteratorCounter >= 0; caerIMU9IteratorCounter--) {                                               \
+		caerIMU9EventConst caerIMU9IteratorElement                                                                \
+			= caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -617,12 +626,13 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_REVERSE_ITERATOR_VALID_START(IMU9_PACKET) \
-	for (int32_t caerIMU9IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader) - 1; \
-		caerIMU9IteratorCounter >= 0; \
-		caerIMU9IteratorCounter--) { \
+#define CAER_IMU9_REVERSE_ITERATOR_VALID_START(IMU9_PACKET)                                                        \
+	for (int32_t caerIMU9IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader) - 1;  \
+		 caerIMU9IteratorCounter >= 0; caerIMU9IteratorCounter--) {                                                \
 		caerIMU9Event caerIMU9IteratorElement = caerIMU9EventPacketGetEvent(IMU9_PACKET, caerIMU9IteratorCounter); \
-		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) { continue; } // Skip invalid IMU9 events.
+		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) {                                                      \
+			continue;                                                                                              \
+		} // Skip invalid IMU9 events.
 
 /**
  * Const-Reverse iterator over only the valid IMU9 events in a packet.
@@ -632,12 +642,14 @@ static inline void caerIMU9EventSetCompZ(caerIMU9Event event, float compZ) {
  *
  * IMU9_PACKET: a valid IMU9EventPacket pointer. Cannot be NULL.
  */
-#define CAER_IMU9_CONST_REVERSE_ITERATOR_VALID_START(IMU9_PACKET) \
+#define CAER_IMU9_CONST_REVERSE_ITERATOR_VALID_START(IMU9_PACKET)                                                 \
 	for (int32_t caerIMU9IteratorCounter = caerEventPacketHeaderGetEventNumber(&(IMU9_PACKET)->packetHeader) - 1; \
-		caerIMU9IteratorCounter >= 0; \
-		caerIMU9IteratorCounter--) { \
-		caerIMU9EventConst caerIMU9IteratorElement = caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter); \
-		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) { continue; } // Skip invalid IMU9 events.
+		 caerIMU9IteratorCounter >= 0; caerIMU9IteratorCounter--) {                                               \
+		caerIMU9EventConst caerIMU9IteratorElement                                                                \
+			= caerIMU9EventPacketGetEventConst(IMU9_PACKET, caerIMU9IteratorCounter);                             \
+		if (!caerIMU9EventIsValid(caerIMU9IteratorElement)) {                                                     \
+			continue;                                                                                             \
+		} // Skip invalid IMU9 events.
 
 /**
  * Reverse iterator close statement.

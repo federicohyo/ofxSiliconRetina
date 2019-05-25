@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct Point4DEvent: public caer_point4d_event {
+struct Point4DEvent : public caer_point4d_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerPoint4DEventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerPoint4DEventGetTimestamp64(this,
-			reinterpret_cast<caerPoint4DEventPacketConst>(packet.getHeaderPointer())));
+		return (caerPoint4DEventGetTimestamp64(
+			this, reinterpret_cast<caerPoint4DEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -88,7 +88,7 @@ struct Point4DEvent: public caer_point4d_event {
 
 static_assert(std::is_pod<Point4DEvent>::value, "Point4DEvent is not POD.");
 
-class Point4DEventPacket: public EventPacketCommon<Point4DEventPacket, Point4DEvent> {
+class Point4DEventPacket : public EventPacketCommon<Point4DEventPacket, Point4DEvent> {
 public:
 	// Constructors.
 	Point4DEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -97,7 +97,7 @@ public:
 		caerPoint4DEventPacket packet = caerPoint4DEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -106,7 +106,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, POINT4D_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -115,29 +115,28 @@ public:
 
 		constructorCheckEventType(packetHeader, POINT4D_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
-		caerPoint4DEvent evtBase = caerPoint4DEventPacketGetEvent(reinterpret_cast<caerPoint4DEventPacket>(header),
-			index);
+		caerPoint4DEvent evtBase
+			= caerPoint4DEventPacketGetEvent(reinterpret_cast<caerPoint4DEventPacket>(header), index);
 		Point4DEvent *evt = static_cast<Point4DEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerPoint4DEventConst evtBase = caerPoint4DEventPacketGetEventConst(
-			reinterpret_cast<caerPoint4DEventPacketConst>(header), index);
+		caerPoint4DEventConst evtBase
+			= caerPoint4DEventPacketGetEventConst(reinterpret_cast<caerPoint4DEventPacketConst>(header), index);
 		const Point4DEvent *evt = static_cast<const Point4DEvent *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

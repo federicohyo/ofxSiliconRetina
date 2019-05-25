@@ -17,6 +17,18 @@ extern "C" {
 #endif
 
 /**
+ * Number of devices supported by this library.
+ * 0 - CAER_DEVICE_DVS128
+ * 1 - CAER_DEVICE_DAVIS_FX2
+ * 2 - CAER_DEVICE_DAVIS_FX3
+ * 3 - CAER_DEVICE_DYNAPSE
+ * 4 - CAER_DEVICE_DAVIS
+ * 5 - CAER_DEVICE_EDVS
+ * 6 - CAER_DEVICE_DAVIS_RPI
+ */
+#define CAER_SUPPORTED_DEVICES_NUMBER 7
+
+/**
  * Pointer to an open device on which to operate.
  */
 typedef struct caer_device_handle *caerDeviceHandle;
@@ -42,7 +54,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * running into lots of dropped/missing packets; you can turn on
  * the INFO log level to see when this is the case.
  */
-#define CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE     0
+#define CAER_HOST_CONFIG_DATAEXCHANGE_BUFFER_SIZE 0
 /**
  * Parameter address for module CAER_HOST_CONFIG_DATAEXCHANGE:
  * when calling caerDeviceDataGet(), the function can either be
@@ -52,7 +64,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * Please see the caerDeviceDataGet() documentation for more
  * information on its return values.
  */
-#define CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING        1
+#define CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING 1
 /**
  * Parameter address for module CAER_HOST_CONFIG_DATAEXCHANGE:
  * whether to start all the data producer modules on the device
@@ -72,7 +84,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * manually, to halt the data flow, which can be useful if you
  * need precise control over which ones are running at any time.
  */
-#define CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS  3
+#define CAER_HOST_CONFIG_DATAEXCHANGE_STOP_PRODUCERS 3
 
 /**
  * Parameter address for module CAER_HOST_CONFIG_PACKETS:
@@ -90,7 +102,7 @@ typedef struct caer_device_handle *caerDeviceHandle;
  * The value is in microseconds, and is checked across all
  * types of events contained in the EventPacketContainer.
  */
-#define CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL    1
+#define CAER_HOST_CONFIG_PACKETS_MAX_CONTAINER_INTERVAL 1
 
 /**
  * Parameter address for module CAER_HOST_CONFIG_LOG:

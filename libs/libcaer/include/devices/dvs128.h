@@ -7,23 +7,23 @@
 #ifndef LIBCAER_DEVICES_DVS128_H_
 #define LIBCAER_DEVICES_DVS128_H_
 
-#include "usb.h"
 #include "../events/polarity.h"
 #include "../events/special.h"
+#include "usb.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * Device type definition for iniLabs DVS128.
+ * Device type definition for iniVation DVS128.
  */
 #define CAER_DEVICE_DVS128 0
 
 /**
  * Module address: device-side DVS configuration.
  */
-#define DVS128_CONFIG_DVS  0
+#define DVS128_CONFIG_DVS 0
 /**
  * Module address: device-side chip bias generator configuration.
  */
@@ -33,7 +33,7 @@ extern "C" {
  * Parameter address for module DVS128_CONFIG_DVS:
  * run the DVS chip and generate polarity event data.
  */
-#define DVS128_CONFIG_DVS_RUN             0
+#define DVS128_CONFIG_DVS_RUN 0
 /**
  * Parameter address for module DVS128_CONFIG_DVS:
  * reset the time-stamp counter of the device. This is a temporary
@@ -45,86 +45,86 @@ extern "C" {
  * reset the whole DVS pixel array. This is a temporary
  * configuration switch and will reset itself right away.
  */
-#define DVS128_CONFIG_DVS_ARRAY_RESET     2
+#define DVS128_CONFIG_DVS_ARRAY_RESET 2
 /**
  * Parameter address for module DVS128_CONFIG_DVS:
  * control if this DVS is a timestamp master device.
  * Default is enabled.
  */
-#define DVS128_CONFIG_DVS_TS_MASTER       3
+#define DVS128_CONFIG_DVS_TS_MASTER 3
 
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * First stage amplifier cascode bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_CAS     0
+#define DVS128_CONFIG_BIAS_CAS 0
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Injected ground bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_INJGND  1
+#define DVS128_CONFIG_BIAS_INJGND 1
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Pull down on chip request (AER).
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_REQPD   2
+#define DVS128_CONFIG_BIAS_REQPD 2
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Pull up on request from X arbiter (AER).
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_PUX     3
+#define DVS128_CONFIG_BIAS_PUX 3
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Off events threshold bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
 #define DVS128_CONFIG_BIAS_DIFFOFF 4
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Pull down for passive load inverters in digital AER pixel circuitry.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_REQ     5
+#define DVS128_CONFIG_BIAS_REQ 5
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Refractory period bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_REFR    6
+#define DVS128_CONFIG_BIAS_REFR 6
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Pull up on request from Y arbiter (AER).
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_PUY     7
+#define DVS128_CONFIG_BIAS_PUY 7
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * On events threshold bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_DIFFON  8
+#define DVS128_CONFIG_BIAS_DIFFON 8
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Differential (second stage amplifier) bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_DIFF    9
+#define DVS128_CONFIG_BIAS_DIFF 9
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Source follower bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_FOLL    10
+#define DVS128_CONFIG_BIAS_FOLL 10
 /**
  * Parameter address for module DVS128_CONFIG_BIAS:
  * Photoreceptor bias.
- * See 'http://inilabs.com/support/biasing/' for more details.
+ * See 'https://inivation.com/support/hardware/biasing/' for more details.
  */
-#define DVS128_CONFIG_BIAS_PR      11
+#define DVS128_CONFIG_BIAS_PR 11
 
 /**
  * DVS128 device-related information.
@@ -139,6 +139,8 @@ struct caer_dvs128_info {
 	/// Device USB device address.
 	uint8_t deviceUSBDeviceAddress;
 	/// Device information string, for logging purposes.
+	/// If not NULL, pointed-to memory is *only* valid while the corresponding
+	/// device is open! After calling deviceClose() this is invalid memory!
 	char *deviceString;
 	/// Logic (FPGA/CPLD) version.
 	int16_t logicVersion;

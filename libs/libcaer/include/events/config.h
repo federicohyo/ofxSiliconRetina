@@ -42,8 +42,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_configuration_event {
+PACKED_STRUCT(struct caer_configuration_event {
 	/// Configuration module address. First (also) because of valid mark.
 	uint8_t moduleAddress;
 	/// Configuration parameter address.
@@ -66,8 +65,7 @@ typedef const struct caer_configuration_event *caerConfigurationEventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_configuration_event_packet {
+PACKED_STRUCT(struct caer_configuration_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -90,8 +88,11 @@ typedef const struct caer_configuration_event_packet *caerConfigurationEventPack
  *
  * @return a valid ConfigurationEventPacket handle or NULL on error.
  */
-caerConfigurationEventPacket caerConfigurationEventPacketAllocate(int32_t eventCapacity, int16_t eventSource,
-	int32_t tsOverflow);
+static inline caerConfigurationEventPacket caerConfigurationEventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerConfigurationEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, CONFIG_EVENT,
+		sizeof(struct caer_configuration_event), offsetof(struct caer_configuration_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Configuration event packet.
@@ -117,7 +118,8 @@ static inline caerConfigurationEventPacket caerConfigurationEventPacketFromPacke
  * @param header a valid read-only event packet header pointer. Cannot be NULL.
  * @return a properly converted, read-only typed event packet pointer.
  */
-static inline caerConfigurationEventPacketConst caerConfigurationEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+static inline caerConfigurationEventPacketConst caerConfigurationEventPacketFromPacketHeaderConst(
+	caerEventPacketHeaderConst header) {
 	if (caerEventPacketHeaderGetEventType(header) != CONFIG_EVENT) {
 		return (NULL);
 	}
@@ -133,12 +135,13 @@ static inline caerConfigurationEventPacketConst caerConfigurationEventPacketFrom
  *
  * @return the requested configuration event. NULL on error.
  */
-static inline caerConfigurationEvent caerConfigurationEventPacketGetEvent(caerConfigurationEventPacket packet,
-	int32_t n) {
+static inline caerConfigurationEvent caerConfigurationEventPacketGetEvent(
+	caerConfigurationEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
-			"Called caerConfigurationEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
+			"Called caerConfigurationEventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -156,12 +159,13 @@ static inline caerConfigurationEvent caerConfigurationEventPacketGetEvent(caerCo
  *
  * @return the requested read-only configuration event. NULL on error.
  */
-static inline caerConfigurationEventConst caerConfigurationEventPacketGetEventConst(caerConfigurationEventPacketConst packet,
-	int32_t n) {
+static inline caerConfigurationEventConst caerConfigurationEventPacketGetEventConst(
+	caerConfigurationEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
-			"Called caerConfigurationEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
+			"Called caerConfigurationEventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -183,7 +187,7 @@ static inline caerConfigurationEventConst caerConfigurationEventPacketGetEventCo
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerConfigurationEventGetTimestamp(caerConfigurationEventConst event) {
-	return (le32toh(event->timestamp));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -196,10 +200,10 @@ static inline int32_t caerConfigurationEventGetTimestamp(caerConfigurationEventC
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerConfigurationEventGetTimestamp64(caerConfigurationEventConst event,
-	caerConfigurationEventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerConfigurationEventGetTimestamp(event))));
+static inline int64_t caerConfigurationEventGetTimestamp64(
+	caerConfigurationEventConst event, caerConfigurationEventPacketConst packet) {
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerConfigurationEventGetTimestamp(event))));
 }
 
 /**
@@ -211,12 +215,12 @@ static inline int64_t caerConfigurationEventGetTimestamp64(caerConfigurationEven
 static inline void caerConfigurationEventSetTimestamp(caerConfigurationEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventSetTimestamp() with negative value!");
 		return;
 	}
 
-	event->timestamp = htole32(timestamp);
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**
@@ -246,13 +250,13 @@ static inline void caerConfigurationEventValidate(caerConfigurationEvent event, 
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventValidate() on already valid event.");
 	}
 }
@@ -272,11 +276,11 @@ static inline void caerConfigurationEventInvalidate(caerConfigurationEvent event
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Configuration Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Configuration Event",
 			"Called caerConfigurationEventInvalidate() on already invalid event.");
 	}
 }
@@ -332,7 +336,7 @@ static inline void caerConfigurationEventSetParameterAddress(caerConfigurationEv
  * @return configuration parameter.
  */
 static inline uint32_t caerConfigurationEventGetParameter(caerConfigurationEventConst event) {
-	return (le32toh(event->parameter));
+	return (I32T(le32toh(event->parameter)));
 }
 
 /**
@@ -342,7 +346,7 @@ static inline uint32_t caerConfigurationEventGetParameter(caerConfigurationEvent
  * @param parameter configuration parameter.
  */
 static inline void caerConfigurationEventSetParameter(caerConfigurationEvent event, uint32_t parameter) {
-	event->parameter = htole32(parameter);
+	event->parameter = I32T(htole32(parameter));
 }
 
 /**
@@ -353,11 +357,13 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_ITERATOR_ALL_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = 0; \
-		caerConfigurationIteratorCounter < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader); \
-		caerConfigurationIteratorCounter++) { \
-		caerConfigurationEvent caerConfigurationIteratorElement = caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
+#define CAER_CONFIGURATION_ITERATOR_ALL_START(CONFIGURATION_PACKET)                    \
+	for (int32_t caerConfigurationIteratorCounter = 0;                                 \
+		 caerConfigurationIteratorCounter                                              \
+		 < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader); \
+		 caerConfigurationIteratorCounter++) {                                         \
+		caerConfigurationEvent caerConfigurationIteratorElement                        \
+			= caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
 
 /**
  * Const-Iterator over all configuration events in a packet.
@@ -367,11 +373,13 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_CONST_ITERATOR_ALL_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = 0; \
-		caerConfigurationIteratorCounter < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader); \
-		caerConfigurationIteratorCounter++) { \
-		caerConfigurationEventConst caerConfigurationIteratorElement = caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
+#define CAER_CONFIGURATION_CONST_ITERATOR_ALL_START(CONFIGURATION_PACKET)              \
+	for (int32_t caerConfigurationIteratorCounter = 0;                                 \
+		 caerConfigurationIteratorCounter                                              \
+		 < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader); \
+		 caerConfigurationIteratorCounter++) {                                         \
+		caerConfigurationEventConst caerConfigurationIteratorElement                   \
+			= caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
 
 /**
  * Iterator close statement.
@@ -386,12 +394,16 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_ITERATOR_VALID_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = 0; \
-		caerConfigurationIteratorCounter < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader); \
-		caerConfigurationIteratorCounter++) { \
-		caerConfigurationEvent caerConfigurationIteratorElement = caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
-		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) { continue; } // Skip invalid configuration events.
+#define CAER_CONFIGURATION_ITERATOR_VALID_START(CONFIGURATION_PACKET)                                       \
+	for (int32_t caerConfigurationIteratorCounter = 0;                                                      \
+		 caerConfigurationIteratorCounter                                                                   \
+		 < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader);                      \
+		 caerConfigurationIteratorCounter++) {                                                              \
+		caerConfigurationEvent caerConfigurationIteratorElement                                             \
+			= caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
+		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) {                             \
+			continue;                                                                                       \
+		} // Skip invalid configuration events.
 
 /**
  * Const-Iterator over only the valid configuration events in a packet.
@@ -401,12 +413,16 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_CONST_ITERATOR_VALID_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = 0; \
-		caerConfigurationIteratorCounter < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader); \
-		caerConfigurationIteratorCounter++) { \
-		caerConfigurationEventConst caerConfigurationIteratorElement = caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
-		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) { continue; } // Skip invalid configuration events.
+#define CAER_CONFIGURATION_CONST_ITERATOR_VALID_START(CONFIGURATION_PACKET)                                      \
+	for (int32_t caerConfigurationIteratorCounter = 0;                                                           \
+		 caerConfigurationIteratorCounter                                                                        \
+		 < caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader);                           \
+		 caerConfigurationIteratorCounter++) {                                                                   \
+		caerConfigurationEventConst caerConfigurationIteratorElement                                             \
+			= caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
+		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) {                                  \
+			continue;                                                                                            \
+		} // Skip invalid configuration events.
 
 /**
  * Iterator close statement.
@@ -421,11 +437,12 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_REVERSE_ITERATOR_ALL_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1; \
-		caerConfigurationIteratorCounter >= 0; \
-		caerConfigurationIteratorCounter--) { \
-		caerConfigurationEvent caerConfigurationIteratorElement = caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
+#define CAER_CONFIGURATION_REVERSE_ITERATOR_ALL_START(CONFIGURATION_PACKET)                \
+	for (int32_t caerConfigurationIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1; \
+		 caerConfigurationIteratorCounter >= 0; caerConfigurationIteratorCounter--) {      \
+		caerConfigurationEvent caerConfigurationIteratorElement                            \
+			= caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
 /**
  * Const-Reverse iterator over all configuration events in a packet.
  * Returns the current index in the 'caerConfigurationIteratorCounter' variable of type
@@ -434,11 +451,12 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_CONST_REVERSE_ITERATOR_ALL_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1; \
-		caerConfigurationIteratorCounter >= 0; \
-		caerConfigurationIteratorCounter--) { \
-		caerConfigurationEventConst caerConfigurationIteratorElement = caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
+#define CAER_CONFIGURATION_CONST_REVERSE_ITERATOR_ALL_START(CONFIGURATION_PACKET)          \
+	for (int32_t caerConfigurationIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1; \
+		 caerConfigurationIteratorCounter >= 0; caerConfigurationIteratorCounter--) {      \
+		caerConfigurationEventConst caerConfigurationIteratorElement                       \
+			= caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -453,12 +471,15 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_REVERSE_ITERATOR_VALID_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1; \
-		caerConfigurationIteratorCounter >= 0; \
-		caerConfigurationIteratorCounter--) { \
-		caerConfigurationEvent caerConfigurationIteratorElement = caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
-		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) { continue; } // Skip invalid configuration events.
+#define CAER_CONFIGURATION_REVERSE_ITERATOR_VALID_START(CONFIGURATION_PACKET)                               \
+	for (int32_t caerConfigurationIteratorCounter                                                           \
+		 = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1;                  \
+		 caerConfigurationIteratorCounter >= 0; caerConfigurationIteratorCounter--) {                       \
+		caerConfigurationEvent caerConfigurationIteratorElement                                             \
+			= caerConfigurationEventPacketGetEvent(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
+		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) {                             \
+			continue;                                                                                       \
+		} // Skip invalid configuration events.
 
 /**
  * Const-Reverse iterator over only the valid configuration events in a packet.
@@ -468,12 +489,15 @@ static inline void caerConfigurationEventSetParameter(caerConfigurationEvent eve
  *
  * CONFIGURATION_PACKET: a valid ConfigurationEventPacket pointer. Cannot be NULL.
  */
-#define CAER_CONFIGURATION_CONST_REVERSE_ITERATOR_VALID_START(CONFIGURATION_PACKET) \
-	for (int32_t caerConfigurationIteratorCounter = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1; \
-		caerConfigurationIteratorCounter >= 0; \
-		caerConfigurationIteratorCounter--) { \
-		caerConfigurationEventConst caerConfigurationIteratorElement = caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
-		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) { continue; } // Skip invalid configuration events.
+#define CAER_CONFIGURATION_CONST_REVERSE_ITERATOR_VALID_START(CONFIGURATION_PACKET)                              \
+	for (int32_t caerConfigurationIteratorCounter                                                                \
+		 = caerEventPacketHeaderGetEventNumber(&(CONFIGURATION_PACKET)->packetHeader) - 1;                       \
+		 caerConfigurationIteratorCounter >= 0; caerConfigurationIteratorCounter--) {                            \
+		caerConfigurationEventConst caerConfigurationIteratorElement                                             \
+			= caerConfigurationEventPacketGetEventConst(CONFIGURATION_PACKET, caerConfigurationIteratorCounter); \
+		if (!caerConfigurationEventIsValid(caerConfigurationIteratorElement)) {                                  \
+			continue;                                                                                            \
+		} // Skip invalid configuration events.
 
 /**
  * Reverse iterator close statement.

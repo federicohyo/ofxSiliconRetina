@@ -33,24 +33,24 @@ extern "C" {
  * Used to interpret the special event type field.
  */
 enum caer_special_event_types {
-	TIMESTAMP_WRAP = 0,                //!< A 32 bit timestamp wrap occurred.
-	TIMESTAMP_RESET = 1,               //!< A timestamp reset occurred.
-	EXTERNAL_INPUT_RISING_EDGE = 2,    //!< A rising edge was detected (External Input module on device).
-	EXTERNAL_INPUT_FALLING_EDGE = 3,   //!< A falling edge was detected (External Input module on device).
-	EXTERNAL_INPUT_PULSE = 4,          //!< A pulse was detected (External Input module on device).
-	DVS_ROW_ONLY = 5,                  //!< A DVS row-only event was detected (a row address without any following column addresses).
-	EXTERNAL_INPUT1_RISING_EDGE = 6,   //!< A rising edge was detected (External Input 1 module on device).
-	EXTERNAL_INPUT1_FALLING_EDGE = 7,  //!< A falling edge was detected (External Input 1 module on device).
-	EXTERNAL_INPUT1_PULSE = 8,         //!< A pulse was detected (External Input 1 module on device).
-	EXTERNAL_INPUT2_RISING_EDGE = 9,   //!< A rising edge was detected (External Input 2 module on device).
-	EXTERNAL_INPUT2_FALLING_EDGE = 10, //!< A falling edge was detected (External Input 2 module on device).
-	EXTERNAL_INPUT2_PULSE = 11,        //!< A pulse was detected (External Input 2 module on device).
-	EXTERNAL_GENERATOR_RISING_EDGE = 12,  //!< A rising edge was generated (External Input Generator module on device).
+	TIMESTAMP_WRAP              = 0, //!< A 32 bit timestamp wrap occurred.
+	TIMESTAMP_RESET             = 1, //!< A timestamp reset occurred.
+	EXTERNAL_INPUT_RISING_EDGE  = 2, //!< A rising edge was detected (External Input module on device).
+	EXTERNAL_INPUT_FALLING_EDGE = 3, //!< A falling edge was detected (External Input module on device).
+	EXTERNAL_INPUT_PULSE        = 4, //!< A pulse was detected (External Input module on device).
+	DVS_ROW_ONLY = 5, //!< A DVS row-only event was detected (a row address without any following column addresses).
+	EXTERNAL_INPUT1_RISING_EDGE     = 6,  //!< A rising edge was detected (External Input 1 module on device).
+	EXTERNAL_INPUT1_FALLING_EDGE    = 7,  //!< A falling edge was detected (External Input 1 module on device).
+	EXTERNAL_INPUT1_PULSE           = 8,  //!< A pulse was detected (External Input 1 module on device).
+	EXTERNAL_INPUT2_RISING_EDGE     = 9,  //!< A rising edge was detected (External Input 2 module on device).
+	EXTERNAL_INPUT2_FALLING_EDGE    = 10, //!< A falling edge was detected (External Input 2 module on device).
+	EXTERNAL_INPUT2_PULSE           = 11, //!< A pulse was detected (External Input 2 module on device).
+	EXTERNAL_GENERATOR_RISING_EDGE  = 12, //!< A rising edge was generated (External Input Generator module on device).
 	EXTERNAL_GENERATOR_FALLING_EDGE = 13, //!< A falling edge was generated (External Input Generator module on device).
-	APS_FRAME_START = 14,              //!< An APS frame capture has started (Frame Event will follow).
-	APS_FRAME_END = 15,                //!< An APS frame capture has completed (Frame Event is alongside).
-	APS_EXPOSURE_START = 16,           //!< An APS frame exposure has started (Frame Event will follow).
-	APS_EXPOSURE_END = 17,             //!< An APS frame exposure has completed (Frame Event will follow).
+	APS_FRAME_START                 = 14, //!< An APS frame capture has started (Frame Event will follow).
+	APS_FRAME_END                   = 15, //!< An APS frame capture has completed (Frame Event is alongside).
+	APS_EXPOSURE_START              = 16, //!< An APS frame exposure has started (Frame Event will follow).
+	APS_EXPOSURE_END                = 17, //!< An APS frame exposure has completed (Frame Event will follow).
 };
 
 /**
@@ -60,8 +60,7 @@ enum caer_special_event_types {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_special_event {
+PACKED_STRUCT(struct caer_special_event {
 	/// Event data. First because of valid mark.
 	uint32_t data;
 	/// Event timestamp.
@@ -80,8 +79,7 @@ typedef const struct caer_special_event *caerSpecialEventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_special_event_packet {
+PACKED_STRUCT(struct caer_special_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -104,7 +102,11 @@ typedef const struct caer_special_event_packet *caerSpecialEventPacketConst;
  *
  * @return a valid SpecialEventPacket handle or NULL on error.
  */
-caerSpecialEventPacket caerSpecialEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerSpecialEventPacket caerSpecialEventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerSpecialEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, SPECIAL_EVENT,
+		sizeof(struct caer_special_event), offsetof(struct caer_special_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Special event packet.
@@ -130,7 +132,8 @@ static inline caerSpecialEventPacket caerSpecialEventPacketFromPacketHeader(caer
  * @param header a valid read-only event packet header pointer. Cannot be NULL.
  * @return a properly converted, read-only typed event packet pointer.
  */
-static inline caerSpecialEventPacketConst caerSpecialEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+static inline caerSpecialEventPacketConst caerSpecialEventPacketFromPacketHeaderConst(
+	caerEventPacketHeaderConst header) {
 	if (caerEventPacketHeaderGetEventType(header) != SPECIAL_EVENT) {
 		return (NULL);
 	}
@@ -149,8 +152,9 @@ static inline caerSpecialEventPacketConst caerSpecialEventPacketFromPacketHeader
 static inline caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Special Event",
-			"Called caerSpecialEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event",
+			"Called caerSpecialEventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -171,8 +175,9 @@ static inline caerSpecialEvent caerSpecialEventPacketGetEvent(caerSpecialEventPa
 static inline caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpecialEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Special Event",
-			"Called caerSpecialEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event",
+			"Called caerSpecialEventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -194,7 +199,7 @@ static inline caerSpecialEventConst caerSpecialEventPacketGetEventConst(caerSpec
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerSpecialEventGetTimestamp(caerSpecialEventConst event) {
-	return (le32toh(event->timestamp));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -208,8 +213,8 @@ static inline int32_t caerSpecialEventGetTimestamp(caerSpecialEventConst event) 
  * @return this event's 64bit microsecond timestamp.
  */
 static inline int64_t caerSpecialEventGetTimestamp64(caerSpecialEventConst event, caerSpecialEventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerSpecialEventGetTimestamp(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerSpecialEventGetTimestamp(event))));
 }
 
 /**
@@ -221,11 +226,11 @@ static inline int64_t caerSpecialEventGetTimestamp64(caerSpecialEventConst event
 static inline void caerSpecialEventSetTimestamp(caerSpecialEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventSetTimestamp() with negative value!");
 		return;
 	}
 
-	event->timestamp = htole32(timestamp);
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**
@@ -255,13 +260,13 @@ static inline void caerSpecialEventValidate(caerSpecialEvent event, caerSpecialE
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventValidate() on already valid event.");
 	}
 }
 
@@ -280,11 +285,11 @@ static inline void caerSpecialEventInvalidate(caerSpecialEvent event, caerSpecia
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Special Event", "Called caerSpecialEventInvalidate() on already invalid event.");
 	}
 }
 
@@ -344,11 +349,12 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_ITERATOR_ALL_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = 0; \
-		caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
-		caerSpecialIteratorCounter++) { \
-		caerSpecialEvent caerSpecialIteratorElement = caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter);
+#define CAER_SPECIAL_ITERATOR_ALL_START(SPECIAL_PACKET)                                                     \
+	for (int32_t caerSpecialIteratorCounter = 0;                                                            \
+		 caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
+		 caerSpecialIteratorCounter++) {                                                                    \
+		caerSpecialEvent caerSpecialIteratorElement                                                         \
+			= caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter);
 
 /**
  * Const-Iterator over all special events in a packet.
@@ -358,11 +364,12 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_CONST_ITERATOR_ALL_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = 0; \
-		caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
-		caerSpecialIteratorCounter++) { \
-		caerSpecialEventConst caerSpecialIteratorElement = caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter);
+#define CAER_SPECIAL_CONST_ITERATOR_ALL_START(SPECIAL_PACKET)                                               \
+	for (int32_t caerSpecialIteratorCounter = 0;                                                            \
+		 caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
+		 caerSpecialIteratorCounter++) {                                                                    \
+		caerSpecialEventConst caerSpecialIteratorElement                                                    \
+			= caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter);
 
 /**
  * Iterator close statement.
@@ -377,12 +384,15 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_ITERATOR_VALID_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = 0; \
-		caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
-		caerSpecialIteratorCounter++) { \
-		caerSpecialEvent caerSpecialIteratorElement = caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter); \
-		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) { continue; } // Skip invalid special events.
+#define CAER_SPECIAL_ITERATOR_VALID_START(SPECIAL_PACKET)                                                   \
+	for (int32_t caerSpecialIteratorCounter = 0;                                                            \
+		 caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
+		 caerSpecialIteratorCounter++) {                                                                    \
+		caerSpecialEvent caerSpecialIteratorElement                                                         \
+			= caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter);                   \
+		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) {                                         \
+			continue;                                                                                       \
+		} // Skip invalid special events.
 
 /**
  * Const-Iterator over only the valid special events in a packet.
@@ -392,12 +402,15 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_CONST_ITERATOR_VALID_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = 0; \
-		caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
-		caerSpecialIteratorCounter++) { \
-		caerSpecialEventConst caerSpecialIteratorElement = caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter); \
-		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) { continue; } // Skip invalid special events.
+#define CAER_SPECIAL_CONST_ITERATOR_VALID_START(SPECIAL_PACKET)                                             \
+	for (int32_t caerSpecialIteratorCounter = 0;                                                            \
+		 caerSpecialIteratorCounter < caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader); \
+		 caerSpecialIteratorCounter++) {                                                                    \
+		caerSpecialEventConst caerSpecialIteratorElement                                                    \
+			= caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter);              \
+		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) {                                         \
+			continue;                                                                                       \
+		} // Skip invalid special events.
 
 /**
  * Iterator close statement.
@@ -412,11 +425,12 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_REVERSE_ITERATOR_ALL_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
-		caerSpecialIteratorCounter >= 0; \
-		caerSpecialIteratorCounter--) { \
-		caerSpecialEvent caerSpecialIteratorElement = caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter);
+#define CAER_SPECIAL_REVERSE_ITERATOR_ALL_START(SPECIAL_PACKET)                      \
+	for (int32_t caerSpecialIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
+		 caerSpecialIteratorCounter >= 0; caerSpecialIteratorCounter--) {            \
+		caerSpecialEvent caerSpecialIteratorElement                                  \
+			= caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter);
 /**
  * Const-Reverse iterator over all special events in a packet.
  * Returns the current index in the 'caerSpecialIteratorCounter' variable of type
@@ -425,11 +439,12 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_ALL_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
-		caerSpecialIteratorCounter >= 0; \
-		caerSpecialIteratorCounter--) { \
-		caerSpecialEventConst caerSpecialIteratorElement = caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter);
+#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_ALL_START(SPECIAL_PACKET)                \
+	for (int32_t caerSpecialIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
+		 caerSpecialIteratorCounter >= 0; caerSpecialIteratorCounter--) {            \
+		caerSpecialEventConst caerSpecialIteratorElement                             \
+			= caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -444,12 +459,15 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_REVERSE_ITERATOR_VALID_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
-		caerSpecialIteratorCounter >= 0; \
-		caerSpecialIteratorCounter--) { \
-		caerSpecialEvent caerSpecialIteratorElement = caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter); \
-		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) { continue; } // Skip invalid special events.
+#define CAER_SPECIAL_REVERSE_ITERATOR_VALID_START(SPECIAL_PACKET)                         \
+	for (int32_t caerSpecialIteratorCounter                                               \
+		 = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1;      \
+		 caerSpecialIteratorCounter >= 0; caerSpecialIteratorCounter--) {                 \
+		caerSpecialEvent caerSpecialIteratorElement                                       \
+			= caerSpecialEventPacketGetEvent(SPECIAL_PACKET, caerSpecialIteratorCounter); \
+		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) {                       \
+			continue;                                                                     \
+		} // Skip invalid special events.
 
 /**
  * Const-Reverse iterator over only the valid special events in a packet.
@@ -459,12 +477,15 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  *
  * SPECIAL_PACKET: a valid SpecialEventPacket pointer. Cannot be NULL.
  */
-#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_VALID_START(SPECIAL_PACKET) \
-	for (int32_t caerSpecialIteratorCounter = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1; \
-		caerSpecialIteratorCounter >= 0; \
-		caerSpecialIteratorCounter--) { \
-		caerSpecialEventConst caerSpecialIteratorElement = caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter); \
-		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) { continue; } // Skip invalid special events.
+#define CAER_SPECIAL_CONST_REVERSE_ITERATOR_VALID_START(SPECIAL_PACKET)                        \
+	for (int32_t caerSpecialIteratorCounter                                                    \
+		 = caerEventPacketHeaderGetEventNumber(&(SPECIAL_PACKET)->packetHeader) - 1;           \
+		 caerSpecialIteratorCounter >= 0; caerSpecialIteratorCounter--) {                      \
+		caerSpecialEventConst caerSpecialIteratorElement                                       \
+			= caerSpecialEventPacketGetEventConst(SPECIAL_PACKET, caerSpecialIteratorCounter); \
+		if (!caerSpecialEventIsValid(caerSpecialIteratorElement)) {                            \
+			continue;                                                                          \
+		} // Skip invalid special events.
 
 /**
  * Reverse iterator close statement.
@@ -483,10 +504,10 @@ static inline void caerSpecialEventSetData(caerSpecialEvent event, uint32_t data
  */
 static inline caerSpecialEvent caerSpecialEventPacketFindEventByType(caerSpecialEventPacket packet, uint8_t type) {
 	CAER_SPECIAL_ITERATOR_ALL_START(packet)
-		if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
-			// Found it, return it.
-			return (caerSpecialIteratorElement);
-		}
+	if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
+		// Found it, return it.
+		return (caerSpecialIteratorElement);
+	}
 	CAER_SPECIAL_ITERATOR_ALL_END
 
 	// Found nothing, return nothing.
@@ -504,12 +525,13 @@ static inline caerSpecialEvent caerSpecialEventPacketFindEventByType(caerSpecial
  *
  * @return the requested read-only special event or NULL on error/not found.
  */
-static inline caerSpecialEventConst caerSpecialEventPacketFindEventByTypeConst(caerSpecialEventPacketConst packet, uint8_t type) {
+static inline caerSpecialEventConst caerSpecialEventPacketFindEventByTypeConst(
+	caerSpecialEventPacketConst packet, uint8_t type) {
 	CAER_SPECIAL_CONST_ITERATOR_ALL_START(packet)
-		if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
-			// Found it, return it.
-			return (caerSpecialIteratorElement);
-		}
+	if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
+		// Found it, return it.
+		return (caerSpecialIteratorElement);
+	}
 	CAER_SPECIAL_ITERATOR_ALL_END
 
 	// Found nothing, return nothing.
@@ -528,10 +550,10 @@ static inline caerSpecialEventConst caerSpecialEventPacketFindEventByTypeConst(c
  */
 static inline caerSpecialEvent caerSpecialEventPacketFindValidEventByType(caerSpecialEventPacket packet, uint8_t type) {
 	CAER_SPECIAL_ITERATOR_VALID_START(packet)
-		if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
-			// Found it, return it.
-			return (caerSpecialIteratorElement);
-		}
+	if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
+		// Found it, return it.
+		return (caerSpecialIteratorElement);
+	}
 	CAER_SPECIAL_ITERATOR_VALID_END
 
 	// Found nothing, return nothing.
@@ -549,12 +571,13 @@ static inline caerSpecialEvent caerSpecialEventPacketFindValidEventByType(caerSp
  *
  * @return the requested read-only valid special event or NULL on error/not found.
  */
-static inline caerSpecialEventConst caerSpecialEventPacketFindValidEventByTypeConst(caerSpecialEventPacketConst packet, uint8_t type) {
+static inline caerSpecialEventConst caerSpecialEventPacketFindValidEventByTypeConst(
+	caerSpecialEventPacketConst packet, uint8_t type) {
 	CAER_SPECIAL_CONST_ITERATOR_VALID_START(packet)
-		if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
-			// Found it, return it.
-			return (caerSpecialIteratorElement);
-		}
+	if (caerSpecialEventGetType(caerSpecialIteratorElement) == type) {
+		// Found it, return it.
+		return (caerSpecialIteratorElement);
+	}
 	CAER_SPECIAL_ITERATOR_VALID_END
 
 	// Found nothing, return nothing.

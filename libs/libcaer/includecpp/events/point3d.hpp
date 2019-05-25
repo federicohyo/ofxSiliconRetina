@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct Point3DEvent: public caer_point3d_event {
+struct Point3DEvent : public caer_point3d_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerPoint3DEventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerPoint3DEventGetTimestamp64(this,
-			reinterpret_cast<caerPoint3DEventPacketConst>(packet.getHeaderPointer())));
+		return (caerPoint3DEventGetTimestamp64(
+			this, reinterpret_cast<caerPoint3DEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -80,7 +80,7 @@ struct Point3DEvent: public caer_point3d_event {
 
 static_assert(std::is_pod<Point3DEvent>::value, "Point3DEvent is not POD.");
 
-class Point3DEventPacket: public EventPacketCommon<Point3DEventPacket, Point3DEvent> {
+class Point3DEventPacket : public EventPacketCommon<Point3DEventPacket, Point3DEvent> {
 public:
 	// Constructors.
 	Point3DEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -89,7 +89,7 @@ public:
 		caerPoint3DEventPacket packet = caerPoint3DEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -98,7 +98,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, POINT3D_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -107,29 +107,28 @@ public:
 
 		constructorCheckEventType(packetHeader, POINT3D_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
-		caerPoint3DEvent evtBase = caerPoint3DEventPacketGetEvent(reinterpret_cast<caerPoint3DEventPacket>(header),
-			index);
+		caerPoint3DEvent evtBase
+			= caerPoint3DEventPacketGetEvent(reinterpret_cast<caerPoint3DEventPacket>(header), index);
 		Point3DEvent *evt = static_cast<Point3DEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerPoint3DEventConst evtBase = caerPoint3DEventPacketGetEventConst(
-			reinterpret_cast<caerPoint3DEventPacketConst>(header), index);
+		caerPoint3DEventConst evtBase
+			= caerPoint3DEventPacketGetEventConst(reinterpret_cast<caerPoint3DEventPacketConst>(header), index);
 		const Point3DEvent *evt = static_cast<const Point3DEvent *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct ConfigurationEvent: public caer_configuration_event {
+struct ConfigurationEvent : public caer_configuration_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerConfigurationEventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerConfigurationEventGetTimestamp64(this,
-			reinterpret_cast<caerConfigurationEventPacketConst>(packet.getHeaderPointer())));
+		return (caerConfigurationEventGetTimestamp64(
+			this, reinterpret_cast<caerConfigurationEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -34,8 +34,8 @@ struct ConfigurationEvent: public caer_configuration_event {
 	}
 
 	void invalidate(EventPacket &packet) noexcept {
-		caerConfigurationEventInvalidate(this,
-			reinterpret_cast<caerConfigurationEventPacket>(packet.getHeaderPointer()));
+		caerConfigurationEventInvalidate(
+			this, reinterpret_cast<caerConfigurationEventPacket>(packet.getHeaderPointer()));
 	}
 
 	uint8_t getModuleAddress() const noexcept {
@@ -65,17 +65,17 @@ struct ConfigurationEvent: public caer_configuration_event {
 
 static_assert(std::is_pod<ConfigurationEvent>::value, "ConfigurationEvent is not POD.");
 
-class ConfigurationEventPacket: public EventPacketCommon<ConfigurationEventPacket, ConfigurationEvent> {
+class ConfigurationEventPacket : public EventPacketCommon<ConfigurationEventPacket, ConfigurationEvent> {
 public:
 	// Constructors.
 	ConfigurationEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
 		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
 
-		caerConfigurationEventPacket packet = caerConfigurationEventPacketAllocate(eventCapacity, eventSource,
-			tsOverflow);
+		caerConfigurationEventPacket packet
+			= caerConfigurationEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -84,7 +84,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, CONFIG_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -93,15 +93,15 @@ public:
 
 		constructorCheckEventType(packetHeader, CONFIG_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
-		caerConfigurationEvent evtBase = caerConfigurationEventPacketGetEvent(
-			reinterpret_cast<caerConfigurationEventPacket>(header), index);
+		caerConfigurationEvent evtBase
+			= caerConfigurationEventPacketGetEvent(reinterpret_cast<caerConfigurationEventPacket>(header), index);
 		ConfigurationEvent *evt = static_cast<ConfigurationEvent *>(evtBase);
 
 		return (*evt);
@@ -115,7 +115,6 @@ protected:
 		return (*evt);
 	}
 };
-
 }
 }
 

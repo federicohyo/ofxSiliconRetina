@@ -21,8 +21,7 @@ extern "C" {
 // Standard MTU 1500 - 20 IP header - 8 UDP header => 1472 bytes
 #define AEDAT3_MAX_UDP_SIZE (1472 - AEDAT3_NETWORK_HEADER_LENGTH)
 
-PACKED_STRUCT(
-struct aedat3_network_header {
+PACKED_STRUCT(struct aedat3_network_header {
 	int64_t magicNumber;
 	int64_t sequenceNumber;
 	int8_t versionNumber;
@@ -38,9 +37,9 @@ static inline struct aedat3_network_header caerParseNetworkHeader(const uint8_t 
 	memcpy(&networkHeader, dataBuffer, AEDAT3_NETWORK_HEADER_LENGTH);
 
 	// Ensure endianness conversion is done if needed.
-	networkHeader.magicNumber = le64toh(networkHeader.magicNumber);
+	networkHeader.magicNumber    = le64toh(networkHeader.magicNumber);
 	networkHeader.sequenceNumber = le64toh(networkHeader.sequenceNumber);
-	networkHeader.sourceID = le16toh(networkHeader.sourceID);
+	networkHeader.sourceID       = le16toh(networkHeader.sourceID);
 
 	return (networkHeader);
 }

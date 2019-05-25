@@ -2,6 +2,7 @@
 #define LIBCAER_HPP_
 
 #include <libcaer/libcaer.h>
+
 #include <stdexcept>
 #include <type_traits>
 
@@ -21,24 +22,26 @@ namespace log {
 
 enum class logLevel {
 	EMERGENCY = 0,
-	ALERT = 1,
-	CRITICAL = 2,
-	ERROR = 3,
-	WARNING = 4,
-	NOTICE = 5,
-	INFO = 6,
-	DEBUG = 7,
+	ALERT     = 1,
+	CRITICAL  = 2,
+	ERROR     = 3,
+	WARNING   = 4,
+	NOTICE    = 5,
+	INFO      = 6,
+	DEBUG     = 7,
 };
 
 inline void logLevelSet(logLevel l) noexcept;
 inline logLevel logLevelGet() noexcept;
+inline void callbackSet(caerLogCallback callback) noexcept;
+inline caerLogCallback callbackGet() noexcept;
 inline void fileDescriptorsSet(int fd1, int fd2) noexcept;
 inline int fileDescriptorsGetFirst() noexcept;
 inline int fileDescriptorsGetSecond() noexcept;
 inline void log(logLevel l, const char *subSystem, const char *format, ...) noexcept;
 inline void logVA(logLevel l, const char *subSystem, const char *format, va_list args) noexcept;
-inline void logVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, logLevel l,
-	const char *subSystem, const char *format, va_list args) noexcept;
+inline void logVAFull(
+	uint8_t systemLogLevel, logLevel l, const char *subSystem, const char *format, va_list args) noexcept;
 
 inline void logLevelSet(logLevel l) noexcept {
 	caerLogLevelSet(static_cast<enum caer_log_level>(static_cast<typename std::underlying_type<logLevel>::type>(l)));
@@ -46,6 +49,14 @@ inline void logLevelSet(logLevel l) noexcept {
 
 inline logLevel logLevelGet() noexcept {
 	return (static_cast<logLevel>(caerLogLevelGet()));
+}
+
+inline void callbackSet(caerLogCallback callback) noexcept {
+	caerLogCallbackSet(callback);
+}
+
+inline caerLogCallback callbackGet() noexcept {
+	return (caerLogCallbackGet());
 }
 
 inline void fileDescriptorsSet(int fd1, int fd2) noexcept {
@@ -58,6 +69,14 @@ inline int fileDescriptorsGetFirst() noexcept {
 
 inline int fileDescriptorsGetSecond() noexcept {
 	return (caerLogFileDescriptorsGetSecond());
+}
+
+inline void disable(bool disableLogging) noexcept {
+	caerLogDisable(disableLogging);
+}
+
+inline bool disabled() noexcept {
+	return (caerLogDisabled());
 }
 
 inline void log(logLevel l, const char *subSystem, const char *format, ...) noexcept {
@@ -73,14 +92,13 @@ inline void logVA(logLevel l, const char *subSystem, const char *format, va_list
 		subSystem, format, args);
 }
 
-inline void logVAFull(int logFileDescriptor1, int logFileDescriptor2, uint8_t systemLogLevel, logLevel l,
-	const char *subSystem, const char *format, va_list args) noexcept {
-	caerLogVAFull(logFileDescriptor1, logFileDescriptor2, systemLogLevel,
+inline void logVAFull(
+	uint8_t systemLogLevel, logLevel l, const char *subSystem, const char *format, va_list args) noexcept {
+	caerLogVAFull(systemLogLevel,
 		static_cast<enum caer_log_level>(static_cast<typename std::underlying_type<logLevel>::type>(l)), subSystem,
 		format, args);
 }
-
-}
-}
+} // namespace log
+} // namespace libcaer
 
 #endif /* LIBCAER_HPP_ */

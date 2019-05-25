@@ -1,30 +1,30 @@
 #ifndef LIBCAER_NETWORK_HPP_
 #define LIBCAER_NETWORK_HPP_
 
-#include <libcaer/network.h>
 #include "libcaer.hpp"
+#include <libcaer/network.h>
 
 namespace libcaer {
 namespace network {
 
-class AEDAT3NetworkHeader: private aedat3_network_header {
+class AEDAT3NetworkHeader : private aedat3_network_header {
 public:
 	AEDAT3NetworkHeader() {
-		magicNumber = AEDAT3_NETWORK_MAGIC_NUMBER;
+		magicNumber    = AEDAT3_NETWORK_MAGIC_NUMBER;
 		sequenceNumber = 0;
-		versionNumber = AEDAT3_NETWORK_VERSION;
-		formatNumber = 0;
-		sourceID = 0;
+		versionNumber  = AEDAT3_NETWORK_VERSION;
+		formatNumber   = 0;
+		sourceID       = 0;
 	}
 
 	AEDAT3NetworkHeader(const uint8_t *h) {
 		struct aedat3_network_header header = caerParseNetworkHeader(h);
 
-		magicNumber = header.magicNumber;
+		magicNumber    = header.magicNumber;
 		sequenceNumber = header.sequenceNumber;
-		versionNumber = header.versionNumber;
-		formatNumber = header.formatNumber;
-		sourceID = header.sourceID;
+		versionNumber  = header.versionNumber;
+		formatNumber   = header.formatNumber;
+		sourceID       = header.sourceID;
 	}
 
 	int64_t getMagicNumber() const noexcept {
@@ -67,7 +67,6 @@ public:
 		sourceID = source;
 	}
 };
-
 }
 }
 

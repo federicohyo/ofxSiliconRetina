@@ -1,9 +1,6 @@
 /**
  * @file point1d.h
  *
- * THIS EVENT DEFINITIONS IS STILL TO BE CONSIDERED EXPERIMENTAL
- * AND IS SUBJECT TO FUTURE CHANGES AND REVISIONS!
- *
  * Point1D Events format definition and handling functions.
  * This contains one dimensional data points as floats,
  * together with support for distinguishing type and scale.
@@ -42,8 +39,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_point1d_event {
+PACKED_STRUCT(struct caer_point1d_event {
 	/// Event information. First because of valid mark.
 	uint32_t info;
 	/// X axis measurement.
@@ -64,8 +60,7 @@ typedef const struct caer_point1d_event *caerPoint1DEventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_point1d_event_packet {
+PACKED_STRUCT(struct caer_point1d_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -88,7 +83,11 @@ typedef const struct caer_point1d_event_packet *caerPoint1DEventPacketConst;
  *
  * @return a valid Point1DEventPacket handle or NULL on error.
  */
-caerPoint1DEventPacket caerPoint1DEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerPoint1DEventPacket caerPoint1DEventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerPoint1DEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, POINT1D_EVENT,
+		sizeof(struct caer_point1d_event), offsetof(struct caer_point1d_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Point1D event packet.
@@ -114,7 +113,8 @@ static inline caerPoint1DEventPacket caerPoint1DEventPacketFromPacketHeader(caer
  * @param header a valid read-only event packet header pointer. Cannot be NULL.
  * @return a properly converted, read-only typed event packet pointer.
  */
-static inline caerPoint1DEventPacketConst caerPoint1DEventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+static inline caerPoint1DEventPacketConst caerPoint1DEventPacketFromPacketHeaderConst(
+	caerEventPacketHeaderConst header) {
 	if (caerEventPacketHeaderGetEventType(header) != POINT1D_EVENT) {
 		return (NULL);
 	}
@@ -133,8 +133,9 @@ static inline caerPoint1DEventPacketConst caerPoint1DEventPacketFromPacketHeader
 static inline caerPoint1DEvent caerPoint1DEventPacketGetEvent(caerPoint1DEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event",
-			"Called caerPoint1DEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event",
+			"Called caerPoint1DEventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -155,8 +156,9 @@ static inline caerPoint1DEvent caerPoint1DEventPacketGetEvent(caerPoint1DEventPa
 static inline caerPoint1DEventConst caerPoint1DEventPacketGetEventConst(caerPoint1DEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event",
-			"Called caerPoint1DEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event",
+			"Called caerPoint1DEventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -178,7 +180,7 @@ static inline caerPoint1DEventConst caerPoint1DEventPacketGetEventConst(caerPoin
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerPoint1DEventGetTimestamp(caerPoint1DEventConst event) {
-	return (le32toh(event->timestamp));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -192,8 +194,8 @@ static inline int32_t caerPoint1DEventGetTimestamp(caerPoint1DEventConst event) 
  * @return this event's 64bit microsecond timestamp.
  */
 static inline int64_t caerPoint1DEventGetTimestamp64(caerPoint1DEventConst event, caerPoint1DEventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerPoint1DEventGetTimestamp(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerPoint1DEventGetTimestamp(event))));
 }
 
 /**
@@ -205,11 +207,11 @@ static inline int64_t caerPoint1DEventGetTimestamp64(caerPoint1DEventConst event
 static inline void caerPoint1DEventSetTimestamp(caerPoint1DEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventSetTimestamp() with negative value!");
 		return;
 	}
 
-	event->timestamp = htole32(timestamp);
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**
@@ -239,13 +241,13 @@ static inline void caerPoint1DEventValidate(caerPoint1DEvent event, caerPoint1DE
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventValidate() on already valid event.");
 	}
 }
 
@@ -264,11 +266,11 @@ static inline void caerPoint1DEventInvalidate(caerPoint1DEvent event, caerPoint1
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Point1D Event", "Called caerPoint1DEventInvalidate() on already invalid event.");
 	}
 }
 
@@ -355,11 +357,12 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_ITERATOR_ALL_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = 0; \
-		caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
-		caerPoint1DIteratorCounter++) { \
-		caerPoint1DEvent caerPoint1DIteratorElement = caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter);
+#define CAER_POINT1D_ITERATOR_ALL_START(POINT1D_PACKET)                                                     \
+	for (int32_t caerPoint1DIteratorCounter = 0;                                                            \
+		 caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
+		 caerPoint1DIteratorCounter++) {                                                                    \
+		caerPoint1DEvent caerPoint1DIteratorElement                                                         \
+			= caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter);
 
 /**
  * Const-Iterator over all Point1D events in a packet.
@@ -369,11 +372,12 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_CONST_ITERATOR_ALL_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = 0; \
-		caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
-		caerPoint1DIteratorCounter++) { \
-		caerPoint1DEventConst caerPoint1DIteratorElement = caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter);
+#define CAER_POINT1D_CONST_ITERATOR_ALL_START(POINT1D_PACKET)                                               \
+	for (int32_t caerPoint1DIteratorCounter = 0;                                                            \
+		 caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
+		 caerPoint1DIteratorCounter++) {                                                                    \
+		caerPoint1DEventConst caerPoint1DIteratorElement                                                    \
+			= caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter);
 
 /**
  * Iterator close statement.
@@ -388,12 +392,15 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_ITERATOR_VALID_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = 0; \
-		caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
-		caerPoint1DIteratorCounter++) { \
-		caerPoint1DEvent caerPoint1DIteratorElement = caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter); \
-		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) { continue; } // Skip invalid Point1D events.
+#define CAER_POINT1D_ITERATOR_VALID_START(POINT1D_PACKET)                                                   \
+	for (int32_t caerPoint1DIteratorCounter = 0;                                                            \
+		 caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
+		 caerPoint1DIteratorCounter++) {                                                                    \
+		caerPoint1DEvent caerPoint1DIteratorElement                                                         \
+			= caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter);                   \
+		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) {                                         \
+			continue;                                                                                       \
+		} // Skip invalid Point1D events.
 
 /**
  * Const-Iterator over only the valid Point1D events in a packet.
@@ -403,12 +410,15 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_CONST_ITERATOR_VALID_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = 0; \
-		caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
-		caerPoint1DIteratorCounter++) { \
-		caerPoint1DEventConst caerPoint1DIteratorElement = caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter); \
-		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) { continue; } // Skip invalid Point1D events.
+#define CAER_POINT1D_CONST_ITERATOR_VALID_START(POINT1D_PACKET)                                             \
+	for (int32_t caerPoint1DIteratorCounter = 0;                                                            \
+		 caerPoint1DIteratorCounter < caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader); \
+		 caerPoint1DIteratorCounter++) {                                                                    \
+		caerPoint1DEventConst caerPoint1DIteratorElement                                                    \
+			= caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter);              \
+		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) {                                         \
+			continue;                                                                                       \
+		} // Skip invalid Point1D events.
 
 /**
  * Iterator close statement.
@@ -423,11 +433,12 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_REVERSE_ITERATOR_ALL_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1; \
-		caerPoint1DIteratorCounter >= 0; \
-		caerPoint1DIteratorCounter--) { \
-		caerPoint1DEvent caerPoint1DIteratorElement = caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter);
+#define CAER_POINT1D_REVERSE_ITERATOR_ALL_START(POINT1D_PACKET)                      \
+	for (int32_t caerPoint1DIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1; \
+		 caerPoint1DIteratorCounter >= 0; caerPoint1DIteratorCounter--) {            \
+		caerPoint1DEvent caerPoint1DIteratorElement                                  \
+			= caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter);
 /**
  * Const-Reverse iterator over all Point1D events in a packet.
  * Returns the current index in the 'caerPoint1DIteratorCounter' variable of type
@@ -436,11 +447,12 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_CONST_REVERSE_ITERATOR_ALL_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1; \
-		caerPoint1DIteratorCounter >= 0; \
-		caerPoint1DIteratorCounter--) { \
-		caerPoint1DEventConst caerPoint1DIteratorElement = caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter);
+#define CAER_POINT1D_CONST_REVERSE_ITERATOR_ALL_START(POINT1D_PACKET)                \
+	for (int32_t caerPoint1DIteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1; \
+		 caerPoint1DIteratorCounter >= 0; caerPoint1DIteratorCounter--) {            \
+		caerPoint1DEventConst caerPoint1DIteratorElement                             \
+			= caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -455,12 +467,15 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_REVERSE_ITERATOR_VALID_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1; \
-		caerPoint1DIteratorCounter >= 0; \
-		caerPoint1DIteratorCounter--) { \
-		caerPoint1DEvent caerPoint1DIteratorElement = caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter); \
-		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) { continue; } // Skip invalid Point1D events.
+#define CAER_POINT1D_REVERSE_ITERATOR_VALID_START(POINT1D_PACKET)                         \
+	for (int32_t caerPoint1DIteratorCounter                                               \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1;      \
+		 caerPoint1DIteratorCounter >= 0; caerPoint1DIteratorCounter--) {                 \
+		caerPoint1DEvent caerPoint1DIteratorElement                                       \
+			= caerPoint1DEventPacketGetEvent(POINT1D_PACKET, caerPoint1DIteratorCounter); \
+		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) {                       \
+			continue;                                                                     \
+		} // Skip invalid Point1D events.
 
 /**
  * Const-Reverse iterator over only the valid Point1D events in a packet.
@@ -470,12 +485,15 @@ static inline void caerPoint1DEventSetX(caerPoint1DEvent event, float x) {
  *
  * POINT1D_PACKET: a valid Point1DEventPacket pointer. Cannot be NULL.
  */
-#define CAER_POINT1D_CONST_REVERSE_ITERATOR_VALID_START(POINT1D_PACKET) \
-	for (int32_t caerPoint1DIteratorCounter = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1; \
-		caerPoint1DIteratorCounter >= 0; \
-		caerPoint1DIteratorCounter--) { \
-		caerPoint1DEventConst caerPoint1DIteratorElement = caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter); \
-		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) { continue; } // Skip invalid Point1D events.
+#define CAER_POINT1D_CONST_REVERSE_ITERATOR_VALID_START(POINT1D_PACKET)                        \
+	for (int32_t caerPoint1DIteratorCounter                                                    \
+		 = caerEventPacketHeaderGetEventNumber(&(POINT1D_PACKET)->packetHeader) - 1;           \
+		 caerPoint1DIteratorCounter >= 0; caerPoint1DIteratorCounter--) {                      \
+		caerPoint1DEventConst caerPoint1DIteratorElement                                       \
+			= caerPoint1DEventPacketGetEventConst(POINT1D_PACKET, caerPoint1DIteratorCounter); \
+		if (!caerPoint1DEventIsValid(caerPoint1DIteratorElement)) {                            \
+			continue;                                                                          \
+		} // Skip invalid Point1D events.
 
 /**
  * Reverse iterator close statement.

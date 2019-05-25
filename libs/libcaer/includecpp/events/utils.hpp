@@ -7,6 +7,7 @@
 #include "frame.hpp"
 #include "imu6.hpp"
 #include "imu9.hpp"
+#include "matrix4x4.hpp"
 #include "point1d.hpp"
 #include "point2d.hpp"
 #include "point3d.hpp"
@@ -24,7 +25,8 @@ namespace utils {
 inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
 inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership);
 
-inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
+inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(
+	caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
 			return (std::unique_ptr<SpecialEventPacket>(new SpecialEventPacket(packet, takeMemoryOwnership)));
@@ -55,7 +57,8 @@ inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader 
 			break;
 
 		case CONFIG_EVENT:
-			return (std::unique_ptr<ConfigurationEventPacket>(new ConfigurationEventPacket(packet, takeMemoryOwnership)));
+			return (
+				std::unique_ptr<ConfigurationEventPacket>(new ConfigurationEventPacket(packet, takeMemoryOwnership)));
 			break;
 
 		case POINT1D_EVENT:
@@ -78,13 +81,18 @@ inline std::unique_ptr<EventPacket> makeUniqueFromCStruct(caerEventPacketHeader 
 			return (std::unique_ptr<SpikeEventPacket>(new SpikeEventPacket(packet, takeMemoryOwnership)));
 			break;
 
+		case MATRIX4x4_EVENT:
+			return (std::unique_ptr<Matrix4x4EventPacket>(new Matrix4x4EventPacket(packet, takeMemoryOwnership)));
+			break;
+
 		default:
 			return (std::unique_ptr<EventPacket>(new EventPacket(packet, takeMemoryOwnership)));
 			break;
 	}
 }
 
-inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
+inline std::shared_ptr<EventPacket> makeSharedFromCStruct(
+	caerEventPacketHeader packet, bool takeMemoryOwnership = true) {
 	switch (caerEventPacketHeaderGetEventType(packet)) {
 		case SPECIAL_EVENT:
 			return (std::make_shared<SpecialEventPacket>(packet, takeMemoryOwnership));
@@ -138,12 +146,15 @@ inline std::shared_ptr<EventPacket> makeSharedFromCStruct(caerEventPacketHeader 
 			return (std::make_shared<SpikeEventPacket>(packet, takeMemoryOwnership));
 			break;
 
+		case MATRIX4x4_EVENT:
+			return (std::make_shared<Matrix4x4EventPacket>(packet, takeMemoryOwnership));
+			break;
+
 		default:
 			return (std::make_shared<EventPacket>(packet, takeMemoryOwnership));
 			break;
 	}
 }
-
 }
 }
 }

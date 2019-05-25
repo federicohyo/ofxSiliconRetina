@@ -2,9 +2,11 @@
 #define LIBCAER_SRC_CONTAINER_GENERATION_H_
 
 #include "libcaer.h"
+
+#include "events/special.h"
+
 #include "data_exchange.h"
 #include "timestamps.h"
-#include "events/special.h"
 
 struct container_generation {
 	caerEventPacketContainer currentPacketContainer;
@@ -55,8 +57,8 @@ static inline int32_t containerGenerationGetMaxInterval(containerGeneration stat
 	return (I32T(atomic_load_explicit(&state->maxPacketContainerInterval, memory_order_relaxed)));
 }
 
-static inline int64_t containerGenerationIsCommitTimestampElapsed(containerGeneration state, int32_t tsWrapOverflow,
-	int32_t tsCurrent) {
+static inline int64_t containerGenerationIsCommitTimestampElapsed(
+	containerGeneration state, int32_t tsWrapOverflow, int32_t tsCurrent) {
 	return (generateFullTimestamp(tsWrapOverflow, tsCurrent) > state->currentPacketContainerCommitTimestamp);
 }
 
@@ -73,8 +75,8 @@ static inline void containerGenerationCommitTimestampInit(containerGeneration st
 }
 
 static inline void containerGenerationExecute(containerGeneration state, bool emptyContainerCommit, bool tsReset,
-	int32_t tsWrapOverflow, int32_t tsCurrent, dataExchange dataState, atomic_bool *transfersRunning, int16_t deviceId,
-	const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
+	int32_t tsWrapOverflow, int32_t tsCurrent, dataExchange dataState, atomic_uint_fast32_t *transfersRunning,
+	int16_t deviceId, const char *deviceString, atomic_uint_fast8_t *deviceLogLevelAtomic) {
 	uint8_t deviceLogLevel = atomic_load_explicit(deviceLogLevelAtomic, memory_order_relaxed);
 
 	// If the commit was triggered by a packet container limit being reached, we always
@@ -97,7 +99,8 @@ static inline void containerGenerationExecute(containerGeneration state, bool em
 			// Failed to forward packet container, just drop it, it doesn't contain
 			// any critical information anyway.
 			commonLog(CAER_LOG_NOTICE, deviceString, deviceLogLevel,
-				"Dropped EventPacket Container because ring-buffer full!");
+				"Dropped EventPacket Container because ring-buffer full! This means your processing loop is not "
+				"keeping up with new data ready to be read from caerDeviceDataGet().");
 
 			caerEventPacketContainerFree(state->currentPacketContainer);
 		}
@@ -115,16 +118,16 @@ static inline void containerGenerationExecute(containerGeneration state, bool em
 		// Allocate packet container just for this event.
 		caerEventPacketContainer tsResetContainer = caerEventPacketContainerAllocate(1);
 		if (tsResetContainer == NULL) {
-			commonLog(CAER_LOG_CRITICAL, deviceString, deviceLogLevel,
-				"Failed to allocate tsReset event packet container.");
+			commonLog(
+				CAER_LOG_CRITICAL, deviceString, deviceLogLevel, "Failed to allocate tsReset event packet container.");
 			return;
 		}
 
 		// Allocate special packet just for this event.
 		caerSpecialEventPacket tsResetPacket = caerSpecialEventPacketAllocate(1, deviceId, tsWrapOverflow);
 		if (tsResetPacket == NULL) {
-			commonLog(CAER_LOG_CRITICAL, deviceString, deviceLogLevel,
-				"Failed to allocate tsReset special event packet.");
+			commonLog(
+				CAER_LOG_CRITICAL, deviceString, deviceLogLevel, "Failed to allocate tsReset special event packet.");
 			return;
 		}
 

@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct PolarityEvent: public caer_polarity_event {
+struct PolarityEvent : public caer_polarity_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerPolarityEventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerPolarityEventGetTimestamp64(this,
-			reinterpret_cast<caerPolarityEventPacketConst>(packet.getHeaderPointer())));
+		return (caerPolarityEventGetTimestamp64(
+			this, reinterpret_cast<caerPolarityEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -64,7 +64,7 @@ struct PolarityEvent: public caer_polarity_event {
 
 static_assert(std::is_pod<PolarityEvent>::value, "PolarityEvent is not POD.");
 
-class PolarityEventPacket: public EventPacketCommon<PolarityEventPacket, PolarityEvent> {
+class PolarityEventPacket : public EventPacketCommon<PolarityEventPacket, PolarityEvent> {
 public:
 	// Constructors.
 	PolarityEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -73,7 +73,7 @@ public:
 		caerPolarityEventPacket packet = caerPolarityEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -82,7 +82,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, POLARITY_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -91,29 +91,28 @@ public:
 
 		constructorCheckEventType(packetHeader, POLARITY_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
-		caerPolarityEvent evtBase = caerPolarityEventPacketGetEvent(reinterpret_cast<caerPolarityEventPacket>(header),
-			index);
+		caerPolarityEvent evtBase
+			= caerPolarityEventPacketGetEvent(reinterpret_cast<caerPolarityEventPacket>(header), index);
 		PolarityEvent *evt = static_cast<PolarityEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerPolarityEventConst evtBase = caerPolarityEventPacketGetEventConst(
-			reinterpret_cast<caerPolarityEventPacketConst>(header), index);
+		caerPolarityEventConst evtBase
+			= caerPolarityEventPacketGetEventConst(reinterpret_cast<caerPolarityEventPacketConst>(header), index);
 		const PolarityEvent *evt = static_cast<const PolarityEvent *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

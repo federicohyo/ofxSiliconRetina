@@ -1,4 +1,4 @@
-# Install script for directory: /media/federico/space/inilabs/libcaer/src
+# Install script for directory: /Volumes/128GB/libcaer/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -27,44 +27,54 @@ if(NOT CMAKE_INSTALL_COMPONENT)
   endif()
 endif()
 
-# Install shared libraries without execute permission?
-if(NOT DEFINED CMAKE_INSTALL_SO_NO_EXE)
-  set(CMAKE_INSTALL_SO_NO_EXE "1")
+# Is this installation the result of a crosscompile?
+if(NOT DEFINED CMAKE_CROSSCOMPILING)
+  set(CMAKE_CROSSCOMPILING "FALSE")
 endif()
 
-if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
-  foreach(file
-      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.so.2.4.0"
-      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.so.2"
-      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.so"
-      )
-    if(EXISTS "${file}" AND
-       NOT IS_SYMLINK "${file}")
-      file(RPATH_CHECK
-           FILE "${file}"
-           RPATH "/usr/local/lib")
-    endif()
-  endforeach()
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES
-    "/media/federico/space/inilabs/libcaer/src/libcaer.so.2.4.0"
-    "/media/federico/space/inilabs/libcaer/src/libcaer.so.2"
-    "/media/federico/space/inilabs/libcaer/src/libcaer.so"
+    "/Volumes/128GB/libcaer/src/libcaer.3.1.0.dylib"
+    "/Volumes/128GB/libcaer/src/libcaer.3.dylib"
     )
   foreach(file
-      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.so.2.4.0"
-      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.so.2"
-      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.so"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.3.1.0.dylib"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.3.dylib"
       )
     if(EXISTS "${file}" AND
        NOT IS_SYMLINK "${file}")
-      file(RPATH_CHANGE
-           FILE "${file}"
-           OLD_RPATH "/usr/local/lib:"
-           NEW_RPATH "/usr/local/lib")
+      execute_process(COMMAND /usr/bin/install_name_tool
+        -delete_rpath "/usr/local/Cellar/libusb/1.0.21/lib"
+        "${file}")
+      execute_process(COMMAND /usr/bin/install_name_tool
+        -add_rpath "/usr/local/lib"
+        "${file}")
+      execute_process(COMMAND /usr/bin/install_name_tool
+        -add_rpath "/usr/local/Cellar/libusb/1.0.21/lib"
+        "${file}")
       if(CMAKE_INSTALL_DO_STRIP)
-        execute_process(COMMAND "/usr/bin/strip" "${file}")
+        execute_process(COMMAND "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip" -x "${file}")
       endif()
     endif()
   endforeach()
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES "/Volumes/128GB/libcaer/src/libcaer.dylib")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.dylib" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.dylib")
+    execute_process(COMMAND /usr/bin/install_name_tool
+      -delete_rpath "/usr/local/Cellar/libusb/1.0.21/lib"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.dylib")
+    execute_process(COMMAND /usr/bin/install_name_tool
+      -add_rpath "/usr/local/lib"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.dylib")
+    execute_process(COMMAND /usr/bin/install_name_tool
+      -add_rpath "/usr/local/Cellar/libusb/1.0.21/lib"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.dylib")
+    if(CMAKE_INSTALL_DO_STRIP)
+      execute_process(COMMAND "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip" -x "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libcaer.dylib")
+    endif()
+  endif()
 endif()
 

@@ -42,8 +42,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_ear_event {
+PACKED_STRUCT(struct caer_ear_event {
 	/// Event data. First because of valid mark.
 	uint32_t data;
 	/// Event timestamp.
@@ -62,8 +61,7 @@ typedef const struct caer_ear_event *caerEarEventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_ear_event_packet {
+PACKED_STRUCT(struct caer_ear_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -86,7 +84,11 @@ typedef const struct caer_ear_event_packet *caerEarEventPacketConst;
  *
  * @return a valid EarEventPacket handle or NULL on error.
  */
-caerEarEventPacket caerEarEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerEarEventPacket caerEarEventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerEarEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, EAR_EVENT,
+		sizeof(struct caer_ear_event), offsetof(struct caer_ear_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into an Ear event packet.
@@ -131,8 +133,9 @@ static inline caerEarEventPacketConst caerEarEventPacketFromPacketHeaderConst(ca
 static inline caerEarEvent caerEarEventPacketGetEvent(caerEarEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Ear Event",
-			"Called caerEarEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Ear Event",
+			"Called caerEarEventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -153,8 +156,9 @@ static inline caerEarEvent caerEarEventPacketGetEvent(caerEarEventPacket packet,
 static inline caerEarEventConst caerEarEventPacketGetEventConst(caerEarEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Ear Event",
-			"Called caerEarEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Ear Event",
+			"Called caerEarEventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -176,7 +180,7 @@ static inline caerEarEventConst caerEarEventPacketGetEventConst(caerEarEventPack
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerEarEventGetTimestamp(caerEarEventConst event) {
-	return (le32toh(event->timestamp));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -190,8 +194,8 @@ static inline int32_t caerEarEventGetTimestamp(caerEarEventConst event) {
  * @return this event's 64bit microsecond timestamp.
  */
 static inline int64_t caerEarEventGetTimestamp64(caerEarEventConst event, caerEarEventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerEarEventGetTimestamp(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerEarEventGetTimestamp(event))));
 }
 
 /**
@@ -203,11 +207,11 @@ static inline int64_t caerEarEventGetTimestamp64(caerEarEventConst event, caerEa
 static inline void caerEarEventSetTimestamp(caerEarEvent event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Ear Event", "Called caerEarEventSetTimestamp() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Ear Event", "Called caerEarEventSetTimestamp() with negative value!");
 		return;
 	}
 
-	event->timestamp = htole32(timestamp);
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**
@@ -237,13 +241,13 @@ static inline void caerEarEventValidate(caerEarEvent event, caerEarEventPacket p
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Ear Event", "Called caerEarEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Ear Event", "Called caerEarEventValidate() on already valid event.");
 	}
 }
 
@@ -262,11 +266,11 @@ static inline void caerEarEventInvalidate(caerEarEvent event, caerEarEventPacket
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Ear Event", "Called caerEarEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Ear Event", "Called caerEarEventInvalidate() on already invalid event.");
 	}
 }
 
@@ -354,10 +358,10 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_ITERATOR_ALL_START(EAR_PACKET) \
-	for (int32_t caerEarIteratorCounter = 0; \
-		caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
-		caerEarIteratorCounter++) { \
+#define CAER_EAR_ITERATOR_ALL_START(EAR_PACKET)                                                     \
+	for (int32_t caerEarIteratorCounter = 0;                                                        \
+		 caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
+		 caerEarIteratorCounter++) {                                                                \
 		caerEarEvent caerEarIteratorElement = caerEarEventPacketGetEvent(EAR_PACKET, caerEarIteratorCounter);
 
 /**
@@ -368,10 +372,10 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_CONST_ITERATOR_ALL_START(EAR_PACKET) \
-	for (int32_t caerEarIteratorCounter = 0; \
-		caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
-		caerEarIteratorCounter++) { \
+#define CAER_EAR_CONST_ITERATOR_ALL_START(EAR_PACKET)                                               \
+	for (int32_t caerEarIteratorCounter = 0;                                                        \
+		 caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
+		 caerEarIteratorCounter++) {                                                                \
 		caerEarEventConst caerEarIteratorElement = caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter);
 
 /**
@@ -387,12 +391,14 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_ITERATOR_VALID_START(EAR_PACKET) \
-	for (int32_t caerEarIteratorCounter = 0; \
-		caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
-		caerEarIteratorCounter++) { \
+#define CAER_EAR_ITERATOR_VALID_START(EAR_PACKET)                                                             \
+	for (int32_t caerEarIteratorCounter = 0;                                                                  \
+		 caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader);           \
+		 caerEarIteratorCounter++) {                                                                          \
 		caerEarEvent caerEarIteratorElement = caerEarEventPacketGetEvent(EAR_PACKET, caerEarIteratorCounter); \
-		if (!caerEarEventIsValid(caerEarIteratorElement)) { continue; } // Skip invalid ear events.
+		if (!caerEarEventIsValid(caerEarIteratorElement)) {                                                   \
+			continue;                                                                                         \
+		} // Skip invalid ear events.
 
 /**
  * Const-Iterator over only the valid ear events in a packet.
@@ -402,12 +408,15 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_CONST_ITERATOR_VALID_START(EAR_PACKET) \
-	for (int32_t caerEarIteratorCounter = 0; \
-		caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
-		caerEarIteratorCounter++) { \
-		caerEarEventConst caerEarIteratorElement = caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter); \
-		if (!caerEarEventIsValid(caerEarIteratorElement)) { continue; } // Skip invalid ear events.
+#define CAER_EAR_CONST_ITERATOR_VALID_START(EAR_PACKET)                                             \
+	for (int32_t caerEarIteratorCounter = 0;                                                        \
+		 caerEarIteratorCounter < caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader); \
+		 caerEarIteratorCounter++) {                                                                \
+		caerEarEventConst caerEarIteratorElement                                                    \
+			= caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter);                  \
+		if (!caerEarEventIsValid(caerEarIteratorElement)) {                                         \
+			continue;                                                                               \
+		} // Skip invalid ear events.
 
 /**
  * Iterator close statement.
@@ -422,10 +431,9 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_REVERSE_ITERATOR_ALL_START(EAR_PACKET) \
+#define CAER_EAR_REVERSE_ITERATOR_ALL_START(EAR_PACKET)                                                         \
 	for (int32_t caerEarIteratorCounter = caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader) - 1; \
-		caerEarIteratorCounter >= 0; \
-		caerEarIteratorCounter--) { \
+		 caerEarIteratorCounter >= 0; caerEarIteratorCounter--) {                                               \
 		caerEarEvent caerEarIteratorElement = caerEarEventPacketGetEvent(EAR_PACKET, caerEarIteratorCounter);
 /**
  * Const-Reverse iterator over all ear events in a packet.
@@ -435,10 +443,9 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_CONST_REVERSE_ITERATOR_ALL_START(EAR_PACKET) \
+#define CAER_EAR_CONST_REVERSE_ITERATOR_ALL_START(EAR_PACKET)                                                   \
 	for (int32_t caerEarIteratorCounter = caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader) - 1; \
-		caerEarIteratorCounter >= 0; \
-		caerEarIteratorCounter--) { \
+		 caerEarIteratorCounter >= 0; caerEarIteratorCounter--) {                                               \
 		caerEarEventConst caerEarIteratorElement = caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter);
 
 /**
@@ -454,12 +461,13 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_REVERSE_ITERATOR_VALID_START(EAR_PACKET) \
+#define CAER_EAR_REVERSE_ITERATOR_VALID_START(EAR_PACKET)                                                       \
 	for (int32_t caerEarIteratorCounter = caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader) - 1; \
-		caerEarIteratorCounter >= 0; \
-		caerEarIteratorCounter--) { \
-		caerEarEvent caerEarIteratorElement = caerEarEventPacketGetEvent(EAR_PACKET, caerEarIteratorCounter); \
-		if (!caerEarEventIsValid(caerEarIteratorElement)) { continue; } // Skip invalid ear events.
+		 caerEarIteratorCounter >= 0; caerEarIteratorCounter--) {                                               \
+		caerEarEvent caerEarIteratorElement = caerEarEventPacketGetEvent(EAR_PACKET, caerEarIteratorCounter);   \
+		if (!caerEarEventIsValid(caerEarIteratorElement)) {                                                     \
+			continue;                                                                                           \
+		} // Skip invalid ear events.
 
 /**
  * Const-Reverse iterator over only the valid ear events in a packet.
@@ -469,12 +477,14 @@ static inline void caerEarEventSetFilter(caerEarEvent event, uint8_t filter) {
  *
  * EAR_PACKET: a valid EarEventPacket pointer. Cannot be NULL.
  */
-#define CAER_EAR_CONST_REVERSE_ITERATOR_VALID_START(EAR_PACKET) \
+#define CAER_EAR_CONST_REVERSE_ITERATOR_VALID_START(EAR_PACKET)                                                 \
 	for (int32_t caerEarIteratorCounter = caerEventPacketHeaderGetEventNumber(&(EAR_PACKET)->packetHeader) - 1; \
-		caerEarIteratorCounter >= 0; \
-		caerEarIteratorCounter--) { \
-		caerEarEventConst caerEarIteratorElement = caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter); \
-		if (!caerEarEventIsValid(caerEarIteratorElement)) { continue; } // Skip invalid ear events.
+		 caerEarIteratorCounter >= 0; caerEarIteratorCounter--) {                                               \
+		caerEarEventConst caerEarIteratorElement                                                                \
+			= caerEarEventPacketGetEventConst(EAR_PACKET, caerEarIteratorCounter);                              \
+		if (!caerEarEventIsValid(caerEarIteratorElement)) {                                                     \
+			continue;                                                                                           \
+		} // Skip invalid ear events.
 
 /**
  * Reverse iterator close statement.

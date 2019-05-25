@@ -7,13 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct IMU6Event: public caer_imu6_event {
+struct IMU6Event : public caer_imu6_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerIMU6EventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerIMU6EventGetTimestamp64(this, reinterpret_cast<caerIMU6EventPacketConst>(packet.getHeaderPointer())));
+		return (
+			caerIMU6EventGetTimestamp64(this, reinterpret_cast<caerIMU6EventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -95,7 +96,7 @@ struct IMU6Event: public caer_imu6_event {
 
 static_assert(std::is_pod<IMU6Event>::value, "IMU6Event is not POD.");
 
-class IMU6EventPacket: public EventPacketCommon<IMU6EventPacket, IMU6Event> {
+class IMU6EventPacket : public EventPacketCommon<IMU6EventPacket, IMU6Event> {
 public:
 	// Constructors.
 	IMU6EventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -104,7 +105,7 @@ public:
 		caerIMU6EventPacket packet = caerIMU6EventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -113,7 +114,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, IMU6_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -122,7 +123,7 @@ public:
 
 		constructorCheckEventType(packetHeader, IMU6_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -130,20 +131,19 @@ protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
 		caerIMU6Event evtBase = caerIMU6EventPacketGetEvent(reinterpret_cast<caerIMU6EventPacket>(header), index);
-		IMU6Event *evt = static_cast<IMU6Event *>(evtBase);
+		IMU6Event *evt        = static_cast<IMU6Event *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerIMU6EventConst evtBase = caerIMU6EventPacketGetEventConst(
-			reinterpret_cast<caerIMU6EventPacketConst>(header), index);
+		caerIMU6EventConst evtBase
+			= caerIMU6EventPacketGetEventConst(reinterpret_cast<caerIMU6EventPacketConst>(header), index);
 		const IMU6Event *evt = static_cast<const IMU6Event *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

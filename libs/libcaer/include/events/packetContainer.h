@@ -59,8 +59,7 @@ extern "C" {
  * Signed integers are used for compatibility with languages that
  * do not have unsigned ones, such as Java.
  */
-PACKED_STRUCT(
-struct caer_event_packet_container {
+PACKED_STRUCT(struct caer_event_packet_container {
 	/// Smallest event timestamp contained in this packet container.
 	int64_t lowestEventTimestamp;
 	/// Largest event timestamp contained in this packet container.
@@ -91,17 +90,31 @@ typedef const struct caer_event_packet_container *caerEventPacketContainerConst;
  *
  * @return a valid EventPacketContainer handle or NULL on error.
  */
-caerEventPacketContainer caerEventPacketContainerAllocate(int32_t eventPacketsNumber);
+static inline caerEventPacketContainer caerEventPacketContainerAllocate(int32_t eventPacketsNumber) {
+	if (eventPacketsNumber <= 0) {
+		return (NULL);
+	}
 
-/**
- * Free the memory occupied by an EventPacketContainer, as well as
- * freeing all of its contained EventPackets and their memory.
- * If you don't want the contained EventPackets to be freed, make
- * sure that you set their pointers to NULL before calling this.
+	size_t eventPacketContainerSize
+		= sizeof(struct caer_event_packet_container) + ((size_t) eventPacketsNumber * sizeof(caerEventPacketHeader));
 
- * @param container the container to be freed.
- */
-void caerEventPacketContainerFree(caerEventPacketContainer container);
+	caerEventPacketContainer packetContainer = (caerEventPacketContainer) calloc(1, eventPacketContainerSize);
+	if (packetContainer == NULL) {
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
+			"Failed to allocate %zu bytes of memory for Event Packet Container, containing %" PRIi32
+			" packets. Error: %d.",
+			eventPacketContainerSize, eventPacketsNumber, errno);
+		return (NULL);
+	}
+
+	// Fill in header fields. Don't care about endianness here, purely internal
+	// memory construct, never meant for inter-system exchange.
+	packetContainer->eventPacketsNumber    = eventPacketsNumber;
+	packetContainer->lowestEventTimestamp  = -1;
+	packetContainer->highestEventTimestamp = -1;
+
+	return (packetContainer);
+}
 
 // Forward declaration for use in set operations.
 static inline void caerEventPacketContainerUpdateStatistics(caerEventPacketContainer container);
@@ -131,8 +144,8 @@ static inline int32_t caerEventPacketContainerGetEventPacketsNumber(caerEventPac
  * @param container a valid EventPacketContainer handle. If NULL, nothing happens.
  * @param eventPacketsNumber the number of EventPacket pointers that can be contained.
  */
-static inline void caerEventPacketContainerSetEventPacketsNumber(caerEventPacketContainer container,
-	int32_t eventPacketsNumber) {
+static inline void caerEventPacketContainerSetEventPacketsNumber(
+	caerEventPacketContainer container, int32_t eventPacketsNumber) {
 	// Non-existing (empty) containers have no valid packets in them!
 	if (container == NULL) {
 		return;
@@ -140,7 +153,7 @@ static inline void caerEventPacketContainerSetEventPacketsNumber(caerEventPacket
 
 	if (eventPacketsNumber < 0) {
 		// Negative numbers (bit 31 set) are not allowed!
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
 			"Called caerEventPacketContainerSetEventPacketsNumber() with negative value!");
 		return;
 	}
@@ -160,8 +173,8 @@ static inline void caerEventPacketContainerSetEventPacketsNumber(caerEventPacket
  *
  * @return a pointer to an EventPacket or NULL on error.
  */
-static inline caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerEventPacketContainerConst container,
-	int32_t n) {
+static inline caerEventPacketHeader caerEventPacketContainerGetEventPacket(
+	caerEventPacketContainerConst container, int32_t n) {
 	// Non-existing (empty) containers have no valid packets in them!
 	if (container == NULL) {
 		return (NULL);
@@ -169,8 +182,9 @@ static inline caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerE
 
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketContainerGetEventPacketsNumber(container)) {
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
-			"Called caerEventPacketContainerGetEventPacket() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
+			"Called caerEventPacketContainerGetEventPacket() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
 			n, caerEventPacketContainerGetEventPacketsNumber(container) - 1);
 		return (NULL);
 	}
@@ -189,7 +203,8 @@ static inline caerEventPacketHeader caerEventPacketContainerGetEventPacket(caerE
  *
  * @return a pointer to a read-only EventPacket or NULL on error.
  */
-static inline caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketConst(caerEventPacketContainerConst container, int32_t n) {
+static inline caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketConst(
+	caerEventPacketContainerConst container, int32_t n) {
 	// Non-existing (empty) containers have no valid packets in them!
 	if (container == NULL) {
 		return (NULL);
@@ -197,8 +212,9 @@ static inline caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketC
 
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketContainerGetEventPacketsNumber(container)) {
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
-			"Called caerEventPacketContainerGetEventPacketConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
+			"Called caerEventPacketContainerGetEventPacketConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
 			n, caerEventPacketContainerGetEventPacketsNumber(container) - 1);
 		return (NULL);
 	}
@@ -215,8 +231,8 @@ static inline caerEventPacketHeaderConst caerEventPacketContainerGetEventPacketC
  * @param n the index of the EventPacket to set.
  * @param packetHeader a pointer to an EventPacket's header. Can be NULL.
  */
-static inline void caerEventPacketContainerSetEventPacket(caerEventPacketContainer container, int32_t n,
-	caerEventPacketHeader packetHeader) {
+static inline void caerEventPacketContainerSetEventPacket(
+	caerEventPacketContainer container, int32_t n, caerEventPacketHeader packetHeader) {
 	// Non-existing (empty) containers have no valid packets in them!
 	if (container == NULL) {
 		return;
@@ -224,8 +240,9 @@ static inline void caerEventPacketContainerSetEventPacket(caerEventPacketContain
 
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketContainerGetEventPacketsNumber(container)) {
-		caerLog(CAER_LOG_CRITICAL, "EventPacket Container",
-			"Called caerEventPacketContainerSetEventPacket() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
+		caerLogEHO(CAER_LOG_CRITICAL, "EventPacket Container",
+			"Called caerEventPacketContainerSetEventPacket() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ". Negative values are not allowed!",
 			n, caerEventPacketContainerGetEventPacketsNumber(container) - 1);
 		return;
 	}
@@ -235,6 +252,33 @@ static inline void caerEventPacketContainerSetEventPacket(caerEventPacketContain
 
 	// Always update all the statics on set operation.
 	caerEventPacketContainerUpdateStatistics(container);
+}
+
+/**
+ * Free the memory occupied by an EventPacketContainer, as well as
+ * freeing all of its contained EventPackets and their memory.
+ * If you don't want the contained EventPackets to be freed, make
+ * sure that you set their pointers to NULL before calling this.
+
+ * @param container the container to be freed.
+ */
+static inline void caerEventPacketContainerFree(caerEventPacketContainer container) {
+	if (container == NULL) {
+		return;
+	}
+
+	// Free packet container and ensure all subordinate memory is also freed.
+	int32_t eventPacketsNum = caerEventPacketContainerGetEventPacketsNumber(container);
+
+	for (int32_t i = 0; i < eventPacketsNum; i++) {
+		caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(container, i);
+
+		if (packetHeader != NULL) {
+			free(packetHeader);
+		}
+	}
+
+	free(container);
 }
 
 /**
@@ -310,13 +354,17 @@ static inline int32_t caerEventPacketContainerGetEventsValidNumber(caerEventPack
  *
  * PACKET_CONTAINER: a valid EventPacketContainer handle. If NULL, no iteration is performed.
  */
-#define CAER_EVENT_PACKET_CONTAINER_ITERATOR_START(PACKET_CONTAINER) \
-	if ((PACKET_CONTAINER) != NULL) { \
-		for (int32_t caerEventPacketContainerIteratorCounter = 0; \
-			caerEventPacketContainerIteratorCounter < caerEventPacketContainerGetEventPacketsNumber(PACKET_CONTAINER); \
-			caerEventPacketContainerIteratorCounter++) { \
-			caerEventPacketHeader caerEventPacketContainerIteratorElement = caerEventPacketContainerGetEventPacket(PACKET_CONTAINER, caerEventPacketContainerIteratorCounter); \
-			if (caerEventPacketContainerIteratorElement == NULL) { continue; }
+#define CAER_EVENT_PACKET_CONTAINER_ITERATOR_START(PACKET_CONTAINER)                                                 \
+	if ((PACKET_CONTAINER) != NULL) {                                                                                \
+		for (int32_t caerEventPacketContainerIteratorCounter = 0;                                                    \
+			 caerEventPacketContainerIteratorCounter                                                                 \
+			 < caerEventPacketContainerGetEventPacketsNumber(PACKET_CONTAINER);                                      \
+			 caerEventPacketContainerIteratorCounter++) {                                                            \
+			caerEventPacketHeader caerEventPacketContainerIteratorElement                                            \
+				= caerEventPacketContainerGetEventPacket(PACKET_CONTAINER, caerEventPacketContainerIteratorCounter); \
+			if (caerEventPacketContainerIteratorElement == NULL) {                                                   \
+				continue;                                                                                            \
+			}
 
 /**
  * Const-Iterator over all event packets in an event packet container.
@@ -327,18 +375,25 @@ static inline int32_t caerEventPacketContainerGetEventsValidNumber(caerEventPack
  *
  * PACKET_CONTAINER: a valid EventPacketContainer handle. If NULL, no iteration is performed.
  */
-#define CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START(PACKET_CONTAINER) \
-	if ((PACKET_CONTAINER) != NULL) { \
-		for (int32_t caerEventPacketContainerIteratorCounter = 0; \
-			caerEventPacketContainerIteratorCounter < caerEventPacketContainerGetEventPacketsNumber(PACKET_CONTAINER); \
-			caerEventPacketContainerIteratorCounter++) { \
-			caerEventPacketHeaderConst caerEventPacketContainerIteratorElement = caerEventPacketContainerGetEventPacketConst(PACKET_CONTAINER, caerEventPacketContainerIteratorCounter); \
-			if (caerEventPacketContainerIteratorElement == NULL) { continue; }
+#define CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START(PACKET_CONTAINER)      \
+	if ((PACKET_CONTAINER) != NULL) {                                           \
+		for (int32_t caerEventPacketContainerIteratorCounter = 0;               \
+			 caerEventPacketContainerIteratorCounter                            \
+			 < caerEventPacketContainerGetEventPacketsNumber(PACKET_CONTAINER); \
+			 caerEventPacketContainerIteratorCounter++) {                       \
+			caerEventPacketHeaderConst caerEventPacketContainerIteratorElement  \
+				= caerEventPacketContainerGetEventPacketConst(                  \
+					PACKET_CONTAINER, caerEventPacketContainerIteratorCounter); \
+			if (caerEventPacketContainerIteratorElement == NULL) {              \
+				continue;                                                       \
+			}
 
 /**
  * Iterator close statement.
  */
-#define CAER_EVENT_PACKET_CONTAINER_ITERATOR_END } }
+#define CAER_EVENT_PACKET_CONTAINER_ITERATOR_END \
+	}                                            \
+	}
 
 /**
  * Recalculates and updates all the packet-container level statistics (event
@@ -352,42 +407,44 @@ static inline void caerEventPacketContainerUpdateStatistics(caerEventPacketConta
 		return;
 	}
 
-	int64_t lowestTimestamp = -1;
+	int64_t lowestTimestamp  = -1;
 	int64_t highestTimestamp = -1;
-	int32_t eventsNumber = 0;
-	int32_t eventsValid = 0;
+	int32_t eventsNumber     = 0;
+	int32_t eventsValid      = 0;
 
 	CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START(container)
-		// If packet has no events, skip it, it contributes nothing to statistics.
-		if (caerEventPacketHeaderGetEventNumber(caerEventPacketContainerIteratorElement) == 0) {
-			continue;
-		}
+	// If packet has no events, skip it, it contributes nothing to statistics.
+	if (caerEventPacketHeaderGetEventNumber(caerEventPacketContainerIteratorElement) == 0) {
+		continue;
+	}
 
-		// Get timestamps to update lowest/highest tracking.
-		const void *firstEvent = caerGenericEventGetEvent(caerEventPacketContainerIteratorElement, 0);
-		int64_t currLowestEventTimestamp = caerGenericEventGetTimestamp64(firstEvent, caerEventPacketContainerIteratorElement);
+	// Get timestamps to update lowest/highest tracking.
+	const void *firstEvent = caerGenericEventGetEvent(caerEventPacketContainerIteratorElement, 0);
+	int64_t currLowestEventTimestamp
+		= caerGenericEventGetTimestamp64(firstEvent, caerEventPacketContainerIteratorElement);
 
-		const void *lastEvent = caerGenericEventGetEvent(caerEventPacketContainerIteratorElement,
-			caerEventPacketHeaderGetEventNumber(caerEventPacketContainerIteratorElement) - 1);
-		int64_t currHighestEventTimestamp = caerGenericEventGetTimestamp64(lastEvent, caerEventPacketContainerIteratorElement);
+	const void *lastEvent = caerGenericEventGetEvent(caerEventPacketContainerIteratorElement,
+		caerEventPacketHeaderGetEventNumber(caerEventPacketContainerIteratorElement) - 1);
+	int64_t currHighestEventTimestamp
+		= caerGenericEventGetTimestamp64(lastEvent, caerEventPacketContainerIteratorElement);
 
-		// Update tracked timestamps (or initialize if needed).
-		if ((lowestTimestamp == -1) || (lowestTimestamp > currLowestEventTimestamp)) {
-			lowestTimestamp = currLowestEventTimestamp;
-		}
+	// Update tracked timestamps (or initialize if needed).
+	if ((lowestTimestamp == -1) || (lowestTimestamp > currLowestEventTimestamp)) {
+		lowestTimestamp = currLowestEventTimestamp;
+	}
 
-		if ((highestTimestamp == -1) || (highestTimestamp < currHighestEventTimestamp)) {
-			highestTimestamp = currHighestEventTimestamp;
-		}
+	if ((highestTimestamp == -1) || (highestTimestamp < currHighestEventTimestamp)) {
+		highestTimestamp = currHighestEventTimestamp;
+	}
 
-		eventsNumber += caerEventPacketHeaderGetEventNumber(caerEventPacketContainerIteratorElement);
-		eventsValid += caerEventPacketHeaderGetEventValid(caerEventPacketContainerIteratorElement);
+	eventsNumber += caerEventPacketHeaderGetEventNumber(caerEventPacketContainerIteratorElement);
+	eventsValid += caerEventPacketHeaderGetEventValid(caerEventPacketContainerIteratorElement);
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_END
 
-	container->lowestEventTimestamp = lowestTimestamp;
+	container->lowestEventTimestamp  = lowestTimestamp;
 	container->highestEventTimestamp = highestTimestamp;
-	container->eventsNumber = eventsNumber;
-	container->eventsValidNumber = eventsValid;
+	container->eventsNumber          = eventsNumber;
+	container->eventsValidNumber     = eventsValid;
 }
 
 /**
@@ -401,18 +458,18 @@ static inline void caerEventPacketContainerUpdateStatistics(caerEventPacketConta
  *
  * @return a pointer to an EventPacket with a certain type or NULL if none found.
  */
-static inline caerEventPacketHeader caerEventPacketContainerFindEventPacketByType(caerEventPacketContainerConst container,
-	int16_t typeID) {
+static inline caerEventPacketHeader caerEventPacketContainerFindEventPacketByType(
+	caerEventPacketContainerConst container, int16_t typeID) {
 	// Non-existing (empty) containers have no valid packets in them!
 	if (container == NULL) {
 		return (NULL);
 	}
 
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_START(container)
-		if (caerEventPacketHeaderGetEventType(caerEventPacketContainerIteratorElement) == typeID) {
-			// Found it, return it.
-			return (caerEventPacketContainerIteratorElement);
-		}
+	if (caerEventPacketHeaderGetEventType(caerEventPacketContainerIteratorElement) == typeID) {
+		// Found it, return it.
+		return (caerEventPacketContainerIteratorElement);
+	}
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_END
 
 	// Found nothing, return nothing.
@@ -430,18 +487,18 @@ static inline caerEventPacketHeader caerEventPacketContainerFindEventPacketByTyp
  *
  * @return a pointer to a read-only EventPacket with a certain type or NULL if none found.
  */
-static inline caerEventPacketHeaderConst caerEventPacketContainerFindEventPacketByTypeConst(caerEventPacketContainerConst container,
-	int16_t typeID) {
+static inline caerEventPacketHeaderConst caerEventPacketContainerFindEventPacketByTypeConst(
+	caerEventPacketContainerConst container, int16_t typeID) {
 	// Non-existing (empty) containers have no valid packets in them!
 	if (container == NULL) {
 		return (NULL);
 	}
 
 	CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START(container)
-		if (caerEventPacketHeaderGetEventType(caerEventPacketContainerIteratorElement) == typeID) {
-			// Found it, return it.
-			return (caerEventPacketContainerIteratorElement);
-		}
+	if (caerEventPacketHeaderGetEventType(caerEventPacketContainerIteratorElement) == typeID) {
+		// Found it, return it.
+		return (caerEventPacketContainerIteratorElement);
+	}
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_END
 
 	// Found nothing, return nothing.
@@ -461,15 +518,15 @@ static inline caerEventPacketContainer caerEventPacketContainerCopyAllEvents(cae
 		return (NULL);
 	}
 
-	caerEventPacketContainer newContainer = caerEventPacketContainerAllocate(
-		caerEventPacketContainerGetEventsNumber(container));
+	caerEventPacketContainer newContainer
+		= caerEventPacketContainerAllocate(caerEventPacketContainerGetEventPacketsNumber(container));
 	if (newContainer == NULL) {
 		return (NULL);
 	}
 
 	CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START(container)
-		caerEventPacketContainerSetEventPacket(newContainer, caerEventPacketContainerIteratorCounter,
-			caerEventPacketCopyOnlyEvents(caerEventPacketContainerIteratorElement));
+	caerEventPacketContainerSetEventPacket(newContainer, caerEventPacketContainerIteratorCounter,
+		caerEventPacketCopyOnlyEvents(caerEventPacketContainerIteratorElement));
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_END
 
 	return (newContainer);
@@ -484,20 +541,21 @@ static inline caerEventPacketContainer caerEventPacketContainerCopyAllEvents(cae
  *
  * @return a deep copy of an event packet container, containing only valid events.
  */
-static inline caerEventPacketContainer caerEventPacketContainerCopyValidEvents(caerEventPacketContainerConst container) {
+static inline caerEventPacketContainer caerEventPacketContainerCopyValidEvents(
+	caerEventPacketContainerConst container) {
 	if (container == NULL) {
 		return (NULL);
 	}
 
-	caerEventPacketContainer newContainer = caerEventPacketContainerAllocate(
-		caerEventPacketContainerGetEventsNumber(container));
+	caerEventPacketContainer newContainer
+		= caerEventPacketContainerAllocate(caerEventPacketContainerGetEventPacketsNumber(container));
 	if (newContainer == NULL) {
 		return (NULL);
 	}
 
 	CAER_EVENT_PACKET_CONTAINER_CONST_ITERATOR_START(container)
-		caerEventPacketContainerSetEventPacket(newContainer, caerEventPacketContainerIteratorCounter,
-			caerEventPacketCopyOnlyValidEvents(caerEventPacketContainerIteratorElement));
+	caerEventPacketContainerSetEventPacket(newContainer, caerEventPacketContainerIteratorCounter,
+		caerEventPacketCopyOnlyValidEvents(caerEventPacketContainerIteratorElement));
 	CAER_EVENT_PACKET_CONTAINER_ITERATOR_END
 
 	return (newContainer);

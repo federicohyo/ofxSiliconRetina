@@ -1,19 +1,20 @@
 #ifndef LIBCAER_SRC_DYNAPSE_H_
 #define LIBCAER_SRC_DYNAPSE_H_
 
+#include "devices/device_discover.h"
 #include "devices/dynapse.h"
-#include "data_exchange.h"
 #include "container_generation.h"
+#include "data_exchange.h"
 #include "usb_utils.h"
 
 #define DYNAPSE_DEVICE_NAME "Dynap-se"
 
 #define DYNAPSE_DEVICE_PID 0x841D
 
-#define DYNAPSE_REQUIRED_LOGIC_REVISION 5 
+#define DYNAPSE_REQUIRED_LOGIC_REVISION 5
 #define DYNAPSE_REQUIRED_FIRMWARE_VERSION 3
 
-#define VENDOR_REQUEST_FPGA_CONFIG_AER          0xC5
+#define VENDOR_REQUEST_FPGA_CONFIG_AER 0xC5
 #define VENDOR_REQUEST_FPGA_CONFIG_AER_MULTIPLE 0xC6
 
 #define DYNAPSE_EVENT_TYPES 2
@@ -21,6 +22,9 @@
 
 #define DYNAPSE_SPIKE_DEFAULT_SIZE 4096
 #define DYNAPSE_SPECIAL_DEFAULT_SIZE 128
+
+#define SPI_CONFIG_MSG_SIZE 6
+#define SPI_CONFIG_MAX 85
 
 #define DYNAPSE_FX2_USB_CLOCK_FREQ 30
 
@@ -61,8 +65,10 @@ struct dynapse_handle {
 
 typedef struct dynapse_handle *dynapseHandle;
 
-caerDeviceHandle dynapseOpen(uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict,
-	const char *serialNumberRestrict);
+ssize_t dynapseFind(caerDeviceDiscoveryResult *discoveredDevices);
+
+caerDeviceHandle dynapseOpen(
+	uint16_t deviceID, uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
 bool dynapseClose(caerDeviceHandle handle);
 
 bool dynapseSendDefaultConfig(caerDeviceHandle handle);

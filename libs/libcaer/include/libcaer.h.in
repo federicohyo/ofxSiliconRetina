@@ -88,6 +88,21 @@ extern "C" {
 #define LIBCAER_HAVE_OPENCV @ENABLE_OPENCV@
 
 /**
+ * Error codes, used for the errno variable to give
+ * more precise information on errors, in addition
+ * to the logging output. All functions setting errno
+ * do note so in their documentation.
+ */
+enum caer_error_codes {
+	CAER_ERROR_MEMORY_ALLOCATION = -1,
+	CAER_ERROR_RESOURCE_ALLOCATION = -2,
+	CAER_ERROR_OPEN_ACCESS = -3,
+	CAER_ERROR_COMMUNICATION = -4,
+	CAER_ERROR_FW_VERSION = -5,
+	CAER_ERROR_LOGIC_VERSION = -6,
+};
+
+/**
  * Cast argument to uint8_t (8bit unsigned integer).
  */
 #define U8T(X)  ((uint8_t)  (X))

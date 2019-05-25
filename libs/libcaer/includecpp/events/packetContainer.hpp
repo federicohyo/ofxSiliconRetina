@@ -1,15 +1,17 @@
 #ifndef LIBCAER_EVENTS_PACKETCONTAINER_HPP_
 #define LIBCAER_EVENTS_PACKETCONTAINER_HPP_
 
+#include <libcaer/events/packetContainer.h>
 #include "common.hpp"
-#include <vector>
+#include "utils.hpp"
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace libcaer {
 namespace events {
 
-template<class InteralIterator, class SharedPtrType>
-class EventPacketContainerCopyIterator {
+template<class InteralIterator, class SharedPtrType> class EventPacketContainerCopyIterator {
 private:
 	// Original vector iterator or const_iterator.
 	InteralIterator eventPacketsIterator;
@@ -17,18 +19,18 @@ private:
 	// currElement acts as a kind of cache: not only does it allow us
 	// to add deep-constness (when needed), but it also stores a copy of
 	// the shared_ptr we're iterating over, effectively increasing its
-	// reference count by one until it is in use by the iterator and its
+	// reference count by one while it is in use by the iterator and its
 	// user, thus ensuring the object can never disappear from under us.
 	mutable SharedPtrType currElement;
 
 public:
 	// Iterator traits.
 	using iterator_category = typename InteralIterator::iterator_category;
-	using value_type = SharedPtrType;
-	using pointer = const SharedPtrType *;
-	using reference = const SharedPtrType &;
-	using difference_type = typename InteralIterator::difference_type;
-	using size_type = typename InteralIterator::difference_type;
+	using value_type        = SharedPtrType;
+	using pointer           = const SharedPtrType *;
+	using reference         = const SharedPtrType &;
+	using difference_type   = typename InteralIterator::difference_type;
+	using size_type         = typename InteralIterator::difference_type;
 
 	// Constructors.
 	EventPacketContainerCopyIterator() {
@@ -38,8 +40,8 @@ public:
 		// - currElement() => empty/nullptr shared_ptr
 	}
 
-	EventPacketContainerCopyIterator(InteralIterator _eventPacketsIterator) :
-			eventPacketsIterator(_eventPacketsIterator) {
+	EventPacketContainerCopyIterator(InteralIterator _eventPacketsIterator)
+		: eventPacketsIterator(_eventPacketsIterator) {
 		// Don't initialize currElement, it is initialized/updated
 		// right before every use.
 	}
@@ -86,7 +88,7 @@ public:
 	}
 
 	// Prefix increment.
-	EventPacketContainerCopyIterator& operator++() noexcept {
+	EventPacketContainerCopyIterator &operator++() noexcept {
 		++eventPacketsIterator;
 		return (*this);
 	}
@@ -99,7 +101,7 @@ public:
 	}
 
 	// Prefix decrement.
-	EventPacketContainerCopyIterator& operator--() noexcept {
+	EventPacketContainerCopyIterator &operator--() noexcept {
 		--eventPacketsIterator;
 		return (*this);
 	}
@@ -112,7 +114,7 @@ public:
 	}
 
 	// Iter += N.
-	EventPacketContainerCopyIterator& operator+=(size_type add) noexcept {
+	EventPacketContainerCopyIterator &operator+=(size_type add) noexcept {
 		eventPacketsIterator += add;
 		return (*this);
 	}
@@ -123,13 +125,13 @@ public:
 	}
 
 	// N + Iter. Must be friend as Iter is right-hand-side.
-	friend EventPacketContainerCopyIterator operator+(size_type lhs, const EventPacketContainerCopyIterator &rhs)
-		noexcept {
+	friend EventPacketContainerCopyIterator operator+(
+		size_type lhs, const EventPacketContainerCopyIterator &rhs) noexcept {
 		return (EventPacketContainerCopyIterator(rhs.eventPacketsIterator + lhs));
 	}
 
 	// Iter -= N.
-	EventPacketContainerCopyIterator& operator-=(size_type sub) noexcept {
+	EventPacketContainerCopyIterator &operator-=(size_type sub) noexcept {
 		eventPacketsIterator -= sub;
 		return (*this);
 	}
@@ -167,19 +169,16 @@ private:
 
 public:
 	// Container traits (not really STL compatible).
-	using value_type = std::shared_ptr<EventPacket>;
+	using value_type       = std::shared_ptr<EventPacket>;
 	using const_value_type = std::shared_ptr<const EventPacket>;
-	using size_type = int32_t;
-	using difference_type = ptrdiff_t;
+	using size_type        = int32_t;
+	using difference_type  = ptrdiff_t;
 
 	/**
 	 * Construct a new EventPacketContainer.
 	 */
-	EventPacketContainer() :
-			lowestEventTimestamp(-1),
-			highestEventTimestamp(-1),
-			eventsNumber(0),
-			eventsValidNumber(0) {
+	EventPacketContainer()
+		: lowestEventTimestamp(-1), highestEventTimestamp(-1), eventsNumber(0), eventsValidNumber(0) {
 	}
 
 	/**
@@ -191,20 +190,55 @@ public:
 	 *                           that can be stored in this container.
 	 *                           Must be equal to one or higher.
 	 */
-	EventPacketContainer(size_type eventPacketsNumber) :
-			lowestEventTimestamp(-1),
-			highestEventTimestamp(-1),
-			eventsNumber(0),
-			eventsValidNumber(0) {
+	EventPacketContainer(size_type eventPacketsNumber)
+		: lowestEventTimestamp(-1), highestEventTimestamp(-1), eventsNumber(0), eventsValidNumber(0) {
 		if (eventPacketsNumber <= 0) {
 			throw std::invalid_argument("Negative or zero capacity not allowed on explicit construction.");
 		}
 
 		// Initialize and fill vector after having checked size value.
-		eventPackets = std::vector<std::shared_ptr<EventPacket>>(static_cast<size_t>(eventPacketsNumber));
+		eventPackets.reserve(static_cast<size_t>(eventPacketsNumber));
 
 		for (size_type i = 0; i < eventPacketsNumber; i++) {
 			eventPackets.emplace_back(); // Call empty constructor.
+		}
+	}
+
+	/**
+	 * Construct a new EventPacketContainer from a C-style
+	 * caerEventPacketContainer. The contained packets can take over memory
+	 * ownership if so requested.
+	 *
+	 * @param packetContainer C-style caerEventPacketContainer from which to
+	 *                        initialize the new packet container.
+	 * @param takeMemoryOwnership true if the container packets shall take
+	 *                            over the ownership of the memory containing
+	 *                            the events from the C-style packets.
+	 */
+	EventPacketContainer(caerEventPacketContainer packetContainer, bool takeMemoryOwnership = true) {
+		if (packetContainer == nullptr) {
+			throw std::runtime_error("Failed to initialize event packet container: null pointer.");
+		}
+
+		lowestEventTimestamp  = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
+		highestEventTimestamp = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+		eventsNumber          = caerEventPacketContainerGetEventsNumber(packetContainer);
+		eventsValidNumber     = caerEventPacketContainerGetEventsValidNumber(packetContainer);
+
+		// Initialize and fill vector.
+		int32_t eventPacketsNumber = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+
+		eventPackets.reserve(static_cast<size_t>(eventPacketsNumber));
+
+		for (size_type i = 0; i < eventPacketsNumber; i++) {
+			caerEventPacketHeader packet = caerEventPacketContainerGetEventPacket(packetContainer, i);
+
+			if (packet != nullptr) {
+				eventPackets.push_back(libcaer::events::utils::makeSharedFromCStruct(packet, takeMemoryOwnership));
+			}
+			else {
+				eventPackets.emplace_back(); // Call empty constructor.
+			}
 		}
 	}
 
@@ -365,10 +399,10 @@ public:
 	 * counts and timestamps).
 	 */
 	void updateStatistics() noexcept {
-		int64_t lowestTimestamp = -1;
+		int64_t lowestTimestamp  = -1;
 		int64_t highestTimestamp = -1;
-		int32_t events = 0;
-		int32_t eventsValid = 0;
+		int32_t events           = 0;
+		int32_t eventsValid      = 0;
 
 		for (auto &packet : *this) {
 			if (packet == nullptr) {
@@ -381,10 +415,10 @@ public:
 			}
 
 			// Get timestamps to update lowest/highest tracking.
-			const auto firstEvent = packet->genericGetEvent(0);
+			const auto firstEvent            = packet->genericGetEvent(0);
 			int64_t currLowestEventTimestamp = firstEvent.getTimestamp64();
 
-			const auto lastEvent = packet->genericGetEvent(-1);
+			const auto lastEvent              = packet->genericGetEvent(-1);
 			int64_t currHighestEventTimestamp = lastEvent.getTimestamp64();
 
 			// Update tracked timestamps (or initialize if needed).
@@ -400,10 +434,10 @@ public:
 			eventsValid += packet->getEventValid();
 		}
 
-		lowestEventTimestamp = lowestTimestamp;
+		lowestEventTimestamp  = lowestTimestamp;
 		highestEventTimestamp = highestTimestamp;
-		eventsNumber = events;
-		eventsValidNumber = eventsValid;
+		eventsNumber          = events;
+		eventsValidNumber     = eventsValid;
 	}
 
 	/**
@@ -578,8 +612,8 @@ public:
 	 * @return a deep copy of this event packet container, containing all events.
 	 */
 	std::unique_ptr<EventPacketContainer> copyAllEvents() const {
-		std::unique_ptr<EventPacketContainer> newContainer = std::unique_ptr<EventPacketContainer>(
-			new EventPacketContainer());
+		std::unique_ptr<EventPacketContainer> newContainer
+			= std::unique_ptr<EventPacketContainer>(new EventPacketContainer());
 
 		for (auto &packet : *this) {
 			if (packet == nullptr) {
@@ -607,8 +641,8 @@ public:
 	 * @return a deep copy of this event packet container, containing only valid events.
 	 */
 	std::unique_ptr<EventPacketContainer> copyValidEvents() const {
-		std::unique_ptr<EventPacketContainer> newContainer = std::unique_ptr<EventPacketContainer>(
-			new EventPacketContainer());
+		std::unique_ptr<EventPacketContainer> newContainer
+			= std::unique_ptr<EventPacketContainer>(new EventPacketContainer());
 
 		for (auto &packet : *this) {
 			if (packet == nullptr) {
@@ -625,9 +659,11 @@ public:
 
 	// Iterator support (the returned shared_ptr are always read-only copies, so actual modifications to
 	// what is pointed to can only happen through setEventPacket() and addEventPacket()).
-	using iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::iterator, std::shared_ptr<EventPacket>>;
-	using const_iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::const_iterator, std::shared_ptr<const EventPacket>>;
-	using reverse_iterator = std::reverse_iterator<iterator>;
+	using iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::iterator,
+		std::shared_ptr<EventPacket>>;
+	using const_iterator = EventPacketContainerCopyIterator<std::vector<std::shared_ptr<EventPacket>>::const_iterator,
+		std::shared_ptr<const EventPacket>>;
+	using reverse_iterator       = std::reverse_iterator<iterator>;
 	using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 	iterator begin() noexcept {
@@ -677,9 +713,7 @@ public:
 	const_reverse_iterator crend() const noexcept {
 		return (const_reverse_iterator(cbegin()));
 	}
-}
-;
-
+};
 }
 }
 

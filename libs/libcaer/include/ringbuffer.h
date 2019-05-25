@@ -3,14 +3,14 @@
 
 #ifdef __cplusplus
 
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 
 #else
 
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #endif
 

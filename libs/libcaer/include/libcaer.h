@@ -67,7 +67,7 @@ extern "C" {
 /**
  * libcaer version (MAJOR * 10000 + MINOR * 100 + PATCH).
  */
-#define LIBCAER_VERSION ((2 * 10000) + (4 * 100) + 0)
+#define LIBCAER_VERSION ((3 * 10000) + (1 * 100) + 0)
 /**
  * libcaer name string.
  */
@@ -75,7 +75,7 @@ extern "C" {
 /**
  * libcaer version string.
  */
-#define LIBCAER_VERSION_STRING "2.4.0"
+#define LIBCAER_VERSION_STRING "3.1.0"
 
 /**
  * libcaer serial devices support.
@@ -85,7 +85,22 @@ extern "C" {
 /**
  * libcaer OpenCV support.
  */
-#define LIBCAER_HAVE_OPENCV 1
+#define LIBCAER_HAVE_OPENCV 0
+
+/**
+ * Error codes, used for the errno variable to give
+ * more precise information on errors, in addition
+ * to the logging output. All functions setting errno
+ * do note so in their documentation.
+ */
+enum caer_error_codes {
+	CAER_ERROR_MEMORY_ALLOCATION = -1,
+	CAER_ERROR_RESOURCE_ALLOCATION = -2,
+	CAER_ERROR_OPEN_ACCESS = -3,
+	CAER_ERROR_COMMUNICATION = -4,
+	CAER_ERROR_FW_VERSION = -5,
+	CAER_ERROR_LOGIC_VERSION = -6,
+};
 
 /**
  * Cast argument to uint8_t (8bit unsigned integer).

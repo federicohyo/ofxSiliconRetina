@@ -29,7 +29,7 @@ void ofxDVS::setup() {
      */
 
     // default behaviour is to start live mode
-    // after 1 seconds of non finding the device we start in file mode
+    // after 3 seconds of non finding the device we start in file mode
     ofResetElapsedTimeCounter();
     uint64_t t0 = ofGetElapsedTimeMicros();
     
@@ -41,7 +41,7 @@ void ofxDVS::setup() {
     	thread.unlock();
         uint64_t t1 = ofGetElapsedTimeMicros();
         //cout << ns << endl;
-        if( (t1-t0) > 10000){
+        if( (t1-t0) > 50000){
             ofLog(OF_LOG_NOTICE, "starting in file mode.");
             ofFileDialogResult result = ofSystemLoadDialog("Load aedat3.1 file");
             if(result.bSuccess) {
@@ -74,12 +74,16 @@ void ofxDVS::setup() {
     ofSetVerticalSync(true);
     ofSetBackgroundColor(255);
     
-    //
+    // allocate fbo , mesh and imagePol
     fbo.allocate(sizeX, sizeY, GL_RGBA32F);
     tex = &fbo.getTexture();
     mesh.setMode(OF_PRIMITIVE_POINTS);
     glEnable(GL_POINT_SMOOTH); // use circular points instead of square points
 
+    // imagePol
+    imagePolarity.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+    newImagePol = false;
+    
     // init spike colors
     initSpikeColors();
 
@@ -867,10 +871,13 @@ void ofxDVS::drawSpikes() {
                         visualizerMap[i][j] = 0;
                     }
                 }
+                //clear polarity
+                imagePolarity.setColor(i, j, ofColor(0,0,0));
             }
         }
         
         mesh.clear();
+        //imagePolarity.clear();
         vector<polarity> packets = getPolarity();
         for(int i=0;i < packets.size();i++) {
             
@@ -905,12 +912,24 @@ void ofxDVS::drawSpikes() {
             mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,sizeX,0,ofGetWidth()),ofMap(packets[i].pos.y,sizeY,0,0,ofGetHeight()), timeus));
             mesh.addTexCoord(ofVec2f(packets[i].pos.x,packets[i].pos.y));
             //int alphaus = (int)ceil(((float)tdiff/(float)nus)*256);
+            ofColor colSO = ofColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha);
+            ofColor colSF = ofColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha);
+            ofColor this_pixel;
             if(packets[i].pol){
-                mesh.addColor(ofColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha));
+                mesh.addColor(colSO);
+                this_pixel.set(colSO);
             }else{
-                mesh.addColor(ofColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha));
+                mesh.addColor(colSF);
+                this_pixel.set(colSF);
             }
+            if(imagePolarity.isAllocated()){
+                imagePolarity.setColor(int(packets[i].pos.x), int(packets[i].pos.y), ofColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike]));
+            }else{
+                ofLog(OF_LOG_ERROR, "imagePol not allocated");
+            }
+            newImagePol = true;
         }
+        imagePolarity.update();
         mesh.setMode(OF_PRIMITIVE_POINTS);
         ofPushMatrix();
         mesh.draw();
@@ -1180,11 +1199,22 @@ void ofxDVS::initImageGenerator(){
             spikeFeatures[i][j] = 0.0;
         }
     }
-    imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR_ALPHA);
+    surfaceMapLastTs = new float*[sizeX];
+    for(int i = 0; i < sizeX; ++i){
+        surfaceMapLastTs[i] = new float[sizeY];
+    }
+    for(int i = 0; i < sizeX; ++i){
+        for(int j = 0; j < sizeY; ++j){
+            surfaceMapLastTs[i][j] = 0.0;
+        }
+    }
+    imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
     rectifyPolarities = false;
-    numSpikes = 2000;
+    numSpikes = 2000.0;
     counterSpikes = 0;
     drawImageGen = false;
+    decaySpikeFeatures = 0.02;
+    newImageGen = false;
 }
 
 //--------------------------------------------------------------
@@ -1284,8 +1314,13 @@ bool ofxDVS::getDrawImageGen(){
 }
 
 //--------------------------------------------------------------
-void ofxDVS::setImageAccumulatorSpikes(int value){
+void ofxDVS::setImageAccumulatorSpikes(float value){
     numSpikes = value;
+}
+
+//--------------------------------------------------------------
+void ofxDVS::setImageAccumulatorDecay(float value){
+    decaySpikeFeatures = value;
 }
 
 //--------------------------------------------------------------
@@ -1306,6 +1341,7 @@ void ofxDVS::set3DTime(int i){
 //--------------------------------------------------------------
 void ofxDVS::updateImageGenerator(){
     
+    long lastTs;
     for (int i = 0; i < packetsPolarity.size(); i++) {
         // only valid
         if(packetsPolarity[i].valid){
@@ -1313,18 +1349,64 @@ void ofxDVS::updateImageGenerator(){
             
             // update surfaceMap
             if(packetsPolarity[i].pol){
-                spikeFeatures[(int)pos.x][(int)pos.y] += 1.0;
+                spikeFeatures[(int)pos.x][(int)pos.y] = 1.0;
             }else{
-                spikeFeatures[(int)pos.x][(int)pos.y] -= 1.0;
+                spikeFeatures[(int)pos.x][(int)pos.y] = 1.0;
             }
+            
+            surfaceMapLastTs[(int)pos.x][(int)pos.y] = packetsPolarity[i].timestamp;
+            lastTs = packetsPolarity[i].timestamp;
             counterSpikes = counterSpikes+1;
         }
     }
     
+    /*
+    // Decay the map.
+    for (size_t x = 0; x < sizeX; x++) {
+        for (size_t y = 0; y < sizeY; y++) {
+            
+            if (surfaceMapLastTs[x][y] == 0) {
+                continue;
+            }
+            else {
+                
+                spikeFeatures[x][y] -= decaySpikeFeatures; // Do decay.
+                if (spikeFeatures[x][y] < 0) {
+                    spikeFeatures[x][y] = 0;
+                }
+            }
+        }
+    }
+    
+    for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+        for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+            ofColor this_pixel;
+            this_pixel.set(0,0,0,1);
+            imageGenerator.setColor(col_idx,row_idx,this_pixel);
+        }
+    }
+    
+    for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+        for (int row_idx = 0; row_idx < sizeY; row_idx++) {
+            
+            ofColor this_pixel;
+            float f = spikeFeatures[col_idx][row_idx]*255;
+            if(f > 255){
+                f = 255;
+            }else if(f < 0){
+                f = 0;
+            }
+            //ofLog(OF_LOG_NOTICE, "Float %f\n", f);
+            this_pixel.set((int)floor(f), spkOnR[paletteSpike],spkOnG[paletteSpike], 125);
+            imageGenerator.setColor(col_idx,row_idx,this_pixel);
+        }
+    }
+    imageGenerator.update();*/
+
     if(numSpikes <= counterSpikes){
 
         counterSpikes = 0;
-        //ofLog(OF_LOG_WARNING,"Generate Image \n");
+        // ofLog(OF_LOG_WARNING,"Generate Image \n");
         // normalize
         int sum = 0, count = 0;
         for (int i = 0; i < sizeX; i++) {
@@ -1366,7 +1448,7 @@ void ofxDVS::updateImageGenerator(){
         for (int col_idx = 0; col_idx < sizeX; col_idx++) {
             for (int row_idx = 0; row_idx < sizeY; row_idx++) {
                 ofColor this_pixel;
-                this_pixel.set(0,0,0,1);
+                this_pixel.set(0,0,0);
                 imageGenerator.setColor(col_idx,row_idx,this_pixel);
             }
         }
@@ -1384,7 +1466,7 @@ void ofxDVS::updateImageGenerator(){
                     }
                     ofColor this_pixel;
                     //spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike]
-                    this_pixel.set((int)floor(f), spkOnR[paletteSpike],spkOnG[paletteSpike], 125);
+                    this_pixel.set((int)floor(f), spkOnR[paletteSpike],spkOnG[paletteSpike]);
                     imageGenerator.setColor(col_idx,row_idx,this_pixel);
                 }
             }
@@ -1396,6 +1478,7 @@ void ofxDVS::updateImageGenerator(){
             }
         }
         imageGenerator.update();
+        newImageGen = true;
     }
 }
 

@@ -7,7 +7,7 @@
 namespace libcaer {
 namespace events {
 
-struct EarEvent: public caer_ear_event {
+struct EarEvent : public caer_ear_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerEarEventGetTimestamp(this));
 	}
@@ -71,7 +71,7 @@ struct EarEvent: public caer_ear_event {
 
 static_assert(std::is_pod<EarEvent>::value, "EarEvent is not POD.");
 
-class EarEventPacket: public EventPacketCommon<EarEventPacket, EarEvent> {
+class EarEventPacket : public EventPacketCommon<EarEventPacket, EarEvent> {
 public:
 	// Constructors.
 	EarEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -80,7 +80,7 @@ public:
 		caerEarEventPacket packet = caerEarEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -89,7 +89,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, EAR_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -98,7 +98,7 @@ public:
 
 		constructorCheckEventType(packetHeader, EAR_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -106,20 +106,19 @@ protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
 		caerEarEvent evtBase = caerEarEventPacketGetEvent(reinterpret_cast<caerEarEventPacket>(header), index);
-		EarEvent *evt = static_cast<EarEvent *>(evtBase);
+		EarEvent *evt        = static_cast<EarEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerEarEventConst evtBase = caerEarEventPacketGetEventConst(reinterpret_cast<caerEarEventPacketConst>(header),
-			index);
+		caerEarEventConst evtBase
+			= caerEarEventPacketGetEventConst(reinterpret_cast<caerEarEventPacketConst>(header), index);
 		const EarEvent *evt = static_cast<const EarEvent *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

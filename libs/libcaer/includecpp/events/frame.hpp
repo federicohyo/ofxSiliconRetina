@@ -2,13 +2,24 @@
 #define LIBCAER_EVENTS_FRAME_HPP_
 
 #include <libcaer/events/frame.h>
-#include <libcaer/frame_utils.h>
+
 #include "common.hpp"
 
-#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+#include <libcaer/frame_utils.h>
 
-#include <opencv2/core.hpp>
-#include <opencv2/core/utility.hpp>
+// Separate define for getOpenCVMat() from main LIBCAER_HAVE_OPENCV,
+// which is for the frame utils support. LIBCAER_FRAMECPP_OPENCV_INSTALLED
+// is only for this one header here and the getOpenCVMat() functions, in
+// which case you need to have OpenCV installed for the application
+// using this only, not necessarily for libcaer.
+#ifndef LIBCAER_FRAMECPP_OPENCV_INSTALLED
+#	define LIBCAER_FRAMECPP_OPENCV_INSTALLED LIBCAER_HAVE_OPENCV
+#endif
+
+#if defined(LIBCAER_FRAMECPP_OPENCV_INSTALLED) && LIBCAER_FRAMECPP_OPENCV_INSTALLED == 1
+
+#	include <opencv2/core.hpp>
+#	include <opencv2/core/utility.hpp>
 
 #endif
 
@@ -22,29 +33,29 @@ namespace events {
  * As such those constructors and operators are disabled.
  * Please use caerGenericEventCopy() to copy frame events!
  */
-struct FrameEvent: public caer_frame_event {
-	FrameEvent() = default;
+struct FrameEvent : public caer_frame_event {
+	FrameEvent()                      = default;
 	FrameEvent(const FrameEvent &rhs) = delete;
-	FrameEvent& operator=(const FrameEvent &rhs) = delete;
-	FrameEvent(FrameEvent &&rhs) = delete;
-	FrameEvent& operator=(FrameEvent &&rhs) = delete;
+	FrameEvent &operator=(const FrameEvent &rhs) = delete;
+	FrameEvent(FrameEvent &&rhs)                 = delete;
+	FrameEvent &operator=(FrameEvent &&rhs) = delete;
 
 	enum class colorChannels {
 		GRAYSCALE = 1, //!< Grayscale, one channel only.
-		RGB = 3,       //!< Red Green Blue, 3 color channels.
-		RGBA = 4,      //!< Red Green Blue Alpha, 3 color channels plus transparency.
+		RGB       = 3, //!< Red Green Blue, 3 color channels.
+		RGBA      = 4, //!< Red Green Blue Alpha, 3 color channels plus transparency.
 	};
 
 	enum class colorFilter {
-		MONO = 0,    //!< No color filter present, all light passes.
-		RGBG = 1,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 1.
-		GRGB = 2,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 2.
-		GBGR = 3,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 3.
-		BGRG = 4,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 4.
-		RGBW = 5,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 1.
-		GRWB = 6,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 2.
-		WBGR = 7,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 3.
-		BWRG = 8,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 4.
+		MONO = 0, //!< No color filter present, all light passes.
+		RGBG = 1, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 1.
+		GRGB = 2, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 2.
+		GBGR = 3, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 3.
+		BGRG = 4, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 4.
+		RGBW = 5, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 1.
+		GRWB = 6, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 2.
+		WBGR = 7, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 3.
+		BWRG = 8, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 4.
 	};
 
 	int32_t getTSStartOfFrame() const noexcept {
@@ -52,8 +63,8 @@ struct FrameEvent: public caer_frame_event {
 	}
 
 	int64_t getTSStartOfFrame64(const EventPacket &packet) const noexcept {
-		return (caerFrameEventGetTSStartOfFrame64(this,
-			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+		return (caerFrameEventGetTSStartOfFrame64(
+			this, reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTSStartOfFrame(int32_t ts) {
@@ -69,8 +80,8 @@ struct FrameEvent: public caer_frame_event {
 	}
 
 	int64_t getTSEndOfFrame64(const EventPacket &packet) const noexcept {
-		return (caerFrameEventGetTSEndOfFrame64(this,
-			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+		return (caerFrameEventGetTSEndOfFrame64(
+			this, reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTSEndOfFrame(int32_t ts) {
@@ -86,8 +97,8 @@ struct FrameEvent: public caer_frame_event {
 	}
 
 	int64_t getTSStartOfExposure64(const EventPacket &packet) const noexcept {
-		return (caerFrameEventGetTSStartOfExposure64(this,
-			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+		return (caerFrameEventGetTSStartOfExposure64(
+			this, reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTSStartOfExposure(int32_t ts) {
@@ -103,8 +114,8 @@ struct FrameEvent: public caer_frame_event {
 	}
 
 	int64_t getTSEndOfExposure64(const EventPacket &packet) const noexcept {
-		return (caerFrameEventGetTSEndOfExposure64(this,
-			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+		return (caerFrameEventGetTSEndOfExposure64(
+			this, reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTSEndOfExposure(int32_t ts) {
@@ -120,8 +131,8 @@ struct FrameEvent: public caer_frame_event {
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerFrameEventGetTimestamp64(this,
-			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
+		return (
+			caerFrameEventGetTimestamp64(this, reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	int32_t getExposureLength() const noexcept {
@@ -153,8 +164,8 @@ struct FrameEvent: public caer_frame_event {
 	}
 
 	void setColorFilter(colorFilter cFilter) noexcept {
-		caerFrameEventSetColorFilter(this,
-			static_cast<enum caer_frame_event_color_filter>(static_cast<typename std::underlying_type<colorFilter>::type>(cFilter)));
+		caerFrameEventSetColorFilter(this, static_cast<enum caer_frame_event_color_filter>(
+											   static_cast<typename std::underlying_type<colorFilter>::type>(cFilter)));
 	}
 
 	int32_t getLengthX() const noexcept {
@@ -171,8 +182,8 @@ struct FrameEvent: public caer_frame_event {
 
 	void setLengthXLengthYChannelNumber(int32_t lenX, int32_t lenY, colorChannels cNumber, const EventPacket &packet) {
 		// Verify lengths and color channels number don't exceed allocated space.
-		enum caer_frame_event_color_channels cNumberEnum =
-			static_cast<enum caer_frame_event_color_channels>(static_cast<typename std::underlying_type<colorChannels>::type>(cNumber));
+		enum caer_frame_event_color_channels cNumberEnum = static_cast<enum caer_frame_event_color_channels>(
+			static_cast<typename std::underlying_type<colorChannels>::type>(cNumber));
 
 		if (lenX <= 0 || lenY <= 0 || cNumberEnum <= 0) {
 			throw std::invalid_argument("Negative lengths or channel number not allowed.");
@@ -180,14 +191,13 @@ struct FrameEvent: public caer_frame_event {
 
 		size_t neededMemory = (sizeof(uint16_t) * static_cast<size_t>(lenX) * static_cast<size_t>(lenY) * cNumberEnum);
 
-		if (neededMemory
-			> caerFrameEventPacketGetPixelsSize(
-				reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()))) {
+		if (neededMemory > caerFrameEventPacketGetPixelsSize(
+							   reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()))) {
 			throw std::invalid_argument("Given values result in memory usage higher than allocated frame event size.");
 		}
 
-		caerFrameEventSetLengthXLengthYChannelNumber(this, lenX, lenY, cNumberEnum,
-			reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()));
+		caerFrameEventSetLengthXLengthYChannelNumber(
+			this, lenX, lenY, cNumberEnum, reinterpret_cast<caerFrameEventPacketConst>(packet.getHeaderPointer()));
 	}
 
 	size_t getPixelsMaxIndex() const noexcept {
@@ -310,8 +320,8 @@ struct FrameEvent: public caer_frame_event {
 	void setPixelUnsafe(int32_t xAddress, int32_t yAddress, uint8_t channel, uint16_t pixelValue) noexcept {
 		uint8_t channelNumber = caerFrameEventGetChannelNumber(this);
 		// Set pixel value at specified position.
-		this->pixels[(((yAddress * caerFrameEventGetLengthX(this)) + xAddress) * channelNumber) + channel] = htole16(
-			pixelValue);
+		this->pixels[(((yAddress * caerFrameEventGetLengthX(this)) + xAddress) * channelNumber) + channel]
+			= htole16(pixelValue);
 	}
 
 	uint16_t *getPixelArrayUnsafe() noexcept {
@@ -322,12 +332,12 @@ struct FrameEvent: public caer_frame_event {
 		return (this->pixels);
 	}
 
-#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+#if defined(LIBCAER_FRAMECPP_OPENCV_INSTALLED) && LIBCAER_FRAMECPP_OPENCV_INSTALLED == 1
 
 	cv::Mat getOpenCVMat() noexcept {
 		const cv::Size frameSize(caerFrameEventGetLengthX(this), caerFrameEventGetLengthY(this));
-		cv::Mat frameMat(frameSize, CV_16UC(caerFrameEventGetChannelNumber(this)),
-			reinterpret_cast<void *>(this->pixels));
+		cv::Mat frameMat(
+			frameSize, CV_16UC(caerFrameEventGetChannelNumber(this)), reinterpret_cast<void *>(this->pixels));
 		return (frameMat);
 	}
 
@@ -349,7 +359,7 @@ struct FrameEvent: public caer_frame_event {
 
 static_assert(std::is_pod<FrameEvent>::value, "FrameEvent is not POD.");
 
-class FrameEventPacket: public EventPacketCommon<FrameEventPacket, FrameEvent> {
+class FrameEventPacket : public EventPacketCommon<FrameEventPacket, FrameEvent> {
 public:
 	// Constructors.
 	FrameEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxLengthX,
@@ -366,11 +376,30 @@ public:
 			throw std::invalid_argument("Negative or zero maximum number of channels not allowed.");
 		}
 
-		caerFrameEventPacket packet = caerFrameEventPacketAllocate(eventCapacity, eventSource, tsOverflow, maxLengthX,
-			maxLengthY, maxChannelNumber);
+		caerFrameEventPacket packet = caerFrameEventPacketAllocate(
+			eventCapacity, eventSource, tsOverflow, maxLengthX, maxLengthY, maxChannelNumber);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
+		isMemoryOwner = true; // Always owner on new allocation!
+	}
+
+	FrameEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxNumPixels,
+		int16_t maxChannelNumber) {
+		constructorCheckCapacitySourceTSOverflow(eventCapacity, eventSource, tsOverflow);
+
+		if (maxNumPixels <= 0) {
+			throw std::invalid_argument("Negative or zero maximum number of pixels not allowed.");
+		}
+		if (maxChannelNumber <= 0) {
+			throw std::invalid_argument("Negative or zero maximum number of channels not allowed.");
+		}
+
+		caerFrameEventPacket packet = caerFrameEventPacketAllocateNumPixels(
+			eventCapacity, eventSource, tsOverflow, maxNumPixels, maxChannelNumber);
+		constructorCheckNullptr(packet);
+
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -379,7 +408,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, FRAME_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -388,7 +417,7 @@ public:
 
 		constructorCheckEventType(packetHeader, FRAME_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -396,14 +425,14 @@ protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
 		caerFrameEvent evtBase = caerFrameEventPacketGetEvent(reinterpret_cast<caerFrameEventPacket>(header), index);
-		FrameEvent *evt = static_cast<FrameEvent *>(evtBase);
+		FrameEvent *evt        = static_cast<FrameEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerFrameEventConst evtBase = caerFrameEventPacketGetEventConst(
-			reinterpret_cast<caerFrameEventPacketConst>(header), index);
+		caerFrameEventConst evtBase
+			= caerFrameEventPacketGetEventConst(reinterpret_cast<caerFrameEventPacketConst>(header), index);
 		const FrameEvent *evt = static_cast<const FrameEvent *>(evtBase);
 
 		return (*evt);
@@ -420,41 +449,87 @@ public:
 
 	enum class demosaicTypes {
 		STANDARD = 0,
+		TO_GRAY  = 1,
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
-		OPENCV_NORMAL = 1,
-		OPENCV_EDGE_AWARE = 2,
-		// OPENCV_VARIABLE_NUMBER_OF_GRADIENTS not supported on 16bit images currently.
+		OPENCV_STANDARD   = 2,
+		OPENCV_EDGE_AWARE = 3,
+		OPENCV_TO_GRAY    = 4,
 #endif
 	};
 
 	std::unique_ptr<FrameEventPacket> demosaic(demosaicTypes demosaicType) const {
-		caerFrameEventPacket colorPacket =
-			caerFrameUtilsDemosaic(reinterpret_cast<caerFrameEventPacketConst>(header),
-				static_cast<enum caer_frame_utils_demosaic_types>(static_cast<typename std::underlying_type<
-					demosaicTypes>::type>(demosaicType)));
-		if (colorPacket == nullptr) {
-			throw std::runtime_error("Failed to generate a demosaiced frame event packet.");
+		std::unique_ptr<FrameEventPacket> outPacket(new FrameEventPacket(
+			this->getEventValid(), this->getEventSource(), this->getEventTSOverflow(), this->getEventSize(), RGB));
+
+		size_t outIdx = 0;
+
+		for (const auto &frame : *this) {
+			// Only operate on valid frames.
+			if (!frame.isValid()) {
+				continue;
+			}
+
+			auto &outFrame = ((*outPacket)[outIdx]);
+
+			// Copy header over. This will also copy validity information, so all copied frames are valid.
+			memcpy(static_cast<void *>(&outFrame), &frame, (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+
+			// Verify requirements for demosaicing operation.
+			if ((frame.getChannelNumber() == libcaer::events::FrameEvent::colorChannels::GRAYSCALE)
+				&& (frame.getColorFilter() != libcaer::events::FrameEvent::colorFilter::MONO)) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+				if ((demosaicType != demosaicTypes::TO_GRAY) && (demosaicType != demosaicTypes::OPENCV_TO_GRAY)) {
+#else
+				if (demosaicType != demosaicTypes::TO_GRAY) {
+#endif
+					// Change channel to RGB. If color requested.
+					outFrame.setLengthXLengthYChannelNumber(frame.getLengthX(), frame.getLengthY(),
+						libcaer::events::FrameEvent::colorChannels::RGB, *outPacket);
+				}
+
+				// Do interpolation.
+				caerFrameUtilsDemosaic(&frame, &outFrame,
+					static_cast<enum caer_frame_utils_demosaic_types>(
+						static_cast<typename std::underlying_type<demosaicTypes>::type>(demosaicType)));
+			}
+			else {
+				// Just copy data over.
+				memcpy(outFrame.getPixelArrayUnsafe(), frame.getPixelArrayUnsafe(), frame.getPixelsSize());
+			}
+
+			outIdx++;
 		}
 
-		return (std::unique_ptr<FrameEventPacket>(new FrameEventPacket(colorPacket)));
+		// Set number of events in output packet correctly.
+		outPacket->setEventNumber(outIdx);
+		outPacket->setEventValid(outIdx);
+
+		return (outPacket);
 	}
 
 	enum class contrastTypes {
 		STANDARD = 0,
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
-		OPENCV_NORMALIZATION = 1,
+		OPENCV_NORMALIZATION          = 1,
 		OPENCV_HISTOGRAM_EQUALIZATION = 2,
-		OPENCV_CLAHE = 3,
+		OPENCV_CLAHE                  = 3,
 #endif
 	};
 
 	void contrast(contrastTypes contrastType) noexcept {
-		caerFrameUtilsContrast(reinterpret_cast<caerFrameEventPacket>(header),
-			static_cast<enum caer_frame_utils_contrast_types>(static_cast<typename std::underlying_type<contrastTypes>::type>(contrastType)));
+		for (auto &frame : *this) {
+			// Only operate on valid frames.
+			if (!frame.isValid()) {
+				continue;
+			}
+
+			caerFrameUtilsContrast(&frame, &frame,
+				static_cast<enum caer_frame_utils_contrast_types>(
+					static_cast<typename std::underlying_type<contrastTypes>::type>(contrastType)));
+		}
 	}
 };
-
-}
-}
+} // namespace events
+} // namespace libcaer
 
 #endif /* LIBCAER_EVENTS_FRAME_HPP_ */

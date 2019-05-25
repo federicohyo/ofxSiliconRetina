@@ -53,8 +53,7 @@ extern "C" {
  * directly, for compatibility with languages that do not have
  * unsigned integer types, such as Java.
  */
-PACKED_STRUCT(
-struct caer_matrix4x4_event {
+PACKED_STRUCT(struct caer_matrix4x4_event {
 	/// Event information. First because of valid mark.
 	uint32_t info;
 	/// m00 axis measurement.
@@ -75,8 +74,7 @@ typedef const struct caer_matrix4x4_event *caerMatrix4x4EventConst;
  * followed by 'eventCapacity' events. Everything has to
  * be in one contiguous memory block.
  */
-PACKED_STRUCT(
-struct caer_matrix4x4_event_packet {
+PACKED_STRUCT(struct caer_matrix4x4_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// The events array.
@@ -99,7 +97,11 @@ typedef const struct caer_matrix4x4_event_packet *caerMatrix4x4EventPacketConst;
  *
  * @return a valid Matrix4x4EventPacket handle or NULL on error.
  */
-caerMatrix4x4EventPacket caerMatrix4x4EventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow);
+static inline caerMatrix4x4EventPacket caerMatrix4x4EventPacketAllocate(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow) {
+	return ((caerMatrix4x4EventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, MATRIX4x4_EVENT,
+		sizeof(struct caer_matrix4x4_event), offsetof(struct caer_matrix4x4_event, timestamp)));
+}
 
 /**
  * Transform a generic event packet header into a Matrix4x4 event packet.
@@ -125,7 +127,8 @@ static inline caerMatrix4x4EventPacket caerMatrix4x4EventPacketFromPacketHeader(
  * @param header a valid read-only event packet header pointer. Cannot be NULL.
  * @return a properly converted, read-only typed event packet pointer.
  */
-static inline caerMatrix4x4EventPacketConst caerMatrix4x4EventPacketFromPacketHeaderConst(caerEventPacketHeaderConst header) {
+static inline caerMatrix4x4EventPacketConst caerMatrix4x4EventPacketFromPacketHeaderConst(
+	caerEventPacketHeaderConst header) {
 	if (caerEventPacketHeaderGetEventType(header) != MATRIX4x4_EVENT) {
 		return (NULL);
 	}
@@ -144,8 +147,9 @@ static inline caerMatrix4x4EventPacketConst caerMatrix4x4EventPacketFromPacketHe
 static inline caerMatrix4x4Event caerMatrix4x4EventPacketGetEvent(caerMatrix4x4EventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event",
-			"Called caerMatrix4x4EventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event",
+			"Called caerMatrix4x4EventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -163,11 +167,13 @@ static inline caerMatrix4x4Event caerMatrix4x4EventPacketGetEvent(caerMatrix4x4E
  *
  * @return the requested read-only Matrix4x4 event. NULL on error.
  */
-static inline caerMatrix4x4EventConst caerMatrix4x4EventPacketGetEventConst(caerMatrix4x4EventPacketConst packet, int32_t n) {
+static inline caerMatrix4x4EventConst caerMatrix4x4EventPacketGetEventConst(
+	caerMatrix4x4EventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event",
-			"Called caerMatrix4x4EventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event",
+			"Called caerMatrix4x4EventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
@@ -189,7 +195,7 @@ static inline caerMatrix4x4EventConst caerMatrix4x4EventPacketGetEventConst(caer
  * @return this event's 32bit microsecond timestamp.
  */
 static inline int32_t caerMatrix4x4EventGetTimestamp(caerMatrix4x4EventConst event) {
-	return (le32toh(event->timestamp));
+	return (I32T(le32toh(U32T(event->timestamp))));
 }
 
 /**
@@ -202,9 +208,10 @@ static inline int32_t caerMatrix4x4EventGetTimestamp(caerMatrix4x4EventConst eve
  *
  * @return this event's 64bit microsecond timestamp.
  */
-static inline int64_t caerMatrix4x4EventGetTimestamp64(caerMatrix4x4EventConst event, caerMatrix4x4EventPacketConst packet) {
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerMatrix4x4EventGetTimestamp(event))));
+static inline int64_t caerMatrix4x4EventGetTimestamp64(
+	caerMatrix4x4EventConst event, caerMatrix4x4EventPacketConst packet) {
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerMatrix4x4EventGetTimestamp(event))));
 }
 
 /**
@@ -216,11 +223,12 @@ static inline int64_t caerMatrix4x4EventGetTimestamp64(caerMatrix4x4EventConst e
 static inline void caerMatrix4x4EventSetTimestamp(caerMatrix4x4Event event, int32_t timestamp) {
 	if (timestamp < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventSetTimestamp() with negative value!");
+		caerLogEHO(
+			CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventSetTimestamp() with negative value!");
 		return;
 	}
 
-	event->timestamp = htole32(timestamp);
+	event->timestamp = I32T(htole32(U32T(timestamp)));
 }
 
 /**
@@ -250,13 +258,13 @@ static inline void caerMatrix4x4EventValidate(caerMatrix4x4Event event, caerMatr
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventValidate() on already valid event.");
 	}
 }
 
@@ -275,11 +283,12 @@ static inline void caerMatrix4x4EventInvalidate(caerMatrix4x4Event event, caerMa
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventInvalidate() on already invalid event.");
+		caerLogEHO(
+			CAER_LOG_CRITICAL, "Matrix4x4 Event", "Called caerMatrix4x4EventInvalidate() on already invalid event.");
 	}
 }
 
@@ -681,11 +690,12 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_ITERATOR_ALL_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = 0; \
-		caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
-		caerMatrix4x4IteratorCounter++) { \
-		caerMatrix4x4Event caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
+#define CAER_MATRIX4x4_ITERATOR_ALL_START(MATRIX4x4_PACKET)                                                     \
+	for (int32_t caerMatrix4x4IteratorCounter = 0;                                                              \
+		 caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
+		 caerMatrix4x4IteratorCounter++) {                                                                      \
+		caerMatrix4x4Event caerMatrix4x4IteratorElement                                                         \
+			= caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
 
 /**
  * Const-Iterator over all Matrix4x4 events in a packet.
@@ -695,11 +705,12 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_CONST_ITERATOR_ALL_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = 0; \
-		caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
-		caerMatrix4x4IteratorCounter++) { \
-		caerMatrix4x4EventConst caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
+#define CAER_MATRIX4x4_CONST_ITERATOR_ALL_START(MATRIX4x4_PACKET)                                               \
+	for (int32_t caerMatrix4x4IteratorCounter = 0;                                                              \
+		 caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
+		 caerMatrix4x4IteratorCounter++) {                                                                      \
+		caerMatrix4x4EventConst caerMatrix4x4IteratorElement                                                    \
+			= caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
 
 /**
  * Iterator close statement.
@@ -714,12 +725,15 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_ITERATOR_VALID_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = 0; \
-		caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
-		caerMatrix4x4IteratorCounter++) { \
-		caerMatrix4x4Event caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter); \
-		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) { continue; } // Skip invalid Matrix4x4 events.
+#define CAER_MATRIX4x4_ITERATOR_VALID_START(MATRIX4x4_PACKET)                                                   \
+	for (int32_t caerMatrix4x4IteratorCounter = 0;                                                              \
+		 caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
+		 caerMatrix4x4IteratorCounter++) {                                                                      \
+		caerMatrix4x4Event caerMatrix4x4IteratorElement                                                         \
+			= caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);                 \
+		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) {                                         \
+			continue;                                                                                           \
+		} // Skip invalid Matrix4x4 events.
 
 /**
  * Const-Iterator over only the valid Matrix4x4 events in a packet.
@@ -729,12 +743,15 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_CONST_ITERATOR_VALID_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = 0; \
-		caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
-		caerMatrix4x4IteratorCounter++) { \
-		caerMatrix4x4EventConst caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter); \
-		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) { continue; } // Skip invalid Matrix4x4 events.
+#define CAER_MATRIX4x4_CONST_ITERATOR_VALID_START(MATRIX4x4_PACKET)                                             \
+	for (int32_t caerMatrix4x4IteratorCounter = 0;                                                              \
+		 caerMatrix4x4IteratorCounter < caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader); \
+		 caerMatrix4x4IteratorCounter++) {                                                                      \
+		caerMatrix4x4EventConst caerMatrix4x4IteratorElement                                                    \
+			= caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);            \
+		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) {                                         \
+			continue;                                                                                           \
+		} // Skip invalid Matrix4x4 events.
 
 /**
  * Iterator close statement.
@@ -749,11 +766,12 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_REVERSE_ITERATOR_ALL_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1; \
-		caerMatrix4x4IteratorCounter >= 0; \
-		caerMatrix4x4IteratorCounter--) { \
-		caerMatrix4x4Event caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
+#define CAER_MATRIX4x4_REVERSE_ITERATOR_ALL_START(MATRIX4x4_PACKET)                    \
+	for (int32_t caerMatrix4x4IteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1; \
+		 caerMatrix4x4IteratorCounter >= 0; caerMatrix4x4IteratorCounter--) {          \
+		caerMatrix4x4Event caerMatrix4x4IteratorElement                                \
+			= caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
 /**
  * Const-Reverse iterator over all Matrix4x4 events in a packet.
  * Returns the current index in the 'caerMatrix4x4IteratorCounter' variable of type
@@ -762,11 +780,12 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_CONST_REVERSE_ITERATOR_ALL_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1; \
-		caerMatrix4x4IteratorCounter >= 0; \
-		caerMatrix4x4IteratorCounter--) { \
-		caerMatrix4x4EventConst caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
+#define CAER_MATRIX4x4_CONST_REVERSE_ITERATOR_ALL_START(MATRIX4x4_PACKET)              \
+	for (int32_t caerMatrix4x4IteratorCounter                                          \
+		 = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1; \
+		 caerMatrix4x4IteratorCounter >= 0; caerMatrix4x4IteratorCounter--) {          \
+		caerMatrix4x4EventConst caerMatrix4x4IteratorElement                           \
+			= caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -781,12 +800,15 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_REVERSE_ITERATOR_VALID_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1; \
-		caerMatrix4x4IteratorCounter >= 0; \
-		caerMatrix4x4IteratorCounter--) { \
-		caerMatrix4x4Event caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter); \
-		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) { continue; } // Skip invalid Matrix4x4 events.
+#define CAER_MATRIX4x4_REVERSE_ITERATOR_VALID_START(MATRIX4x4_PACKET)                           \
+	for (int32_t caerMatrix4x4IteratorCounter                                                   \
+		 = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1;          \
+		 caerMatrix4x4IteratorCounter >= 0; caerMatrix4x4IteratorCounter--) {                   \
+		caerMatrix4x4Event caerMatrix4x4IteratorElement                                         \
+			= caerMatrix4x4EventPacketGetEvent(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter); \
+		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) {                         \
+			continue;                                                                           \
+		} // Skip invalid Matrix4x4 events.
 
 /**
  * Const-Reverse iterator over only the valid Matrix4x4 events in a packet.
@@ -796,12 +818,15 @@ static inline void caerMatrix4x4EventSetM33(caerMatrix4x4Event event, float x) {
  *
  * MATRIX4x4_PACKET: a valid Matrix4x4EventPacket pointer. Cannot be NULL.
  */
-#define CAER_MATRIX4x4_CONST_REVERSE_ITERATOR_VALID_START(MATRIX4x4_PACKET) \
-	for (int32_t caerMatrix4x4IteratorCounter = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1; \
-		caerMatrix4x4IteratorCounter >= 0; \
-		caerMatrix4x4IteratorCounter--) { \
-		caerMatrix4x4EventConst caerMatrix4x4IteratorElement = caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter); \
-		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) { continue; } // Skip invalid Matrix4x4 events.
+#define CAER_MATRIX4x4_CONST_REVERSE_ITERATOR_VALID_START(MATRIX4x4_PACKET)                          \
+	for (int32_t caerMatrix4x4IteratorCounter                                                        \
+		 = caerEventPacketHeaderGetEventNumber(&(MATRIX4x4_PACKET)->packetHeader) - 1;               \
+		 caerMatrix4x4IteratorCounter >= 0; caerMatrix4x4IteratorCounter--) {                        \
+		caerMatrix4x4EventConst caerMatrix4x4IteratorElement                                         \
+			= caerMatrix4x4EventPacketGetEventConst(MATRIX4x4_PACKET, caerMatrix4x4IteratorCounter); \
+		if (!caerMatrix4x4EventIsValid(caerMatrix4x4IteratorElement)) {                              \
+			continue;                                                                                \
+		} // Skip invalid Matrix4x4 events.
 
 /**
  * Reverse iterator close statement.

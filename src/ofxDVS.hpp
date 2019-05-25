@@ -483,7 +483,7 @@ public:
                     imuStatusLocal = imuStatus;
                     //enable disable frames
     #if DAVIS == 1
-                    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
+                //caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
     #endif
                 }
                 
@@ -698,6 +698,8 @@ public:
     // easycam
     ofEasyCam myCam;
     ofMesh mesh;
+    ofImage imagePolarity;
+    bool newImagePol;
     
     // Data containers
     vector<polarity> packetsPolarity;
@@ -727,7 +729,8 @@ public:
     float **visualizerMap;
     void changeFSInt(float i);
     void changeBAdeltat(float i);
-    void setImageAccumulatorSpikes(int i);
+    void setImageAccumulatorSpikes(float i);
+    void setImageAccumulatorDecay(float i);
     void setDrawSpikes(bool doDraw);
     bool getDrawSpikes();
     void set3DTime(int i);
@@ -770,10 +773,13 @@ public:
     //Image Generator
     ofImage imageGenerator;
     float** spikeFeatures;
+    float** surfaceMapLastTs;
     bool rectifyPolarities;
-    int numSpikes;
+    float numSpikes;
     int counterSpikes;
     bool drawImageGen;
+    float decaySpikeFeatures;
+    bool newImageGen;
     
     //Mean Rate
     ofImage meanRateImage;

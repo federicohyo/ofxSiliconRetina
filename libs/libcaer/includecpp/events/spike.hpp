@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct SpikeEvent: public caer_spike_event {
+struct SpikeEvent : public caer_spike_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerSpikeEventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerSpikeEventGetTimestamp64(this,
-			reinterpret_cast<caerSpikeEventPacketConst>(packet.getHeaderPointer())));
+		return (
+			caerSpikeEventGetTimestamp64(this, reinterpret_cast<caerSpikeEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -64,7 +64,7 @@ struct SpikeEvent: public caer_spike_event {
 
 static_assert(std::is_pod<SpikeEvent>::value, "SpikeEvent is not POD.");
 
-class SpikeEventPacket: public EventPacketCommon<SpikeEventPacket, SpikeEvent> {
+class SpikeEventPacket : public EventPacketCommon<SpikeEventPacket, SpikeEvent> {
 public:
 	// Constructors.
 	SpikeEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -73,7 +73,7 @@ public:
 		caerSpikeEventPacket packet = caerSpikeEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -82,7 +82,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, SPIKE_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -91,7 +91,7 @@ public:
 
 		constructorCheckEventType(packetHeader, SPIKE_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -99,20 +99,19 @@ protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
 		caerSpikeEvent evtBase = caerSpikeEventPacketGetEvent(reinterpret_cast<caerSpikeEventPacket>(header), index);
-		SpikeEvent *evt = static_cast<SpikeEvent *>(evtBase);
+		SpikeEvent *evt        = static_cast<SpikeEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerSpikeEventConst evtBase = caerSpikeEventPacketGetEventConst(
-			reinterpret_cast<caerSpikeEventPacketConst>(header), index);
+		caerSpikeEventConst evtBase
+			= caerSpikeEventPacketGetEventConst(reinterpret_cast<caerSpikeEventPacketConst>(header), index);
 		const SpikeEvent *evt = static_cast<const SpikeEvent *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

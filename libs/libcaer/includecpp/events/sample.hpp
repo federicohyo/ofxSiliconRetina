@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct SampleEvent: public caer_sample_event {
+struct SampleEvent : public caer_sample_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerSampleEventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerSampleEventGetTimestamp64(this,
-			reinterpret_cast<caerSampleEventPacketConst>(packet.getHeaderPointer())));
+		return (caerSampleEventGetTimestamp64(
+			this, reinterpret_cast<caerSampleEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -56,7 +56,7 @@ struct SampleEvent: public caer_sample_event {
 
 static_assert(std::is_pod<SampleEvent>::value, "SampleEvent is not POD.");
 
-class SampleEventPacket: public EventPacketCommon<SampleEventPacket, SampleEvent> {
+class SampleEventPacket : public EventPacketCommon<SampleEventPacket, SampleEvent> {
 public:
 	// Constructors.
 	SampleEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -65,7 +65,7 @@ public:
 		caerSampleEventPacket packet = caerSampleEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -74,7 +74,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, SAMPLE_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -83,7 +83,7 @@ public:
 
 		constructorCheckEventType(packetHeader, SAMPLE_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -91,20 +91,19 @@ protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
 		caerSampleEvent evtBase = caerSampleEventPacketGetEvent(reinterpret_cast<caerSampleEventPacket>(header), index);
-		SampleEvent *evt = static_cast<SampleEvent *>(evtBase);
+		SampleEvent *evt        = static_cast<SampleEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerSampleEventConst evtBase = caerSampleEventPacketGetEventConst(
-			reinterpret_cast<caerSampleEventPacketConst>(header), index);
+		caerSampleEventConst evtBase
+			= caerSampleEventPacketGetEventConst(reinterpret_cast<caerSampleEventPacketConst>(header), index);
 		const SampleEvent *evt = static_cast<const SampleEvent *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

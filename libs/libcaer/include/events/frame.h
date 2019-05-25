@@ -48,8 +48,8 @@ extern "C" {
  */
 enum caer_frame_event_color_channels {
 	GRAYSCALE = 1, //!< Grayscale, one channel only.
-	RGB = 3,       //!< Red Green Blue, 3 color channels.
-	RGBA = 4,      //!< Red Green Blue Alpha, 3 color channels plus transparency.
+	RGB       = 3, //!< Red Green Blue, 3 color channels.
+	RGBA      = 4, //!< Red Green Blue Alpha, 3 color channels plus transparency.
 };
 
 /**
@@ -57,15 +57,15 @@ enum caer_frame_event_color_channels {
  * Used to interpret the frame event color filter field.
  */
 enum caer_frame_event_color_filter {
-	MONO = 0,    //!< No color filter present, all light passes.
-	RGBG = 1,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 1.
-	GRGB = 2,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 2.
-	GBGR = 3,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 3.
-	BGRG = 4,    //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 4.
-	RGBW = 5,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 1.
-	GRWB = 6,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 2.
-	WBGR = 7,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 3.
-	BWRG = 8,    //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 4.
+	MONO = 0, //!< No color filter present, all light passes.
+	RGBG = 1, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 1.
+	GRGB = 2, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 2.
+	GBGR = 3, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 3.
+	BGRG = 4, //!< Standard Bayer color filter, 1 red 2 green 1 blue. Variation 4.
+	RGBW = 5, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 1.
+	GRWB = 6, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 2.
+	WBGR = 7, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 3.
+	BWRG = 8, //!< Modified Bayer color filter, with white (pass all light) instead of extra green. Variation 4.
 };
 
 /**
@@ -82,8 +82,7 @@ enum caer_frame_event_color_filter {
  * To copy a frame event, the usual assignment operator = cannot be used.
  * Please use caerGenericEventCopy() to copy frame events!
  */
-PACKED_STRUCT(
-struct caer_frame_event {
+PACKED_STRUCT(struct caer_frame_event {
 	/// Event information (ROI region, color channels, color filter). First because of valid mark.
 	uint32_t info;
 	/// Start of Frame (SOF) timestamp.
@@ -122,8 +121,7 @@ typedef const struct caer_frame_event *caerFrameEventConst;
  * array is not possible for Frame events. To calculate position
  * offsets, use the 'eventSize' field in the packet header.
  */
-PACKED_STRUCT(
-struct caer_frame_event_packet {
+PACKED_STRUCT(struct caer_frame_event_packet {
 	/// The common event packet header.
 	struct caer_event_packet_header packetHeader;
 	/// All events follow here. Direct access to the events
@@ -136,6 +134,39 @@ struct caer_frame_event_packet {
  */
 typedef struct caer_frame_event_packet *caerFrameEventPacket;
 typedef const struct caer_frame_event_packet *caerFrameEventPacketConst;
+
+/**
+ * Allocate a new frame events packet, passing the total number of maximum
+ * pixels instead of the maximum X/Y dimensions expected.
+ * Use free() to reclaim this memory.
+ * The frame events allocate memory for a maximum sized pixels array, depending
+ * on the parameters passed to this function, so that every event occupies the
+ * same amount of memory (constant size). The actual frames inside of it
+ * might be smaller than that, for example when using ROI, and their actual size
+ * is stored inside the frame event and should always be queried from there.
+ * The unused part of a pixels array is guaranteed to be zeros.
+ *
+ * @param eventCapacity the maximum number of events this packet will hold.
+ * @param eventSource the unique ID representing the source/generator of this packet.
+ * @param tsOverflow the current timestamp overflow counter value for this packet.
+ * @param maxNumPixels the maximum number of pixels that can be held by a frame event.
+ * @param maxChannelNumber the maximum expected number of channels for frames in this packet.
+ *
+ * @return a valid FrameEventPacket handle or NULL on error.
+ */
+static inline caerFrameEventPacket caerFrameEventPacketAllocateNumPixels(
+	int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow, int32_t maxNumPixels, int16_t maxChannelNumber) {
+	if ((maxNumPixels <= 0) || (maxChannelNumber <= 0)) {
+		return (NULL);
+	}
+
+	size_t pixelSize = sizeof(uint16_t) * (size_t) maxNumPixels * (size_t) maxChannelNumber;
+	// '- sizeof(uint16_t)' to compensate for pixels[1] at end of struct for C++ compatibility.
+	size_t eventSize = (sizeof(struct caer_frame_event) - sizeof(uint16_t)) + pixelSize;
+
+	return ((caerFrameEventPacket) caerEventPacketAllocate(eventCapacity, eventSource, tsOverflow, FRAME_EVENT,
+		I32T(eventSize), offsetof(struct caer_frame_event, ts_endframe)));
+}
 
 /**
  * Allocate a new frame events packet.
@@ -156,8 +187,15 @@ typedef const struct caer_frame_event_packet *caerFrameEventPacketConst;
  *
  * @return a valid FrameEventPacket handle or NULL on error.
  */
-caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t eventSource, int32_t tsOverflow,
-	int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber);
+static inline caerFrameEventPacket caerFrameEventPacketAllocate(int32_t eventCapacity, int16_t eventSource,
+	int32_t tsOverflow, int32_t maxLengthX, int32_t maxLengthY, int16_t maxChannelNumber) {
+	if ((maxLengthX <= 0) || (maxLengthY <= 0) || (maxChannelNumber <= 0)) {
+		return (NULL);
+	}
+
+	return (caerFrameEventPacketAllocateNumPixels(
+		eventCapacity, eventSource, tsOverflow, maxLengthX * maxLengthY, maxChannelNumber));
+}
 
 /**
  * Transform a generic event packet header into a Frame event packet.
@@ -204,14 +242,16 @@ static inline caerFrameEventPacketConst caerFrameEventPacketFromPacketHeaderCons
 static inline caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventPacketGetEvent() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventPacketGetEvent() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
 
 	// Return a pointer to the specified event.
-	return ((caerFrameEvent) (((uint8_t *) &packet->packetHeader)
+	return ((caerFrameEvent)(
+		((uint8_t *) &packet->packetHeader)
 		+ (CAER_EVENT_PACKET_HEADER_SIZE + U64T(n * caerEventPacketHeaderGetEventSize(&packet->packetHeader)))));
 }
 
@@ -229,14 +269,16 @@ static inline caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket p
 static inline caerFrameEventConst caerFrameEventPacketGetEventConst(caerFrameEventPacketConst packet, int32_t n) {
 	// Check that we're not out of bounds.
 	if (n < 0 || n >= caerEventPacketHeaderGetEventCapacity(&packet->packetHeader)) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventPacketGetEventConst() with invalid event offset %" PRIi32 ", while maximum allowed value is %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventPacketGetEventConst() with invalid event offset %" PRIi32
+			", while maximum allowed value is %" PRIi32 ".",
 			n, caerEventPacketHeaderGetEventCapacity(&packet->packetHeader) - 1);
 		return (NULL);
 	}
 
 	// Return a pointer to the specified event.
-	return ((caerFrameEventConst) (((const uint8_t *) &packet->packetHeader)
+	return ((caerFrameEventConst)(
+		((const uint8_t *) &packet->packetHeader)
 		+ (CAER_EVENT_PACKET_HEADER_SIZE + U64T(n * caerEventPacketHeaderGetEventSize(&packet->packetHeader)))));
 }
 
@@ -253,7 +295,7 @@ static inline caerFrameEventConst caerFrameEventPacketGetEventConst(caerFrameEve
  * @return this event's 32bit microsecond start of frame timestamp.
  */
 static inline int32_t caerFrameEventGetTSStartOfFrame(caerFrameEventConst event) {
-	return (le32toh(event->ts_startframe));
+	return (I32T(le32toh(U32T(event->ts_startframe))));
 }
 
 /**
@@ -269,8 +311,8 @@ static inline int32_t caerFrameEventGetTSStartOfFrame(caerFrameEventConst event)
 static inline int64_t caerFrameEventGetTSStartOfFrame64(caerFrameEventConst event, caerFrameEventPacketConst packet) {
 	// Even if frames have multiple time-stamps, it's not possible for later time-stamps to
 	// be in a different TSOverflow period, since in those rare cases the event is dropped.
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerFrameEventGetTSStartOfFrame(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerFrameEventGetTSStartOfFrame(event))));
 }
 
 /**
@@ -282,11 +324,11 @@ static inline int64_t caerFrameEventGetTSStartOfFrame64(caerFrameEventConst even
 static inline void caerFrameEventSetTSStartOfFrame(caerFrameEvent event, int32_t startFrame) {
 	if (startFrame < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSStartOfFrame() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSStartOfFrame() with negative value!");
 		return;
 	}
 
-	event->ts_startframe = htole32(startFrame);
+	event->ts_startframe = I32T(htole32(U32T(startFrame)));
 }
 
 /**
@@ -302,7 +344,7 @@ static inline void caerFrameEventSetTSStartOfFrame(caerFrameEvent event, int32_t
  * @return this event's 32bit microsecond end of frame timestamp.
  */
 static inline int32_t caerFrameEventGetTSEndOfFrame(caerFrameEventConst event) {
-	return (le32toh(event->ts_endframe));
+	return (I32T(le32toh(U32T(event->ts_endframe))));
 }
 
 /**
@@ -318,8 +360,8 @@ static inline int32_t caerFrameEventGetTSEndOfFrame(caerFrameEventConst event) {
 static inline int64_t caerFrameEventGetTSEndOfFrame64(caerFrameEventConst event, caerFrameEventPacketConst packet) {
 	// Even if frames have multiple time-stamps, it's not possible for later time-stamps to
 	// be in a different TSOverflow period, since in those rare cases the event is dropped.
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerFrameEventGetTSEndOfFrame(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerFrameEventGetTSEndOfFrame(event))));
 }
 
 /**
@@ -331,11 +373,11 @@ static inline int64_t caerFrameEventGetTSEndOfFrame64(caerFrameEventConst event,
 static inline void caerFrameEventSetTSEndOfFrame(caerFrameEvent event, int32_t endFrame) {
 	if (endFrame < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSEndOfFrame() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSEndOfFrame() with negative value!");
 		return;
 	}
 
-	event->ts_endframe = htole32(endFrame);
+	event->ts_endframe = I32T(htole32(U32T(endFrame)));
 }
 
 /**
@@ -351,7 +393,7 @@ static inline void caerFrameEventSetTSEndOfFrame(caerFrameEvent event, int32_t e
  * @return this event's 32bit microsecond start of exposure timestamp.
  */
 static inline int32_t caerFrameEventGetTSStartOfExposure(caerFrameEventConst event) {
-	return (le32toh(event->ts_startexposure));
+	return (I32T(le32toh(U32T(event->ts_startexposure))));
 }
 
 /**
@@ -364,11 +406,12 @@ static inline int32_t caerFrameEventGetTSStartOfExposure(caerFrameEventConst eve
  *
  * @return this event's 64bit microsecond start of exposure timestamp.
  */
-static inline int64_t caerFrameEventGetTSStartOfExposure64(caerFrameEventConst event, caerFrameEventPacketConst packet) {
+static inline int64_t caerFrameEventGetTSStartOfExposure64(
+	caerFrameEventConst event, caerFrameEventPacketConst packet) {
 	// Even if frames have multiple time-stamps, it's not possible for later time-stamps to
 	// be in a different TSOverflow period, since in those rare cases the event is dropped.
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerFrameEventGetTSStartOfExposure(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerFrameEventGetTSStartOfExposure(event))));
 }
 
 /**
@@ -380,11 +423,12 @@ static inline int64_t caerFrameEventGetTSStartOfExposure64(caerFrameEventConst e
 static inline void caerFrameEventSetTSStartOfExposure(caerFrameEvent event, int32_t startExposure) {
 	if (startExposure < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSStartOfExposure() with negative value!");
+		caerLogEHO(
+			CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSStartOfExposure() with negative value!");
 		return;
 	}
 
-	event->ts_startexposure = htole32(startExposure);
+	event->ts_startexposure = I32T(htole32(U32T(startExposure)));
 }
 
 /**
@@ -400,7 +444,7 @@ static inline void caerFrameEventSetTSStartOfExposure(caerFrameEvent event, int3
  * @return this event's 32bit microsecond end of exposure timestamp.
  */
 static inline int32_t caerFrameEventGetTSEndOfExposure(caerFrameEventConst event) {
-	return (le32toh(event->ts_endexposure));
+	return (I32T(le32toh(U32T(event->ts_endexposure))));
 }
 
 /**
@@ -416,8 +460,8 @@ static inline int32_t caerFrameEventGetTSEndOfExposure(caerFrameEventConst event
 static inline int64_t caerFrameEventGetTSEndOfExposure64(caerFrameEventConst event, caerFrameEventPacketConst packet) {
 	// Even if frames have multiple time-stamps, it's not possible for later time-stamps to
 	// be in a different TSOverflow period, since in those rare cases the event is dropped.
-	return (I64T(
-		(U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT) | U64T(caerFrameEventGetTSEndOfExposure(event))));
+	return (I64T((U64T(caerEventPacketHeaderGetEventTSOverflow(&packet->packetHeader)) << TS_OVERFLOW_SHIFT)
+				 | U64T(caerFrameEventGetTSEndOfExposure(event))));
 }
 
 /**
@@ -429,11 +473,11 @@ static inline int64_t caerFrameEventGetTSEndOfExposure64(caerFrameEventConst eve
 static inline void caerFrameEventSetTSEndOfExposure(caerFrameEvent event, int32_t endExposure) {
 	if (endExposure < 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSEndOfExposure() with negative value!");
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventSetTSEndOfExposure() with negative value!");
 		return;
 	}
 
-	event->ts_endexposure = htole32(endExposure);
+	event->ts_endexposure = I32T(htole32(U32T(endExposure)));
 }
 
 /**
@@ -508,13 +552,13 @@ static inline void caerFrameEventValidate(caerFrameEvent event, caerFrameEventPa
 
 		// Also increase number of events and valid events.
 		// Only call this on (still) invalid events!
-		caerEventPacketHeaderSetEventNumber(&packet->packetHeader,
-			caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventNumber(
+			&packet->packetHeader, caerEventPacketHeaderGetEventNumber(&packet->packetHeader) + 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) + 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventValidate() on already valid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventValidate() on already valid event.");
 	}
 }
 
@@ -533,11 +577,11 @@ static inline void caerFrameEventInvalidate(caerFrameEvent event, caerFrameEvent
 
 		// Also decrease number of valid events. Number of total events doesn't change.
 		// Only call this on valid events!
-		caerEventPacketHeaderSetEventValid(&packet->packetHeader,
-			caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
+		caerEventPacketHeaderSetEventValid(
+			&packet->packetHeader, caerEventPacketHeaderGetEventValid(&packet->packetHeader) - 1);
 	}
 	else {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventInvalidate() on already invalid event.");
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event", "Called caerFrameEventInvalidate() on already invalid event.");
 	}
 }
 
@@ -551,7 +595,8 @@ static inline void caerFrameEventInvalidate(caerFrameEvent event, caerFrameEvent
  */
 static inline size_t caerFrameEventPacketGetPixelsSize(caerFrameEventPacketConst packet) {
 	// '- sizeof(uint16_t)' to compensate for pixels[1] at end of struct for C++ compatibility.
-	return ((size_t) caerEventPacketHeaderGetEventSize(&packet->packetHeader) - (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
+	return ((size_t) caerEventPacketHeaderGetEventSize(&packet->packetHeader)
+			- (sizeof(struct caer_frame_event) - sizeof(uint16_t)));
 }
 
 /**
@@ -599,7 +644,8 @@ static inline void caerFrameEventSetROIIdentifier(caerFrameEvent event, uint8_t 
  * @return color filter identifier.
  */
 static inline enum caer_frame_event_color_filter caerFrameEventGetColorFilter(caerFrameEventConst event) {
-	return ((enum caer_frame_event_color_filter) U8T(GET_NUMBITS32(event->info, FRAME_COLOR_FILTER_SHIFT, FRAME_COLOR_FILTER_MASK)));
+	return ((enum caer_frame_event_color_filter) U8T(
+		GET_NUMBITS32(event->info, FRAME_COLOR_FILTER_SHIFT, FRAME_COLOR_FILTER_MASK)));
 }
 
 /**
@@ -622,7 +668,7 @@ static inline void caerFrameEventSetColorFilter(caerFrameEvent event, enum caer_
  * @return frame X axis length.
  */
 static inline int32_t caerFrameEventGetLengthX(caerFrameEventConst event) {
-	return (le32toh(event->lengthX));
+	return (I32T(le32toh(U32T(event->lengthX))));
 }
 
 /**
@@ -633,7 +679,7 @@ static inline int32_t caerFrameEventGetLengthX(caerFrameEventConst event) {
  * @return frame Y axis length.
  */
 static inline int32_t caerFrameEventGetLengthY(caerFrameEventConst event) {
-	return (le32toh(event->lengthY));
+	return (I32T(le32toh(U32T(event->lengthY))));
 }
 
 /**
@@ -664,7 +710,7 @@ static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent e
 	enum caer_frame_event_color_channels channelNumber, caerFrameEventPacketConst packet) {
 	if (lengthX <= 0 || lengthY <= 0 || channelNumber <= 0) {
 		// Negative means using the 31st bit!
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
 			"Called caerFrameEventSetLengthXLengthYChannelNumber() with negative value(s)!");
 		return;
 	}
@@ -673,14 +719,16 @@ static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent e
 	size_t neededMemory = (sizeof(uint16_t) * (size_t) lengthX * (size_t) lengthY * channelNumber);
 
 	if (neededMemory > caerFrameEventPacketGetPixelsSize(packet)) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventSetLengthXLengthYChannelNumber() with values that result in requiring %zu bytes, which exceeds the maximum allocated event size of %zu bytes.",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetLengthXLengthYChannelNumber() with "
+			"values that result in requiring %zu bytes, which exceeds the "
+			"maximum allocated event size of %zu bytes.",
 			neededMemory, (size_t) caerEventPacketHeaderGetEventSize(&packet->packetHeader));
 		return;
 	}
 
-	event->lengthX = htole32(lengthX);
-	event->lengthY = htole32(lengthY);
+	event->lengthX = I32T(htole32(U32T(lengthX)));
+	event->lengthY = I32T(htole32(U32T(lengthY)));
 	CLEAR_NUMBITS32(event->info, FRAME_COLOR_CHANNELS_SHIFT, FRAME_COLOR_CHANNELS_MASK);
 	SET_NUMBITS32(event->info, FRAME_COLOR_CHANNELS_SHIFT, FRAME_COLOR_CHANNELS_MASK, channelNumber);
 }
@@ -695,7 +743,7 @@ static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent e
  */
 static inline size_t caerFrameEventGetPixelsMaxIndex(caerFrameEventConst event) {
 	enum caer_frame_event_color_channels channels = caerFrameEventGetChannelNumber(event);
-	return ((size_t) (caerFrameEventGetLengthX(event) * caerFrameEventGetLengthY(event) * I32T(channels)));
+	return ((size_t)(caerFrameEventGetLengthX(event) * caerFrameEventGetLengthY(event) * I32T(channels)));
 }
 
 /**
@@ -720,7 +768,7 @@ static inline size_t caerFrameEventGetPixelsSize(caerFrameEventConst event) {
  * @return X axis position offset.
  */
 static inline int32_t caerFrameEventGetPositionX(caerFrameEventConst event) {
-	return (le32toh(event->positionX));
+	return (I32T(le32toh(U32T(event->positionX))));
 }
 
 /**
@@ -732,7 +780,7 @@ static inline int32_t caerFrameEventGetPositionX(caerFrameEventConst event) {
  * @param positionX X axis position offset.
  */
 static inline void caerFrameEventSetPositionX(caerFrameEvent event, int32_t positionX) {
-	event->positionX = htole32(positionX);
+	event->positionX = I32T(htole32(U32T(positionX)));
 }
 
 /**
@@ -745,7 +793,7 @@ static inline void caerFrameEventSetPositionX(caerFrameEvent event, int32_t posi
  * @return Y axis position offset.
  */
 static inline int32_t caerFrameEventGetPositionY(caerFrameEventConst event) {
-	return (le32toh(event->positionY));
+	return (I32T(le32toh(U32T(event->positionY))));
 }
 
 /**
@@ -757,7 +805,7 @@ static inline int32_t caerFrameEventGetPositionY(caerFrameEventConst event) {
  * @param positionY Y axis position offset.
  */
 static inline void caerFrameEventSetPositionY(caerFrameEvent event, int32_t positionY) {
-	event->positionY = htole32(positionY);
+	event->positionY = I32T(htole32(U32T(positionY)));
 }
 
 /**
@@ -775,8 +823,9 @@ static inline void caerFrameEventSetPositionY(caerFrameEvent event, int32_t posi
 static inline uint16_t caerFrameEventGetPixel(caerFrameEventConst event, int32_t xAddress, int32_t yAddress) {
 	// Check frame bounds first.
 	if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(event)) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventGetPixel() with invalid Y address of %" PRIi32 ", should be between 0 and %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventGetPixel() with invalid Y address of %" PRIi32 ", should be between 0 and %" PRIi32
+			".",
 			yAddress, caerFrameEventGetLengthY(event) - 1);
 		return (0);
 	}
@@ -784,8 +833,9 @@ static inline uint16_t caerFrameEventGetPixel(caerFrameEventConst event, int32_t
 	int32_t xLength = caerFrameEventGetLengthX(event);
 
 	if (xAddress < 0 || xAddress >= xLength) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventGetPixel() with invalid X address of %" PRIi32 ", should be between 0 and %" PRIi32".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventGetPixel() with invalid X address of %" PRIi32 ", should be between 0 and %" PRIi32
+			".",
 			xAddress, xLength - 1);
 		return (0);
 	}
@@ -805,11 +855,13 @@ static inline uint16_t caerFrameEventGetPixel(caerFrameEventConst event, int32_t
  * @param yAddress Y address value (checked).
  * @param pixelValue pixel value (normalized to 16 bit depth).
  */
-static inline void caerFrameEventSetPixel(caerFrameEvent event, int32_t xAddress, int32_t yAddress, uint16_t pixelValue) {
+static inline void caerFrameEventSetPixel(
+	caerFrameEvent event, int32_t xAddress, int32_t yAddress, uint16_t pixelValue) {
 	// Check frame bounds first.
 	if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(event)) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventSetPixel() with invalid Y address of %" PRIi32 ", should be between 0 and %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetPixel() with invalid Y address of %" PRIi32 ", should be between 0 and %" PRIi32
+			".",
 			yAddress, caerFrameEventGetLengthY(event) - 1);
 		return;
 	}
@@ -817,8 +869,9 @@ static inline void caerFrameEventSetPixel(caerFrameEvent event, int32_t xAddress
 	int32_t xLength = caerFrameEventGetLengthX(event);
 
 	if (xAddress < 0 || xAddress >= xLength) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventSetPixel() with invalid X address of %" PRIi32 ", should be between 0 and %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetPixel() with invalid X address of %" PRIi32 ", should be between 0 and %" PRIi32
+			".",
 			xAddress, xLength - 1);
 		return;
 	}
@@ -841,12 +894,13 @@ static inline void caerFrameEventSetPixel(caerFrameEvent event, int32_t xAddress
  *
  * @return pixel value (normalized to 16 bit depth).
  */
-static inline uint16_t caerFrameEventGetPixelForChannel(caerFrameEventConst event, int32_t xAddress, int32_t yAddress,
-	uint8_t channel) {
+static inline uint16_t caerFrameEventGetPixelForChannel(
+	caerFrameEventConst event, int32_t xAddress, int32_t yAddress, uint8_t channel) {
 	// Check frame bounds first.
 	if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(event)) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventGetPixelForChannel() with invalid Y address of %" PRIi32 ", should be between 0 and %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventGetPixelForChannel() with invalid Y address of %" PRIi32
+			", should be between 0 and %" PRIi32 ".",
 			yAddress, caerFrameEventGetLengthY(event) - 1);
 		return (0);
 	}
@@ -854,23 +908,25 @@ static inline uint16_t caerFrameEventGetPixelForChannel(caerFrameEventConst even
 	int32_t xLength = caerFrameEventGetLengthX(event);
 
 	if (xAddress < 0 || xAddress >= xLength) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventGetPixelForChannel() with invalid X address of %" PRIi32 ", should be between 0 and %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventGetPixelForChannel() with invalid X address of %" PRIi32
+			", should be between 0 and %" PRIi32 ".",
 			xAddress, xLength - 1);
 		return (0);
 	}
 
-	uint8_t channelNumber = caerFrameEventGetChannelNumber(event);
+	enum caer_frame_event_color_channels channelNumber = caerFrameEventGetChannelNumber(event);
 
 	if (channel >= channelNumber) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventGetPixelForChannel() with invalid channel number of %" PRIu8 ", should be between 0 and %" PRIu8 ".",
-			channel, (uint8_t) (channelNumber - 1));
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventGetPixelForChannel() with invalid channel number of %" PRIu8
+			", should be between 0 and %" PRIu8 ".",
+			channel, (uint8_t)(channelNumber - 1));
 		return (0);
 	}
 
 	// Get pixel value at specified position.
-	return (le16toh(event->pixels[(((yAddress * xLength) + xAddress) * channelNumber) + channel]));
+	return (le16toh(event->pixels[(((yAddress * xLength) + xAddress) * U8T(channelNumber)) + channel]));
 }
 
 /**
@@ -886,12 +942,13 @@ static inline uint16_t caerFrameEventGetPixelForChannel(caerFrameEventConst even
  * @param channel the channel number (checked).
  * @param pixelValue pixel value (normalized to 16 bit depth).
  */
-static inline void caerFrameEventSetPixelForChannel(caerFrameEvent event, int32_t xAddress, int32_t yAddress,
-	uint8_t channel, uint16_t pixelValue) {
+static inline void caerFrameEventSetPixelForChannel(
+	caerFrameEvent event, int32_t xAddress, int32_t yAddress, uint8_t channel, uint16_t pixelValue) {
 	// Check frame bounds first.
 	if (yAddress < 0 || yAddress >= caerFrameEventGetLengthY(event)) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventSetPixelForChannel() with invalid Y address of %" PRIi32 ", should be between 0 and %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetPixelForChannel() with invalid Y address of %" PRIi32
+			", should be between 0 and %" PRIi32 ".",
 			yAddress, caerFrameEventGetLengthY(event) - 1);
 		return;
 	}
@@ -899,23 +956,25 @@ static inline void caerFrameEventSetPixelForChannel(caerFrameEvent event, int32_
 	int32_t xLength = caerFrameEventGetLengthX(event);
 
 	if (xAddress < 0 || xAddress >= xLength) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventSetPixelForChannel() with invalid X address of %" PRIi32 ", should be between 0 and %" PRIi32 ".",
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetPixelForChannel() with invalid X address of %" PRIi32
+			", should be between 0 and %" PRIi32 ".",
 			xAddress, xLength - 1);
 		return;
 	}
 
-	uint8_t channelNumber = caerFrameEventGetChannelNumber(event);
+	enum caer_frame_event_color_channels channelNumber = caerFrameEventGetChannelNumber(event);
 
 	if (channel >= channelNumber) {
-		caerLog(CAER_LOG_CRITICAL, "Frame Event",
-			"Called caerFrameEventSetPixelForChannel() with invalid channel number of %" PRIu8 ", should be between 0 and %" PRIu8 ".",
-			channel, (uint8_t) (channelNumber - 1));
+		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
+			"Called caerFrameEventSetPixelForChannel() with invalid channel number of %" PRIu8
+			", should be between 0 and %" PRIu8 ".",
+			channel, (uint8_t)(channelNumber - 1));
 		return;
 	}
 
 	// Set pixel value at specified position.
-	event->pixels[(((yAddress * xLength) + xAddress) * channelNumber) + channel] = htole16(pixelValue);
+	event->pixels[(((yAddress * xLength) + xAddress) * U8T(channelNumber)) + channel] = htole16(pixelValue);
 }
 
 /**
@@ -944,8 +1003,8 @@ static inline uint16_t caerFrameEventGetPixelUnsafe(caerFrameEventConst event, i
  * @param yAddress Y address value (unchecked).
  * @param pixelValue pixel value (normalized to 16 bit depth).
  */
-static inline void caerFrameEventSetPixelUnsafe(caerFrameEvent event, int32_t xAddress, int32_t yAddress,
-	uint16_t pixelValue) {
+static inline void caerFrameEventSetPixelUnsafe(
+	caerFrameEvent event, int32_t xAddress, int32_t yAddress, uint16_t pixelValue) {
 	// Set pixel value at specified position.
 	event->pixels[(yAddress * caerFrameEventGetLengthX(event)) + xAddress] = htole16(pixelValue);
 }
@@ -963,12 +1022,12 @@ static inline void caerFrameEventSetPixelUnsafe(caerFrameEvent event, int32_t xA
  *
  * @return pixel value (normalized to 16 bit depth).
  */
-static inline uint16_t caerFrameEventGetPixelForChannelUnsafe(caerFrameEventConst event, int32_t xAddress, int32_t yAddress,
-	uint8_t channel) {
-	uint8_t channelNumber = caerFrameEventGetChannelNumber(event);
+static inline uint16_t caerFrameEventGetPixelForChannelUnsafe(
+	caerFrameEventConst event, int32_t xAddress, int32_t yAddress, uint8_t channel) {
+	enum caer_frame_event_color_channels channelNumber = caerFrameEventGetChannelNumber(event);
 	// Get pixel value at specified position.
 	return (le16toh(
-		event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * channelNumber)+ channel]));
+		event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * U8T(channelNumber)) + channel]));
 }
 
 /**
@@ -983,12 +1042,12 @@ static inline uint16_t caerFrameEventGetPixelForChannelUnsafe(caerFrameEventCons
  * @param channel the channel number (unchecked).
  * @param pixelValue pixel value (normalized to 16 bit depth).
  */
-static inline void caerFrameEventSetPixelForChannelUnsafe(caerFrameEvent event, int32_t xAddress, int32_t yAddress,
-	uint8_t channel, uint16_t pixelValue) {
-	uint8_t channelNumber = caerFrameEventGetChannelNumber(event);
+static inline void caerFrameEventSetPixelForChannelUnsafe(
+	caerFrameEvent event, int32_t xAddress, int32_t yAddress, uint8_t channel, uint16_t pixelValue) {
+	enum caer_frame_event_color_channels channelNumber = caerFrameEventGetChannelNumber(event);
 	// Set pixel value at specified position.
-	event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * channelNumber) + channel] = htole16(
-		pixelValue);
+	event->pixels[(((yAddress * caerFrameEventGetLengthX(event)) + xAddress) * U8T(channelNumber)) + channel]
+		= htole16(pixelValue);
 }
 
 /**
@@ -1035,10 +1094,10 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_ITERATOR_ALL_START(FRAME_PACKET) \
-	for (int32_t caerFrameIteratorCounter = 0; \
-		caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
-		caerFrameIteratorCounter++) { \
+#define CAER_FRAME_ITERATOR_ALL_START(FRAME_PACKET)                                                     \
+	for (int32_t caerFrameIteratorCounter = 0;                                                          \
+		 caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
+		 caerFrameIteratorCounter++) {                                                                  \
 		caerFrameEvent caerFrameIteratorElement = caerFrameEventPacketGetEvent(FRAME_PACKET, caerFrameIteratorCounter);
 
 /**
@@ -1049,11 +1108,12 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_CONST_ITERATOR_ALL_START(FRAME_PACKET) \
-	for (int32_t caerFrameIteratorCounter = 0; \
-		caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
-		caerFrameIteratorCounter++) { \
-		caerFrameEventConst caerFrameIteratorElement = caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter);
+#define CAER_FRAME_CONST_ITERATOR_ALL_START(FRAME_PACKET)                                               \
+	for (int32_t caerFrameIteratorCounter = 0;                                                          \
+		 caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
+		 caerFrameIteratorCounter++) {                                                                  \
+		caerFrameEventConst caerFrameIteratorElement                                                    \
+			= caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter);
 
 /**
  * Iterator close statement.
@@ -1068,12 +1128,15 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_ITERATOR_VALID_START(FRAME_PACKET) \
-	for (int32_t caerFrameIteratorCounter = 0; \
-		caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
-		caerFrameIteratorCounter++) { \
-		caerFrameEvent caerFrameIteratorElement = caerFrameEventPacketGetEvent(FRAME_PACKET, caerFrameIteratorCounter); \
-		if (!caerFrameEventIsValid(caerFrameIteratorElement)) { continue; } // Skip invalid frame events.
+#define CAER_FRAME_ITERATOR_VALID_START(FRAME_PACKET)                                                   \
+	for (int32_t caerFrameIteratorCounter = 0;                                                          \
+		 caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
+		 caerFrameIteratorCounter++) {                                                                  \
+		caerFrameEvent caerFrameIteratorElement                                                         \
+			= caerFrameEventPacketGetEvent(FRAME_PACKET, caerFrameIteratorCounter);                     \
+		if (!caerFrameEventIsValid(caerFrameIteratorElement)) {                                         \
+			continue;                                                                                   \
+		} // Skip invalid frame events.
 
 /**
  * Const-Iterator over only the valid frame events in a packet.
@@ -1083,12 +1146,15 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_CONST_ITERATOR_VALID_START(FRAME_PACKET) \
-	for (int32_t caerFrameIteratorCounter = 0; \
-		caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
-		caerFrameIteratorCounter++) { \
-		caerFrameEventConst caerFrameIteratorElement = caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter); \
-		if (!caerFrameEventIsValid(caerFrameIteratorElement)) { continue; } // Skip invalid frame events.
+#define CAER_FRAME_CONST_ITERATOR_VALID_START(FRAME_PACKET)                                             \
+	for (int32_t caerFrameIteratorCounter = 0;                                                          \
+		 caerFrameIteratorCounter < caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader); \
+		 caerFrameIteratorCounter++) {                                                                  \
+		caerFrameEventConst caerFrameIteratorElement                                                    \
+			= caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter);                \
+		if (!caerFrameEventIsValid(caerFrameIteratorElement)) {                                         \
+			continue;                                                                                   \
+		} // Skip invalid frame events.
 
 /**
  * Iterator close statement.
@@ -1103,10 +1169,9 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_REVERSE_ITERATOR_ALL_START(FRAME_PACKET) \
+#define CAER_FRAME_REVERSE_ITERATOR_ALL_START(FRAME_PACKET)                                                         \
 	for (int32_t caerFrameIteratorCounter = caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader) - 1; \
-		caerFrameIteratorCounter >= 0; \
-		caerFrameIteratorCounter--) { \
+		 caerFrameIteratorCounter >= 0; caerFrameIteratorCounter--) {                                               \
 		caerFrameEvent caerFrameIteratorElement = caerFrameEventPacketGetEvent(FRAME_PACKET, caerFrameIteratorCounter);
 /**
  * Const-Reverse iterator over all frame events in a packet.
@@ -1116,11 +1181,11 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_CONST_REVERSE_ITERATOR_ALL_START(FRAME_PACKET) \
+#define CAER_FRAME_CONST_REVERSE_ITERATOR_ALL_START(FRAME_PACKET)                                                   \
 	for (int32_t caerFrameIteratorCounter = caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader) - 1; \
-		caerFrameIteratorCounter >= 0; \
-		caerFrameIteratorCounter--) { \
-		caerFrameEventConst caerFrameIteratorElement = caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter);
+		 caerFrameIteratorCounter >= 0; caerFrameIteratorCounter--) {                                               \
+		caerFrameEventConst caerFrameIteratorElement                                                                \
+			= caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter);
 
 /**
  * Reverse iterator close statement.
@@ -1135,12 +1200,14 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_REVERSE_ITERATOR_VALID_START(FRAME_PACKET) \
+#define CAER_FRAME_REVERSE_ITERATOR_VALID_START(FRAME_PACKET)                                                       \
 	for (int32_t caerFrameIteratorCounter = caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader) - 1; \
-		caerFrameIteratorCounter >= 0; \
-		caerFrameIteratorCounter--) { \
-		caerFrameEvent caerFrameIteratorElement = caerFrameEventPacketGetEvent(FRAME_PACKET, caerFrameIteratorCounter); \
-		if (!caerFrameEventIsValid(caerFrameIteratorElement)) { continue; } // Skip invalid frame events.
+		 caerFrameIteratorCounter >= 0; caerFrameIteratorCounter--) {                                               \
+		caerFrameEvent caerFrameIteratorElement                                                                     \
+			= caerFrameEventPacketGetEvent(FRAME_PACKET, caerFrameIteratorCounter);                                 \
+		if (!caerFrameEventIsValid(caerFrameIteratorElement)) {                                                     \
+			continue;                                                                                               \
+		} // Skip invalid frame events.
 
 /**
  * Const-Reverse iterator over only the valid frame events in a packet.
@@ -1150,12 +1217,14 @@ static inline const uint16_t *caerFrameEventGetPixelArrayUnsafeConst(caerFrameEv
  *
  * FRAME_PACKET: a valid FrameEventPacket pointer. Cannot be NULL.
  */
-#define CAER_FRAME_CONST_REVERSE_ITERATOR_VALID_START(FRAME_PACKET) \
+#define CAER_FRAME_CONST_REVERSE_ITERATOR_VALID_START(FRAME_PACKET)                                                 \
 	for (int32_t caerFrameIteratorCounter = caerEventPacketHeaderGetEventNumber(&(FRAME_PACKET)->packetHeader) - 1; \
-		caerFrameIteratorCounter >= 0; \
-		caerFrameIteratorCounter--) { \
-		caerFrameEventConst caerFrameIteratorElement = caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter); \
-		if (!caerFrameEventIsValid(caerFrameIteratorElement)) { continue; } // Skip invalid frame events.
+		 caerFrameIteratorCounter >= 0; caerFrameIteratorCounter--) {                                               \
+		caerFrameEventConst caerFrameIteratorElement                                                                \
+			= caerFrameEventPacketGetEventConst(FRAME_PACKET, caerFrameIteratorCounter);                            \
+		if (!caerFrameEventIsValid(caerFrameIteratorElement)) {                                                     \
+			continue;                                                                                               \
+		} // Skip invalid frame events.
 
 /**
  * Reverse iterator close statement.

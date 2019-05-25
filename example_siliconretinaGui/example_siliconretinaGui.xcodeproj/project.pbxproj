@@ -1,2656 +1,994 @@
-<?xml version="1.0"?>
-<plist version="1.0">
-	<dict>
-		<key>archiveVersion</key>
-		<string>1</string>
-		<key>classes</key>
-		<dict />
-		<key>objectVersion</key>
-		<string>46</string>
-		<key>objects</key>
-		<dict>
-			<key>2F1D6B225F788C78882946DA</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>72B6D9F6396CBAB509A90777</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>include</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>C8C62617C126D6112E2A0CB0</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>2F1D6B225F788C78882946DA</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>libusb-1.0</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>72B6D9F6396CBAB509A90777</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>libusb.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/include/libusb.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>63D2850AAF18F81E7C571D5C</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>usb_utils.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/usb_utils.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>988A453C859F755B2BE778CD</key>
-			<dict>
-				<key>fileRef</key>
-				<string>9A19279480BF6ADC7339B83C</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>9A19279480BF6ADC7339B83C</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>usb_utils.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/usb_utils.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>329D792CCECF5284C3E78566</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ringbuffer.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer/ringbuffer.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>4363DD56D0F0DADD83593218</key>
-			<dict>
-				<key>fileRef</key>
-				<string>97C7D802EBDF2126B3EBDFA3</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>97C7D802EBDF2126B3EBDFA3</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ringbuffer.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer/ringbuffer.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>53CE87A39F33B4669CE99531</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>71C79627A2C07B647B92923E</string>
-					<string>97C7D802EBDF2126B3EBDFA3</string>
-					<string>329D792CCECF5284C3E78566</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>ringbuffer</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>71C79627A2C07B647B92923E</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>portable_aligned_alloc.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer/portable_aligned_alloc.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>3A778AE3ADACC3F218128EFF</key>
-			<dict>
-				<key>fileRef</key>
-				<string>43DA9F18637C47D997E7C9C2</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>43DA9F18637C47D997E7C9C2</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>log.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/log.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>DDE0DD29AC05468A869F7378</key>
-			<dict>
-				<key>fileRef</key>
-				<string>E821615051B5C7A06E1D7D2A</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>E821615051B5C7A06E1D7D2A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>frame_utils.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/frame_utils.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>4F948936FD4C00C4B03F7FA8</key>
-			<dict>
-				<key>fileRef</key>
-				<string>408D3AE2AD8590F3B04EFC6C</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>408D3AE2AD8590F3B04EFC6C</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>events.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/events.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>D419A64ABB608B507ED1B5D3</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dynapse.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/dynapse.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>25418C9D4B3B57222099CD60</key>
-			<dict>
-				<key>fileRef</key>
-				<string>F74BDB9757D0DE7E14A91BFE</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>F74BDB9757D0DE7E14A91BFE</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dynapse.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/dynapse.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>784A13640E955EEFCA725235</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dvs128.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/dvs128.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>5E9F18E67D74FB3C83421BF5</key>
-			<dict>
-				<key>fileRef</key>
-				<string>AD975112D95064883DCD661B</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>AD975112D95064883DCD661B</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dvs128.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/dvs128.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>408E92C787DE6EDE5D3E4693</key>
-			<dict>
-				<key>fileRef</key>
-				<string>E6BF861CFA656ED539F40510</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>E6BF861CFA656ED539F40510</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>device.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/device.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>810FBA9BD09ADA751EBB156A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis_common.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/davis_common.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>C8A4B0FA91BF65A21618A458</key>
-			<dict>
-				<key>fileRef</key>
-				<string>CC80A564796D4641D396A92A</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>CC80A564796D4641D396A92A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis_common.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/davis_common.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>53A28478E031D1938A2DCF57</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>c11threads_posix.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/c11threads_posix.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>469D2715EA0B563F3BE4E0C3</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>autoexposure.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/autoexposure.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>002FF9EF75984C23C81C71C8</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>52FDA5E3611A2CACB05DEF82</string>
-					<string>469D2715EA0B563F3BE4E0C3</string>
-					<string>53A28478E031D1938A2DCF57</string>
-					<string>CC80A564796D4641D396A92A</string>
-					<string>810FBA9BD09ADA751EBB156A</string>
-					<string>E6BF861CFA656ED539F40510</string>
-					<string>AD975112D95064883DCD661B</string>
-					<string>784A13640E955EEFCA725235</string>
-					<string>F74BDB9757D0DE7E14A91BFE</string>
-					<string>D419A64ABB608B507ED1B5D3</string>
-					<string>408D3AE2AD8590F3B04EFC6C</string>
-					<string>E821615051B5C7A06E1D7D2A</string>
-					<string>43DA9F18637C47D997E7C9C2</string>
-					<string>53CE87A39F33B4669CE99531</string>
-					<string>9A19279480BF6ADC7339B83C</string>
-					<string>63D2850AAF18F81E7C571D5C</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>src</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>FB1858EF104D56E41EE52D04</key>
-			<dict>
-				<key>fileRef</key>
-				<string>52FDA5E3611A2CACB05DEF82</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>52FDA5E3611A2CACB05DEF82</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.c</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>autoexposure.c</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/autoexposure.c</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>8D16A064B037249393ED4907</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>network.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/network.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>F065774D21AECF9FF7185087</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>libcaer.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/libcaer.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>356CDFDDD3E86A3220D2FB4A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>utils.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/utils.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>A59F18BF347F3B181E15E00E</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>spike.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/spike.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>C73A6E54E482429BC299C0CC</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>special.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/special.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>0ADD4FB97D3DE60EE6868198</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>sample.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/sample.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>16A3B6CC38E2D46CC8B05DC6</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>polarity.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/polarity.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>68A2055A71B308DB85642920</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point4d.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point4d.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>D0310B3B3AA2AFDC3A18BD71</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point3d.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point3d.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>03E29596675835AF0F0A4DAE</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point2d.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point2d.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>B994F12156F66283973F8516</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point1d.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point1d.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>2B627BC08F693B1239A9BFC0</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>packetContainer.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/packetContainer.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>428C4CB0EB43C04F643E0D92</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>imu9.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/imu9.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>888ADC17FCFFD54DFE06DF15</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>imu6.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/imu6.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>EBF035B7141D4B9A5EC1F311</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>frame.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/frame.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>B6AA6B59B8FE890B2C949DDB</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ear.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/ear.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>F4A0DD8CC530FEA384F3135C</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>config.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/config.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>54228D9D1044B7CEECAC2C1E</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>544E689EA4AF0BFB65F33347</string>
-					<string>F4A0DD8CC530FEA384F3135C</string>
-					<string>B6AA6B59B8FE890B2C949DDB</string>
-					<string>EBF035B7141D4B9A5EC1F311</string>
-					<string>888ADC17FCFFD54DFE06DF15</string>
-					<string>428C4CB0EB43C04F643E0D92</string>
-					<string>2B627BC08F693B1239A9BFC0</string>
-					<string>B994F12156F66283973F8516</string>
-					<string>03E29596675835AF0F0A4DAE</string>
-					<string>D0310B3B3AA2AFDC3A18BD71</string>
-					<string>68A2055A71B308DB85642920</string>
-					<string>16A3B6CC38E2D46CC8B05DC6</string>
-					<string>0ADD4FB97D3DE60EE6868198</string>
-					<string>C73A6E54E482429BC299C0CC</string>
-					<string>A59F18BF347F3B181E15E00E</string>
-					<string>356CDFDDD3E86A3220D2FB4A</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>events</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>544E689EA4AF0BFB65F33347</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>common.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/common.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>C584D43EA5E4BBC13BC302EB</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>usb.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/usb.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>CDFA6FF8B79081171FDC4623</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dynapse.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/dynapse.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>A9BA291E147FE297B5741E71</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dvs128.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/dvs128.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>87298478136173E0A77EEAF0</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>9EFE95E860A7A5A2A564B01A</string>
-					<string>A9BA291E147FE297B5741E71</string>
-					<string>CDFA6FF8B79081171FDC4623</string>
-					<string>C584D43EA5E4BBC13BC302EB</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>devices</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>D6C183F726A191AB65A0E52B</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>87298478136173E0A77EEAF0</string>
-					<string>54228D9D1044B7CEECAC2C1E</string>
-					<string>F065774D21AECF9FF7185087</string>
-					<string>8D16A064B037249393ED4907</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>includecpp</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>9EFE95E860A7A5A2A564B01A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/davis.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>9F230FAC78D55B68D531E535</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>portable_endian.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/portable_endian.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>1A4C63A98C53F8BEA4B545E0</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>network.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/network.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>5DDAE67229D9A61724BA9CE0</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>log.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/log.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>52FF58B95AAB70FF27099569</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>D01A41D2934A066FEF7B9F40</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>libusb-1.0</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>D01A41D2934A066FEF7B9F40</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>libusb.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0/libusb.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>264909ECC3D3AA06B5221895</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>libcaer.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>61DC1359831D4C2E555E351A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>frame_utils.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/frame_utils.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>EFAA888A6737BBD933745A2B</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>spike.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/spike.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>812AB7A89C8DC53A2D8762D7</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>special.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/special.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>347FB6E5D0C4F6C4012A6F23</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>sample.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/sample.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>8FFE2A94B121C509C3A3B7E7</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>polarity.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/polarity.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>B43F5C5937BFF8945582095B</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point4d.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point4d.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>6046C51C5BD9DCBF06986B54</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point3d.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point3d.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>91A1FD5552BA0B1FF7FBCA41</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point2d.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point2d.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>FB567BAD41AC1A5055008C77</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>point1d.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point1d.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>1BAE97339B248DC41DE8EAE9</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>packetContainer.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/packetContainer.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>3AA8706AC57581F726B577DB</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>imu9.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/imu9.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>B187AEDED3FB36C22B4B1930</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>imu6.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/imu6.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>3880D6C34C0802C7DFC4D517</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>frame.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/frame.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>B92D50DFDB10A7157D71A4C3</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ear.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/ear.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>7C418F41FED8092EDB344226</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>config.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/config.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>5B18A1385EF7E060409D458E</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>E905447D0A06334E78C3B5D7</string>
-					<string>7C418F41FED8092EDB344226</string>
-					<string>B92D50DFDB10A7157D71A4C3</string>
-					<string>3880D6C34C0802C7DFC4D517</string>
-					<string>B187AEDED3FB36C22B4B1930</string>
-					<string>3AA8706AC57581F726B577DB</string>
-					<string>1BAE97339B248DC41DE8EAE9</string>
-					<string>FB567BAD41AC1A5055008C77</string>
-					<string>91A1FD5552BA0B1FF7FBCA41</string>
-					<string>6046C51C5BD9DCBF06986B54</string>
-					<string>B43F5C5937BFF8945582095B</string>
-					<string>8FFE2A94B121C509C3A3B7E7</string>
-					<string>347FB6E5D0C4F6C4012A6F23</string>
-					<string>812AB7A89C8DC53A2D8762D7</string>
-					<string>EFAA888A6737BBD933745A2B</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>events</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>E905447D0A06334E78C3B5D7</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>common.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events/common.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>88E9B9A95A2EE775CFFC4633</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>usb.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/usb.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>5554E02EE2BA451645586113</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dynapse.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/dynapse.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>BE45EC8F077F42B9E58D35E3</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>dvs128.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/dvs128.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>7F5207BD341C03D294BDC040</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>3E8E6C7C22C3AACF7B6FA5A2</string>
-					<string>BE45EC8F077F42B9E58D35E3</string>
-					<string>5554E02EE2BA451645586113</string>
-					<string>88E9B9A95A2EE775CFFC4633</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>devices</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>C65C25D200141BCC66128297</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>7F5207BD341C03D294BDC040</string>
-					<string>5B18A1385EF7E060409D458E</string>
-					<string>61DC1359831D4C2E555E351A</string>
-					<string>264909ECC3D3AA06B5221895</string>
-					<string>52FF58B95AAB70FF27099569</string>
-					<string>5DDAE67229D9A61724BA9CE0</string>
-					<string>1A4C63A98C53F8BEA4B545E0</string>
-					<string>9F230FAC78D55B68D531E535</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>include</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>C3518AABF7FB59ADA0538CFD</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>C65C25D200141BCC66128297</string>
-					<string>D6C183F726A191AB65A0E52B</string>
-					<string>002FF9EF75984C23C81C71C8</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>libcaer</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>C24EAFEA5F387DDCE4534137</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>C3518AABF7FB59ADA0538CFD</string>
-					<string>C8C62617C126D6112E2A0CB0</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>libs</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>3E8E6C7C22C3AACF7B6FA5A2</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>davis.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/davis.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>FF5E5A2063AD8AB2FAAC253C</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDVS.hpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/src/ofxDVS.hpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>FF856C20036809D724F03682</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>1FD5DE589407BAEC49F9E7E3</string>
-					<string>FF5E5A2063AD8AB2FAAC253C</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>src</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>15E4481F0FB2FCE8B0CC7824</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>FF856C20036809D724F03682</string>
-					<string>C24EAFEA5F387DDCE4534137</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>ofxSiliconRetina</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>20B09BDF2518F5E343BEA41D</key>
-			<dict>
-				<key>fileRef</key>
-				<string>1FD5DE589407BAEC49F9E7E3</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>1FD5DE589407BAEC49F9E7E3</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.cpp.cpp</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDVS.cpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxSiliconRetina/src/ofxDVS.cpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>21E1E3071CB7B11914428B62</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiThemes.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/themes/ofxDatGuiThemes.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>911FE1C75E520EE70A7B4830</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>B498F0559F473CF855EF6062</string>
-					<string>21E1E3071CB7B11914428B62</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>themes</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>B498F0559F473CF855EF6062</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiTheme.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/themes/ofxDatGuiTheme.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>9705D66270ED89ECA6E6FECE</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGui.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/ofxDatGui.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>C9466C434D1CF8AB968D298D</key>
-			<dict>
-				<key>fileRef</key>
-				<string>26490D7CC31EF7D6ED5F925A</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>26490D7CC31EF7D6ED5F925A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.cpp.cpp</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGui.cpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/ofxDatGui.cpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>896211FFD7650884437CE42C</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxSmartFont.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>0EF29D3ABD6E4147AE024D7A</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>C954E0E8B7DB9D6983309883</string>
-					<string>896211FFD7650884437CE42C</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>ofxSmartFont</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>69146F0BA46E48E576618E5E</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>0EF29D3ABD6E4147AE024D7A</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>libs</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>9CF4130A7E6DA19A3DC42B9A</key>
-			<dict>
-				<key>fileRef</key>
-				<string>C954E0E8B7DB9D6983309883</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>C954E0E8B7DB9D6983309883</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.cpp.cpp</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxSmartFont.cpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.cpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>422C4E1AAC7EC4D30B17702D</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiIntObject.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/core/ofxDatGuiIntObject.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>F59384ED57A7C6A7A8B0351D</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiEvents.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/core/ofxDatGuiEvents.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>9B5051062C6A871714E6F5F4</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiConstants.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/core/ofxDatGuiConstants.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>BCC84C6EB3417706F4F762F0</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiComponent.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/core/ofxDatGuiComponent.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>8870759BC9CAEA1E4E9EA3A8</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>1A3E3B8F332A1A3C7EDF4998</string>
-					<string>BCC84C6EB3417706F4F762F0</string>
-					<string>9B5051062C6A871714E6F5F4</string>
-					<string>F59384ED57A7C6A7A8B0351D</string>
-					<string>422C4E1AAC7EC4D30B17702D</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>core</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>D3C1C48E59CAA2D68C0DD477</key>
-			<dict>
-				<key>fileRef</key>
-				<string>1A3E3B8F332A1A3C7EDF4998</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>1A3E3B8F332A1A3C7EDF4998</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.cpp.cpp</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiComponent.cpp</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/core/ofxDatGuiComponent.cpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>0A42C807BEF3A18E8E105A3B</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiTimeGraph.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiTimeGraph.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>04C339FF9ADCF05DF2DA62A3</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiTextInputField.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiTextInputField.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>C085A33340AB0C1DB647AC2F</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiTextInput.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiTextInput.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>D0D6A66BEBA820EA1D396889</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiSlider.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiSlider.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>545BBA6F6669BED2DA497BC6</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiScrollView.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiScrollView.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>CDF7278CB636137FE7BF91A5</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiMatrix.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiMatrix.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>787315438BF1DD00C81DF413</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiLabel.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiLabel.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>744031A3E8F8DAF9FE6F3EA8</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiGroups.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiGroups.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>64C563B8158C37E9D07AE29D</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiFRM.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiFRM.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>E100ED9DCB412957A879CD5A</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiControls.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiControls.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>C84ED7FCC017328C6F58283D</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiColorPicker.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiColorPicker.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>FDA86F4C2F1F1964D35391C6</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGuiButton.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGuiButton.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>947FCD1248D8B0A16B53C1AA</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>902724601B82C6AD81BBCD71</string>
-					<string>FDA86F4C2F1F1964D35391C6</string>
-					<string>C84ED7FCC017328C6F58283D</string>
-					<string>E100ED9DCB412957A879CD5A</string>
-					<string>64C563B8158C37E9D07AE29D</string>
-					<string>744031A3E8F8DAF9FE6F3EA8</string>
-					<string>787315438BF1DD00C81DF413</string>
-					<string>CDF7278CB636137FE7BF91A5</string>
-					<string>545BBA6F6669BED2DA497BC6</string>
-					<string>D0D6A66BEBA820EA1D396889</string>
-					<string>C085A33340AB0C1DB647AC2F</string>
-					<string>04C339FF9ADCF05DF2DA62A3</string>
-					<string>0A42C807BEF3A18E8E105A3B</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>components</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>E9B32C117486580389FAFF01</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>947FCD1248D8B0A16B53C1AA</string>
-					<string>8870759BC9CAEA1E4E9EA3A8</string>
-					<string>69146F0BA46E48E576618E5E</string>
-					<string>26490D7CC31EF7D6ED5F925A</string>
-					<string>9705D66270ED89ECA6E6FECE</string>
-					<string>911FE1C75E520EE70A7B4830</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>src</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>D8DD1043C333F6F63C8685E6</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>E9B32C117486580389FAFF01</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>ofxDatGui</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>902724601B82C6AD81BBCD71</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofxDatGui2dPad.h</string>
-				<key>path</key>
-				<string>../../../addons/ofxDatGui/src/components/ofxDatGui2dPad.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>6948EE371B920CB800B5AC1A</key>
-			<dict>
-				<key>children</key>
-				<array />
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>local_addons</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>BB4B014C10F69532006C3DED</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>D8DD1043C333F6F63C8685E6</string>
-					<string>15E4481F0FB2FCE8B0CC7824</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>addons</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>E4328143138ABC890047C5CB</key>
-			<dict>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>lastKnownFileType</key>
-				<string>wrapper.pb-project</string>
-				<key>name</key>
-				<string>openFrameworksLib.xcodeproj</string>
-				<key>path</key>
-				<string>../../../libs/openFrameworksCompiled/project/osx/openFrameworksLib.xcodeproj</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>E4328144138ABC890047C5CB</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>E4328148138ABC890047C5CB</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>Products</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>E4328147138ABC890047C5CB</key>
-			<dict>
-				<key>containerPortal</key>
-				<string>E4328143138ABC890047C5CB</string>
-				<key>isa</key>
-				<string>PBXContainerItemProxy</string>
-				<key>proxyType</key>
-				<string>2</string>
-				<key>remoteGlobalIDString</key>
-				<string>E4B27C1510CBEB8E00536013</string>
-				<key>remoteInfo</key>
-				<string>openFrameworks</string>
-			</dict>
-			<key>E4328148138ABC890047C5CB</key>
-			<dict>
-				<key>fileType</key>
-				<string>archive.ar</string>
-				<key>isa</key>
-				<string>PBXReferenceProxy</string>
-				<key>path</key>
-				<string>openFrameworksDebug.a</string>
-				<key>remoteRef</key>
-				<string>E4328147138ABC890047C5CB</string>
-				<key>sourceTree</key>
-				<string>BUILT_PRODUCTS_DIR</string>
-			</dict>
-			<key>E4328149138ABC9F0047C5CB</key>
-			<dict>
-				<key>fileRef</key>
-				<string>E4328148138ABC890047C5CB</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>E4B69B4A0A3A1720003C02F2</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>E4B6FCAD0C3E899E008CF71C</string>
-					<string>E4EB6923138AFD0F00A09F29</string>
-					<string>E4B69E1C0A3A1BDC003C02F2</string>
-					<string>E4EEC9E9138DF44700A80321</string>
-					<string>BB4B014C10F69532006C3DED</string>
-					<string>6948EE371B920CB800B5AC1A</string>
-					<string>E4B69B5B0A3A1756003C02F2</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>E4B69B4C0A3A1720003C02F2</key>
-			<dict>
-				<key>attributes</key>
-				<dict>
-					<key>LastUpgradeCheck</key>
-					<string>0600</string>
-				</dict>
-				<key>buildConfigurationList</key>
-				<string>E4B69B4D0A3A1720003C02F2</string>
-				<key>compatibilityVersion</key>
-				<string>Xcode 3.2</string>
-				<key>developmentRegion</key>
-				<string>English</string>
-				<key>hasScannedForEncodings</key>
-				<string>0</string>
-				<key>isa</key>
-				<string>PBXProject</string>
-				<key>knownRegions</key>
-				<array>
-					<string>English</string>
-					<string>Japanese</string>
-					<string>French</string>
-					<string>German</string>
-				</array>
-				<key>mainGroup</key>
-				<string>E4B69B4A0A3A1720003C02F2</string>
-				<key>productRefGroup</key>
-				<string>E4B69B4A0A3A1720003C02F2</string>
-				<key>projectDirPath</key>
-				<string />
-				<key>projectReferences</key>
-				<array>
-					<dict>
-						<key>ProductGroup</key>
-						<string>E4328144138ABC890047C5CB</string>
-						<key>ProjectRef</key>
-						<string>E4328143138ABC890047C5CB</string>
-					</dict>
-				</array>
-				<key>projectRoot</key>
-				<string />
-				<key>targets</key>
-				<array>
-					<string>E4B69B5A0A3A1756003C02F2</string>
-				</array>
-			</dict>
-			<key>E4B69B4D0A3A1720003C02F2</key>
-			<dict>
-				<key>buildConfigurations</key>
-				<array>
-					<string>E4B69B4E0A3A1720003C02F2</string>
-					<string>E4B69B4F0A3A1720003C02F2</string>
-				</array>
-				<key>defaultConfigurationIsVisible</key>
-				<string>0</string>
-				<key>defaultConfigurationName</key>
-				<string>Release</string>
-				<key>isa</key>
-				<string>XCConfigurationList</string>
-			</dict>
-			<key>E4B69B4E0A3A1720003C02F2</key>
-			<dict>
-				<key>baseConfigurationReference</key>
-				<string>E4EB6923138AFD0F00A09F29</string>
-				<key>buildSettings</key>
-				<dict>
-					<key>OTHER_LDFLAGS</key>
-					<array>
-						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib</string>
-					</array>
-					<key>HEADER_SEARCH_PATHS</key>
-					<array>
-						<string>$(OF_CORE_HEADERS)</string>
-						<string>src</string>
-						<string>../../../addons/ofxDatGui/src</string>
-						<string>../../../addons/ofxDatGui/src/components</string>
-						<string>../../../addons/ofxDatGui/src/core</string>
-						<string>../../../addons/ofxDatGui/src/libs</string>
-						<string>../../../addons/ofxDatGui/src/libs/ofxSmartFont</string>
-						<string>../../../addons/ofxDatGui/src/themes</string>
-						<string>../../../addons/ofxSiliconRetina/libs</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/src</string>
-					</array>
-					<key>CONFIGURATION_BUILD_DIR</key>
-					<string>$(SRCROOT)/bin/</string>
-					<key>COPY_PHASE_STRIP</key>
-					<string>NO</string>
-					<key>DEAD_CODE_STRIPPING</key>
-					<string>YES</string>
-					<key>GCC_AUTO_VECTORIZATION</key>
-					<string>YES</string>
-					<key>GCC_ENABLE_SSE3_EXTENSIONS</key>
-					<string>YES</string>
-					<key>GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS</key>
-					<string>YES</string>
-					<key>GCC_INLINES_ARE_PRIVATE_EXTERN</key>
-					<string>NO</string>
-					<key>GCC_OPTIMIZATION_LEVEL</key>
-					<string>0</string>
-					<key>GCC_SYMBOLS_PRIVATE_EXTERN</key>
-					<string>NO</string>
-					<key>GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS</key>
-					<string>YES</string>
-					<key>GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO</key>
-					<string>NO</string>
-					<key>GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL</key>
-					<string>NO</string>
-					<key>GCC_WARN_UNINITIALIZED_AUTOS</key>
-					<string>NO</string>
-					<key>GCC_WARN_UNUSED_VALUE</key>
-					<string>NO</string>
-					<key>GCC_WARN_UNUSED_VARIABLE</key>
-					<string>NO</string>
-					<key>MACOSX_DEPLOYMENT_TARGET</key>
-					<string>10.8</string>
-					<key>ONLY_ACTIVE_ARCH</key>
-					<string>YES</string>
-					<key>OTHER_CPLUSPLUSFLAGS</key>
-					<array>
-						<string>-D__MACOSX_CORE__</string>
-						<string>-mtune=native</string>
-					</array>
-					<key>SDKROOT</key>
-					<string>macosx</string>
-				</dict>
-				<key>isa</key>
-				<string>XCBuildConfiguration</string>
-				<key>name</key>
-				<string>Debug</string>
-			</dict>
-			<key>E4B69B4F0A3A1720003C02F2</key>
-			<dict>
-				<key>baseConfigurationReference</key>
-				<string>E4EB6923138AFD0F00A09F29</string>
-				<key>buildSettings</key>
-				<dict>
-					<key>OTHER_LDFLAGS</key>
-					<array>
-						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib</string>
-					</array>
-					<key>HEADER_SEARCH_PATHS</key>
-					<array>
-						<string>$(OF_CORE_HEADERS)</string>
-						<string>src</string>
-						<string>../../../addons/ofxDatGui/src</string>
-						<string>../../../addons/ofxDatGui/src/components</string>
-						<string>../../../addons/ofxDatGui/src/core</string>
-						<string>../../../addons/ofxDatGui/src/libs</string>
-						<string>../../../addons/ofxDatGui/src/libs/ofxSmartFont</string>
-						<string>../../../addons/ofxDatGui/src/themes</string>
-						<string>../../../addons/ofxSiliconRetina/libs</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/src</string>
-					</array>
-					<key>CONFIGURATION_BUILD_DIR</key>
-					<string>$(SRCROOT)/bin/</string>
-					<key>COPY_PHASE_STRIP</key>
-					<string>YES</string>
-					<key>DEAD_CODE_STRIPPING</key>
-					<string>YES</string>
-					<key>GCC_AUTO_VECTORIZATION</key>
-					<string>YES</string>
-					<key>GCC_ENABLE_SSE3_EXTENSIONS</key>
-					<string>YES</string>
-					<key>GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS</key>
-					<string>YES</string>
-					<key>GCC_INLINES_ARE_PRIVATE_EXTERN</key>
-					<string>NO</string>
-					<key>GCC_OPTIMIZATION_LEVEL</key>
-					<string>3</string>
-					<key>GCC_SYMBOLS_PRIVATE_EXTERN</key>
-					<string>NO</string>
-					<key>GCC_UNROLL_LOOPS</key>
-					<string>YES</string>
-					<key>GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS</key>
-					<string>YES</string>
-					<key>GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO</key>
-					<string>NO</string>
-					<key>GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL</key>
-					<string>NO</string>
-					<key>GCC_WARN_UNINITIALIZED_AUTOS</key>
-					<string>NO</string>
-					<key>GCC_WARN_UNUSED_VALUE</key>
-					<string>NO</string>
-					<key>GCC_WARN_UNUSED_VARIABLE</key>
-					<string>NO</string>
-					<key>MACOSX_DEPLOYMENT_TARGET</key>
-					<string>10.8</string>
-					<key>OTHER_CPLUSPLUSFLAGS</key>
-					<array>
-						<string>-D__MACOSX_CORE__</string>
-						<string>-mtune=native</string>
-					</array>
-					<key>SDKROOT</key>
-					<string>macosx</string>
-				</dict>
-				<key>isa</key>
-				<string>XCBuildConfiguration</string>
-				<key>name</key>
-				<string>Release</string>
-			</dict>
-			<key>E4B69B580A3A1756003C02F2</key>
-			<dict>
-				<key>buildActionMask</key>
-				<string>2147483647</string>
-				<key>files</key>
-				<array>
-					<string>E4B69E200A3A1BDC003C02F2</string>
-					<string>E4B69E210A3A1BDC003C02F2</string>
-					<string>D3C1C48E59CAA2D68C0DD477</string>
-					<string>9CF4130A7E6DA19A3DC42B9A</string>
-					<string>C9466C434D1CF8AB968D298D</string>
-					<string>20B09BDF2518F5E343BEA41D</string>
-					<string>FB1858EF104D56E41EE52D04</string>
-					<string>C8A4B0FA91BF65A21618A458</string>
-					<string>408E92C787DE6EDE5D3E4693</string>
-					<string>5E9F18E67D74FB3C83421BF5</string>
-					<string>25418C9D4B3B57222099CD60</string>
-					<string>4F948936FD4C00C4B03F7FA8</string>
-					<string>DDE0DD29AC05468A869F7378</string>
-					<string>3A778AE3ADACC3F218128EFF</string>
-					<string>4363DD56D0F0DADD83593218</string>
-					<string>988A453C859F755B2BE778CD</string>
-				</array>
-				<key>isa</key>
-				<string>PBXSourcesBuildPhase</string>
-				<key>runOnlyForDeploymentPostprocessing</key>
-				<string>0</string>
-			</dict>
-			<key>E4B69B590A3A1756003C02F2</key>
-			<dict>
-				<key>buildActionMask</key>
-				<string>2147483647</string>
-				<key>files</key>
-				<array>
-					<string>E4328149138ABC9F0047C5CB</string>
-				</array>
-				<key>isa</key>
-				<string>PBXFrameworksBuildPhase</string>
-				<key>runOnlyForDeploymentPostprocessing</key>
-				<string>0</string>
-			</dict>
-			<key>E4B69B5A0A3A1756003C02F2</key>
-			<dict>
-				<key>buildConfigurationList</key>
-				<string>E4B69B5F0A3A1757003C02F2</string>
-				<key>buildPhases</key>
-				<array>
-					<string>E4B69B580A3A1756003C02F2</string>
-					<string>E4B69B590A3A1756003C02F2</string>
-					<string>E4B6FFFD0C3F9AB9008CF71C</string>
-					<string>E4C2427710CC5ABF004149E2</string>
-				</array>
-				<key>buildRules</key>
-				<array />
-				<key>dependencies</key>
-				<array>
-					<string>E4EEB9AC138B136A00A80321</string>
-				</array>
-				<key>isa</key>
-				<string>PBXNativeTarget</string>
-				<key>name</key>
-				<string>example_siliconretinaGui</string>
-				<key>productName</key>
-				<string>myOFApp</string>
-				<key>productReference</key>
-				<string>E4B69B5B0A3A1756003C02F2</string>
-				<key>productType</key>
-				<string>com.apple.product-type.application</string>
-			</dict>
-			<key>E4B69B5B0A3A1756003C02F2</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>wrapper.application</string>
-				<key>includeInIndex</key>
-				<string>0</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>path</key>
-				<string>example_siliconretinaGuiDebug.app</string>
-				<key>sourceTree</key>
-				<string>BUILT_PRODUCTS_DIR</string>
-			</dict>
-			<key>E4B69B5F0A3A1757003C02F2</key>
-			<dict>
-				<key>buildConfigurations</key>
-				<array>
-					<string>E4B69B600A3A1757003C02F2</string>
-					<string>E4B69B610A3A1757003C02F2</string>
-				</array>
-				<key>defaultConfigurationIsVisible</key>
-				<string>0</string>
-				<key>defaultConfigurationName</key>
-				<string>Release</string>
-				<key>isa</key>
-				<string>XCConfigurationList</string>
-			</dict>
-			<key>E4B69B600A3A1757003C02F2</key>
-			<dict>
-				<key>baseConfigurationReference</key>
-				<string>E4EB6923138AFD0F00A09F29</string>
-				<key>buildSettings</key>
-				<dict>
-					<key>OTHER_LDFLAGS</key>
-					<array>
-						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib</string>
-					</array>
-					<key>HEADER_SEARCH_PATHS</key>
-					<array>
-						<string>$(OF_CORE_HEADERS)</string>
-						<string>src</string>
-						<string>../../../addons/ofxDatGui/src</string>
-						<string>../../../addons/ofxDatGui/src/components</string>
-						<string>../../../addons/ofxDatGui/src/core</string>
-						<string>../../../addons/ofxDatGui/src/libs</string>
-						<string>../../../addons/ofxDatGui/src/libs/ofxSmartFont</string>
-						<string>../../../addons/ofxDatGui/src/themes</string>
-						<string>../../../addons/ofxSiliconRetina/libs</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/src</string>
-					</array>
-					<key>COMBINE_HIDPI_IMAGES</key>
-					<string>YES</string>
-					<key>COPY_PHASE_STRIP</key>
-					<string>NO</string>
-					<key>FRAMEWORK_SEARCH_PATHS</key>
-					<array>
-						<string>$(inherited)</string>
-						<string>$(FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1)</string>
-					</array>
-					<key>FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1</key>
-					<string>"$(SRCROOT)/../../../libs/glut/lib/osx"</string>
-					<key>GCC_DYNAMIC_NO_PIC</key>
-					<string>NO</string>
-					<key>GCC_GENERATE_DEBUGGING_SYMBOLS</key>
-					<string>YES</string>
-					<key>GCC_MODEL_TUNING</key>
-					<string>NONE</string>
-					<key>ICON</key>
-					<string>$(ICON_NAME_DEBUG)</string>
-					<key>ICON_FILE</key>
-					<string>$(ICON_FILE_PATH)$(ICON)</string>
-					<key>INFOPLIST_FILE</key>
-					<string>openFrameworks-Info.plist</string>
-					<key>INSTALL_PATH</key>
-					<string>/Applications</string>
-					<key>LIBRARY_SEARCH_PATHS</key>
-					<string>$(inherited)</string>
-					<key>PRODUCT_NAME</key>
-					<string>$(TARGET_NAME)Debug</string>
-					<key>WRAPPER_EXTENSION</key>
-					<string>app</string>
-				</dict>
-				<key>isa</key>
-				<string>XCBuildConfiguration</string>
-				<key>name</key>
-				<string>Debug</string>
-			</dict>
-			<key>E4B69B610A3A1757003C02F2</key>
-			<dict>
-				<key>baseConfigurationReference</key>
-				<string>E4EB6923138AFD0F00A09F29</string>
-				<key>buildSettings</key>
-				<dict>
-					<key>OTHER_LDFLAGS</key>
-					<array>
-						<string>$(OF_CORE_FRAMEWORKS) $(OF_CORE_LIBS)</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.2.dylib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib</string>
-					</array>
-					<key>HEADER_SEARCH_PATHS</key>
-					<array>
-						<string>$(OF_CORE_HEADERS)</string>
-						<string>src</string>
-						<string>../../../addons/ofxDatGui/src</string>
-						<string>../../../addons/ofxDatGui/src/components</string>
-						<string>../../../addons/ofxDatGui/src/core</string>
-						<string>../../../addons/ofxDatGui/src/libs</string>
-						<string>../../../addons/ofxDatGui/src/libs/ofxSmartFont</string>
-						<string>../../../addons/ofxDatGui/src/themes</string>
-						<string>../../../addons/ofxSiliconRetina/libs</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/include/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/include</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib</string>
-						<string>../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx</string>
-						<string>../../../addons/ofxSiliconRetina/src</string>
-					</array>
-					<key>COMBINE_HIDPI_IMAGES</key>
-					<string>YES</string>
-					<key>COPY_PHASE_STRIP</key>
-					<string>YES</string>
-					<key>FRAMEWORK_SEARCH_PATHS</key>
-					<array>
-						<string>$(inherited)</string>
-						<string>$(FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1)</string>
-					</array>
-					<key>FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1</key>
-					<string>"$(SRCROOT)/../../../libs/glut/lib/osx"</string>
-					<key>GCC_GENERATE_DEBUGGING_SYMBOLS</key>
-					<string>YES</string>
-					<key>GCC_MODEL_TUNING</key>
-					<string>NONE</string>
-					<key>ICON</key>
-					<string>$(ICON_NAME_RELEASE)</string>
-					<key>ICON_FILE</key>
-					<string>$(ICON_FILE_PATH)$(ICON)</string>
-					<key>INFOPLIST_FILE</key>
-					<string>openFrameworks-Info.plist</string>
-					<key>INSTALL_PATH</key>
-					<string>/Applications</string>
-					<key>LIBRARY_SEARCH_PATHS</key>
-					<string>$(inherited)</string>
-					<key>PRODUCT_NAME</key>
-					<string>$(TARGET_NAME)</string>
-					<key>WRAPPER_EXTENSION</key>
-					<string>app</string>
-					<key>baseConfigurationReference</key>
-					<string>E4EB6923138AFD0F00A09F29</string>
-				</dict>
-				<key>isa</key>
-				<string>XCBuildConfiguration</string>
-				<key>name</key>
-				<string>Release</string>
-			</dict>
-			<key>E4B69E1C0A3A1BDC003C02F2</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>E4B69E1D0A3A1BDC003C02F2</string>
-					<string>E4B69E1E0A3A1BDC003C02F2</string>
-					<string>E4B69E1F0A3A1BDC003C02F2</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>path</key>
-				<string>src</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>E4B69E1D0A3A1BDC003C02F2</key>
-			<dict>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>lastKnownFileType</key>
-				<string>sourcecode.cpp.cpp</string>
-				<key>name</key>
-				<string>main.cpp</string>
-				<key>path</key>
-				<string>src/main.cpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>E4B69E1E0A3A1BDC003C02F2</key>
-			<dict>
-				<key>explicitFileType</key>
-				<string>sourcecode.cpp.cpp</string>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>name</key>
-				<string>ofApp.cpp</string>
-				<key>path</key>
-				<string>src/ofApp.cpp</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>E4B69E1F0A3A1BDC003C02F2</key>
-			<dict>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>lastKnownFileType</key>
-				<string>sourcecode.c.h</string>
-				<key>name</key>
-				<string>ofApp.h</string>
-				<key>path</key>
-				<string>src/ofApp.h</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>E4B69E200A3A1BDC003C02F2</key>
-			<dict>
-				<key>fileRef</key>
-				<string>E4B69E1D0A3A1BDC003C02F2</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>E4B69E210A3A1BDC003C02F2</key>
-			<dict>
-				<key>fileRef</key>
-				<string>E4B69E1E0A3A1BDC003C02F2</string>
-				<key>isa</key>
-				<string>PBXBuildFile</string>
-			</dict>
-			<key>E4B6FCAD0C3E899E008CF71C</key>
-			<dict>
-				<key>fileEncoding</key>
-				<string>30</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>lastKnownFileType</key>
-				<string>text.plist.xml</string>
-				<key>path</key>
-				<string>openFrameworks-Info.plist</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>E4B6FFFD0C3F9AB9008CF71C</key>
-			<dict>
-				<key>buildActionMask</key>
-				<string>2147483647</string>
-				<key>files</key>
-				<array />
-				<key>inputPaths</key>
-				<array />
-				<key>isa</key>
-				<string>PBXShellScriptBuildPhase</string>
-				<key>outputPaths</key>
-				<array />
-				<key>runOnlyForDeploymentPostprocessing</key>
-				<string>0</string>
-				<key>shellPath</key>
-				<string>/bin/sh</string>
-				<key>shellScript</key>
-				<string>mkdir -p "$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/"
-# Copy default icon file into App/Resources
-rsync -aved "$ICON_FILE" "$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/"
-# Copy libfmod and change install directory for fmod to run
-rsync -aved ../../../libs/fmodex/lib/osx/libfmodex.dylib "$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Frameworks/";
-install_name_tool -change @executable_path/libfmodex.dylib @executable_path/../Frameworks/libfmodex.dylib "$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME";
-# Copy GLUT framework (must remove for AppStore submissions)
-rsync -aved ../../../libs/glut/lib/osx/GLUT.framework "$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Frameworks/"
-</string>
-			</dict>
-			<key>E4C2427710CC5ABF004149E2</key>
-			<dict>
-				<key>buildActionMask</key>
-				<string>2147483647</string>
-				<key>dstPath</key>
-				<string />
-				<key>dstSubfolderSpec</key>
-				<string>10</string>
-				<key>files</key>
-				<array />
-				<key>isa</key>
-				<string>PBXCopyFilesBuildPhase</string>
-				<key>runOnlyForDeploymentPostprocessing</key>
-				<string>0</string>
-			</dict>
-			<key>E4EB691F138AFCF100A09F29</key>
-			<dict>
-				<key>fileEncoding</key>
-				<string>4</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>lastKnownFileType</key>
-				<string>text.xcconfig</string>
-				<key>name</key>
-				<string>CoreOF.xcconfig</string>
-				<key>path</key>
-				<string>../../../libs/openFrameworksCompiled/project/osx/CoreOF.xcconfig</string>
-				<key>sourceTree</key>
-				<string>SOURCE_ROOT</string>
-			</dict>
-			<key>E4EB6923138AFD0F00A09F29</key>
-			<dict>
-				<key>fileEncoding</key>
-				<string>4</string>
-				<key>isa</key>
-				<string>PBXFileReference</string>
-				<key>lastKnownFileType</key>
-				<string>text.xcconfig</string>
-				<key>path</key>
-				<string>Project.xcconfig</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-			<key>E4EEB9AB138B136A00A80321</key>
-			<dict>
-				<key>containerPortal</key>
-				<string>E4328143138ABC890047C5CB</string>
-				<key>isa</key>
-				<string>PBXContainerItemProxy</string>
-				<key>proxyType</key>
-				<string>1</string>
-				<key>remoteGlobalIDString</key>
-				<string>E4B27C1410CBEB8E00536013</string>
-				<key>remoteInfo</key>
-				<string>openFrameworks</string>
-			</dict>
-			<key>E4EEB9AC138B136A00A80321</key>
-			<dict>
-				<key>isa</key>
-				<string>PBXTargetDependency</string>
-				<key>name</key>
-				<string>openFrameworks</string>
-				<key>targetProxy</key>
-				<string>E4EEB9AB138B136A00A80321</string>
-			</dict>
-			<key>E4EEC9E9138DF44700A80321</key>
-			<dict>
-				<key>children</key>
-				<array>
-					<string>E4EB691F138AFCF100A09F29</string>
-					<string>E4328143138ABC890047C5CB</string>
-				</array>
-				<key>isa</key>
-				<string>PBXGroup</string>
-				<key>name</key>
-				<string>openFrameworks</string>
-				<key>sourceTree</key>
-				<string>&lt;group&gt;</string>
-			</dict>
-		</dict>
-		<key>rootObject</key>
-		<string>E4B69B4C0A3A1720003C02F2</string>
-	</dict>
-</plist>
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		20B09BDF2518F5E343BEA41D /* ofxDVS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1FD5DE589407BAEC49F9E7E3 /* ofxDVS.cpp */; };
+		25418C9D4B3B57222099CD60 /* dynapse.c in Sources */ = {isa = PBXBuildFile; fileRef = F74BDB9757D0DE7E14A91BFE /* dynapse.c */; };
+		3A778AE3ADACC3F218128EFF /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 43DA9F18637C47D997E7C9C2 /* log.c */; };
+		408E92C787DE6EDE5D3E4693 /* device.c in Sources */ = {isa = PBXBuildFile; fileRef = E6BF861CFA656ED539F40510 /* device.c */; };
+		576E756DB3BD0D8EC00AC7F5 /* filters_dvs_noise.c in Sources */ = {isa = PBXBuildFile; fileRef = 7717E25A36D8D541B102BE0C /* filters_dvs_noise.c */; };
+		5E9F18E67D74FB3C83421BF5 /* dvs128.c in Sources */ = {isa = PBXBuildFile; fileRef = AD975112D95064883DCD661B /* dvs128.c */; };
+		8CBE50155AA576B4E92640B2 /* device_discover.c in Sources */ = {isa = PBXBuildFile; fileRef = DD56E7B288FC1751CB116A9D /* device_discover.c */; };
+		95E1FB372640C3F8AE8B1275 /* davis.c in Sources */ = {isa = PBXBuildFile; fileRef = C00785839FF816C256DF7271 /* davis.c */; };
+		988A453C859F755B2BE778CD /* usb_utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 9A19279480BF6ADC7339B83C /* usb_utils.c */; };
+		9CF4130A7E6DA19A3DC42B9A /* ofxSmartFont.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C954E0E8B7DB9D6983309883 /* ofxSmartFont.cpp */; };
+		C3CF806F30E886EA12663E2E /* ringbuffer.c in Sources */ = {isa = PBXBuildFile; fileRef = 7496240E9D66FF79259CFDE5 /* ringbuffer.c */; };
+		C9466C434D1CF8AB968D298D /* ofxDatGui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26490D7CC31EF7D6ED5F925A /* ofxDatGui.cpp */; };
+		D3C1C48E59CAA2D68C0DD477 /* ofxDatGuiComponent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A3E3B8F332A1A3C7EDF4998 /* ofxDatGuiComponent.cpp */; };
+		DDE0DD29AC05468A869F7378 /* frame_utils.c in Sources */ = {isa = PBXBuildFile; fileRef = E821615051B5C7A06E1D7D2A /* frame_utils.c */; };
+		E4328149138ABC9F0047C5CB /* openFrameworksDebug.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E4328148138ABC890047C5CB /* openFrameworksDebug.a */; };
+		E4B69E200A3A1BDC003C02F2 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E4B69E1D0A3A1BDC003C02F2 /* main.cpp */; };
+		E4B69E210A3A1BDC003C02F2 /* ofApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E4B69E1E0A3A1BDC003C02F2 /* ofApp.cpp */; };
+		FB1858EF104D56E41EE52D04 /* autoexposure.c in Sources */ = {isa = PBXBuildFile; fileRef = 52FDA5E3611A2CACB05DEF82 /* autoexposure.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E4328147138ABC890047C5CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E4328143138ABC890047C5CB /* openFrameworksLib.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = E4B27C1510CBEB8E00536013;
+			remoteInfo = openFrameworks;
+		};
+		E4EEB9AB138B136A00A80321 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E4328143138ABC890047C5CB /* openFrameworksLib.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = E4B27C1410CBEB8E00536013;
+			remoteInfo = openFrameworks;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E4C2427710CC5ABF004149E2 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		029A24B6109F5BA124FF948D /* spi_config_interface.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = spi_config_interface.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/spi_config_interface.h; sourceTree = SOURCE_ROOT; };
+		032054F629840A307CFA709B /* edvs.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = edvs.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/edvs.h; sourceTree = SOURCE_ROOT; };
+		03E29596675835AF0F0A4DAE /* point2d.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point2d.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point2d.hpp; sourceTree = SOURCE_ROOT; };
+		04C339FF9ADCF05DF2DA62A3 /* ofxDatGuiTextInputField.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiTextInputField.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiTextInputField.h; sourceTree = SOURCE_ROOT; };
+		0A42C807BEF3A18E8E105A3B /* ofxDatGuiTimeGraph.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiTimeGraph.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiTimeGraph.h; sourceTree = SOURCE_ROOT; };
+		0ADD4FB97D3DE60EE6868198 /* sample.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = sample.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/sample.hpp; sourceTree = SOURCE_ROOT; };
+		0F916E887A97E15CFBF16476 /* edvs.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = edvs.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/edvs.hpp; sourceTree = SOURCE_ROOT; };
+		16A3B6CC38E2D46CC8B05DC6 /* polarity.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = polarity.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/polarity.hpp; sourceTree = SOURCE_ROOT; };
+		1A3E3B8F332A1A3C7EDF4998 /* ofxDatGuiComponent.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 30; name = ofxDatGuiComponent.cpp; path = ../../../addons/ofxDatGui/src/core/ofxDatGuiComponent.cpp; sourceTree = SOURCE_ROOT; };
+		1A4C63A98C53F8BEA4B545E0 /* network.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = network.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/network.h; sourceTree = SOURCE_ROOT; };
+		1BAE97339B248DC41DE8EAE9 /* packetContainer.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = packetContainer.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/packetContainer.h; sourceTree = SOURCE_ROOT; };
+		1FD5DE589407BAEC49F9E7E3 /* ofxDVS.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 30; name = ofxDVS.cpp; path = ../../../addons/ofxSiliconRetina/src/ofxDVS.cpp; sourceTree = SOURCE_ROOT; };
+		21E1E3071CB7B11914428B62 /* ofxDatGuiThemes.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiThemes.h; path = ../../../addons/ofxDatGui/src/themes/ofxDatGuiThemes.h; sourceTree = SOURCE_ROOT; };
+		264909ECC3D3AA06B5221895 /* libcaer.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = libcaer.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer.h; sourceTree = SOURCE_ROOT; };
+		26490D7CC31EF7D6ED5F925A /* ofxDatGui.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 30; name = ofxDatGui.cpp; path = ../../../addons/ofxDatGui/src/ofxDatGui.cpp; sourceTree = SOURCE_ROOT; };
+		28FA4A7D685DD34C092E7467 /* portable_time.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = portable_time.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/portable_time.h; sourceTree = SOURCE_ROOT; };
+		2B627BC08F693B1239A9BFC0 /* packetContainer.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = packetContainer.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/packetContainer.hpp; sourceTree = SOURCE_ROOT; };
+		347FB6E5D0C4F6C4012A6F23 /* sample.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = sample.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/sample.h; sourceTree = SOURCE_ROOT; };
+		356CDFDDD3E86A3220D2FB4A /* utils.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = utils.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/utils.hpp; sourceTree = SOURCE_ROOT; };
+		3880D6C34C0802C7DFC4D517 /* frame.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = frame.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/frame.h; sourceTree = SOURCE_ROOT; };
+		3AA8706AC57581F726B577DB /* imu9.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = imu9.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/imu9.h; sourceTree = SOURCE_ROOT; };
+		3E8E6C7C22C3AACF7B6FA5A2 /* davis.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = davis.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/davis.h; sourceTree = SOURCE_ROOT; };
+		422C4E1AAC7EC4D30B17702D /* ofxDatGuiIntObject.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiIntObject.h; path = ../../../addons/ofxDatGui/src/core/ofxDatGuiIntObject.h; sourceTree = SOURCE_ROOT; };
+		428C4CB0EB43C04F643E0D92 /* imu9.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = imu9.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/imu9.hpp; sourceTree = SOURCE_ROOT; };
+		43DA9F18637C47D997E7C9C2 /* log.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = log.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/log.c; sourceTree = SOURCE_ROOT; };
+		469D2715EA0B563F3BE4E0C3 /* autoexposure.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = autoexposure.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/autoexposure.h; sourceTree = SOURCE_ROOT; };
+		52FDA5E3611A2CACB05DEF82 /* autoexposure.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = autoexposure.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/autoexposure.c; sourceTree = SOURCE_ROOT; };
+		53A28478E031D1938A2DCF57 /* c11threads_posix.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = c11threads_posix.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/c11threads_posix.h; sourceTree = SOURCE_ROOT; };
+		544E689EA4AF0BFB65F33347 /* common.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = common.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/common.hpp; sourceTree = SOURCE_ROOT; };
+		545BBA6F6669BED2DA497BC6 /* ofxDatGuiScrollView.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiScrollView.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiScrollView.h; sourceTree = SOURCE_ROOT; };
+		5554E02EE2BA451645586113 /* dynapse.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dynapse.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/dynapse.h; sourceTree = SOURCE_ROOT; };
+		58182A9271AE3010E3AA6228 /* ringbuffer.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ringbuffer.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/ringbuffer.h; sourceTree = SOURCE_ROOT; };
+		5DDAE67229D9A61724BA9CE0 /* log.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = log.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/log.h; sourceTree = SOURCE_ROOT; };
+		6046C51C5BD9DCBF06986B54 /* point3d.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point3d.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point3d.h; sourceTree = SOURCE_ROOT; };
+		61DC1359831D4C2E555E351A /* frame_utils.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = frame_utils.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/frame_utils.h; sourceTree = SOURCE_ROOT; };
+		63D2850AAF18F81E7C571D5C /* usb_utils.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = usb_utils.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/usb_utils.h; sourceTree = SOURCE_ROOT; };
+		64C563B8158C37E9D07AE29D /* ofxDatGuiFRM.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiFRM.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiFRM.h; sourceTree = SOURCE_ROOT; };
+		65FE9E8FDC3D2EFDE62216A0 /* serial.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = serial.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/serial.h; sourceTree = SOURCE_ROOT; };
+		68A2055A71B308DB85642920 /* point4d.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point4d.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point4d.hpp; sourceTree = SOURCE_ROOT; };
+		705B1940FB40D163491A002A /* timestamps.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = timestamps.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/timestamps.h; sourceTree = SOURCE_ROOT; };
+		72B6D9F6396CBAB509A90777 /* libusb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = libusb.h; path = "../../../addons/ofxSiliconRetina/libs/libusb-1.0/include/libusb.h"; sourceTree = SOURCE_ROOT; };
+		744031A3E8F8DAF9FE6F3EA8 /* ofxDatGuiGroups.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiGroups.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiGroups.h; sourceTree = SOURCE_ROOT; };
+		7496240E9D66FF79259CFDE5 /* ringbuffer.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = ringbuffer.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/ringbuffer.c; sourceTree = SOURCE_ROOT; };
+		762144BEC7D70C4EDEDABBDD /* dvs_noise.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dvs_noise.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/filters/dvs_noise.h; sourceTree = SOURCE_ROOT; };
+		76678BE55273B99FF15AB51D /* libcaer.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = libcaer.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer/libcaer.h; sourceTree = SOURCE_ROOT; };
+		7717E25A36D8D541B102BE0C /* filters_dvs_noise.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = filters_dvs_noise.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/filters_dvs_noise.c; sourceTree = SOURCE_ROOT; };
+		778BD2072DF7540DE4CBAC01 /* data_exchange.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = data_exchange.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/data_exchange.h; sourceTree = SOURCE_ROOT; };
+		784A13640E955EEFCA725235 /* dvs128.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dvs128.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/dvs128.h; sourceTree = SOURCE_ROOT; };
+		787315438BF1DD00C81DF413 /* ofxDatGuiLabel.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiLabel.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiLabel.h; sourceTree = SOURCE_ROOT; };
+		7BD0E40F8704635D8EB37573 /* davis.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = davis.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/davis.h; sourceTree = SOURCE_ROOT; };
+		7C418F41FED8092EDB344226 /* config.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = config.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/config.h; sourceTree = SOURCE_ROOT; };
+		810FBA9BD09ADA751EBB156A /* davis_common.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = davis_common.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/davis_common.h; sourceTree = SOURCE_ROOT; };
+		812AB7A89C8DC53A2D8762D7 /* special.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = special.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/special.h; sourceTree = SOURCE_ROOT; };
+		81C4C697CCE865D196B5095F /* ringbuffer.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ringbuffer.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/ringbuffer.hpp; sourceTree = SOURCE_ROOT; };
+		888ADC17FCFFD54DFE06DF15 /* imu6.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = imu6.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/imu6.hpp; sourceTree = SOURCE_ROOT; };
+		88E9B9A95A2EE775CFFC4633 /* usb.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = usb.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/usb.h; sourceTree = SOURCE_ROOT; };
+		896211FFD7650884437CE42C /* ofxSmartFont.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxSmartFont.h; path = ../../../addons/ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.h; sourceTree = SOURCE_ROOT; };
+		8D16A064B037249393ED4907 /* network.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = network.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/network.hpp; sourceTree = SOURCE_ROOT; };
+		8E76F649C29DEAD64B6612BC /* matrix4x4.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = matrix4x4.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/matrix4x4.hpp; sourceTree = SOURCE_ROOT; };
+		8FFE2A94B121C509C3A3B7E7 /* polarity.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = polarity.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/polarity.h; sourceTree = SOURCE_ROOT; };
+		902724601B82C6AD81BBCD71 /* ofxDatGui2dPad.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGui2dPad.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGui2dPad.h; sourceTree = SOURCE_ROOT; };
+		91A1FD5552BA0B1FF7FBCA41 /* point2d.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point2d.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point2d.h; sourceTree = SOURCE_ROOT; };
+		9705D66270ED89ECA6E6FECE /* ofxDatGui.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGui.h; path = ../../../addons/ofxDatGui/src/ofxDatGui.h; sourceTree = SOURCE_ROOT; };
+		977A63DCB5549D78F04662F6 /* container_generation.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = container_generation.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/container_generation.h; sourceTree = SOURCE_ROOT; };
+		9A19279480BF6ADC7339B83C /* usb_utils.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = usb_utils.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/usb_utils.c; sourceTree = SOURCE_ROOT; };
+		9B5051062C6A871714E6F5F4 /* ofxDatGuiConstants.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiConstants.h; path = ../../../addons/ofxDatGui/src/core/ofxDatGuiConstants.h; sourceTree = SOURCE_ROOT; };
+		9EFE95E860A7A5A2A564B01A /* davis.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = davis.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/davis.hpp; sourceTree = SOURCE_ROOT; };
+		9F230FAC78D55B68D531E535 /* portable_endian.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = portable_endian.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/portable_endian.h; sourceTree = SOURCE_ROOT; };
+		A03D6682911AA46D81FD9A38 /* device_discover.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = device_discover.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/device_discover.h; sourceTree = SOURCE_ROOT; };
+		A59F18BF347F3B181E15E00E /* spike.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = spike.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/spike.hpp; sourceTree = SOURCE_ROOT; };
+		A9BA291E147FE297B5741E71 /* dvs128.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dvs128.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/dvs128.hpp; sourceTree = SOURCE_ROOT; };
+		AD43857550375E7F1C348739 /* dvs_noise.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dvs_noise.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/filters/dvs_noise.hpp; sourceTree = SOURCE_ROOT; };
+		AD975112D95064883DCD661B /* dvs128.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = dvs128.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/dvs128.c; sourceTree = SOURCE_ROOT; };
+		B187AEDED3FB36C22B4B1930 /* imu6.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = imu6.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/imu6.h; sourceTree = SOURCE_ROOT; };
+		B43F5C5937BFF8945582095B /* point4d.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point4d.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point4d.h; sourceTree = SOURCE_ROOT; };
+		B498F0559F473CF855EF6062 /* ofxDatGuiTheme.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiTheme.h; path = ../../../addons/ofxDatGui/src/themes/ofxDatGuiTheme.h; sourceTree = SOURCE_ROOT; };
+		B6AA6B59B8FE890B2C949DDB /* ear.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ear.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/ear.hpp; sourceTree = SOURCE_ROOT; };
+		B92D50DFDB10A7157D71A4C3 /* ear.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ear.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/ear.h; sourceTree = SOURCE_ROOT; };
+		B994F12156F66283973F8516 /* point1d.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point1d.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point1d.hpp; sourceTree = SOURCE_ROOT; };
+		BC4B3F96692EFFA67F082B09 /* matrix4x4.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = matrix4x4.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/matrix4x4.h; sourceTree = SOURCE_ROOT; };
+		BCC84C6EB3417706F4F762F0 /* ofxDatGuiComponent.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiComponent.h; path = ../../../addons/ofxDatGui/src/core/ofxDatGuiComponent.h; sourceTree = SOURCE_ROOT; };
+		BDCC71E8A80F1767CF24236D /* device.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = device.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/device.h; sourceTree = SOURCE_ROOT; };
+		BE45EC8F077F42B9E58D35E3 /* dvs128.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dvs128.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/devices/dvs128.h; sourceTree = SOURCE_ROOT; };
+		C00785839FF816C256DF7271 /* davis.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = davis.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/davis.c; sourceTree = SOURCE_ROOT; };
+		C03DAFD90924C951E6F5238C /* device.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = device.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/device.hpp; sourceTree = SOURCE_ROOT; };
+		C085A33340AB0C1DB647AC2F /* ofxDatGuiTextInput.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiTextInput.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiTextInput.h; sourceTree = SOURCE_ROOT; };
+		C584D43EA5E4BBC13BC302EB /* usb.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = usb.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/usb.hpp; sourceTree = SOURCE_ROOT; };
+		C73A6E54E482429BC299C0CC /* special.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = special.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/special.hpp; sourceTree = SOURCE_ROOT; };
+		C8452CA28632BBFC4B598A8A /* device_discover.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = device_discover.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/device_discover.hpp; sourceTree = SOURCE_ROOT; };
+		C84ED7FCC017328C6F58283D /* ofxDatGuiColorPicker.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiColorPicker.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiColorPicker.h; sourceTree = SOURCE_ROOT; };
+		C954E0E8B7DB9D6983309883 /* ofxSmartFont.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 30; name = ofxSmartFont.cpp; path = ../../../addons/ofxDatGui/src/libs/ofxSmartFont/ofxSmartFont.cpp; sourceTree = SOURCE_ROOT; };
+		CDF7278CB636137FE7BF91A5 /* ofxDatGuiMatrix.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiMatrix.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiMatrix.h; sourceTree = SOURCE_ROOT; };
+		CDFA6FF8B79081171FDC4623 /* dynapse.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dynapse.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/dynapse.hpp; sourceTree = SOURCE_ROOT; };
+		D0310B3B3AA2AFDC3A18BD71 /* point3d.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point3d.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/point3d.hpp; sourceTree = SOURCE_ROOT; };
+		D0D6A66BEBA820EA1D396889 /* ofxDatGuiSlider.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiSlider.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiSlider.h; sourceTree = SOURCE_ROOT; };
+		D419A64ABB608B507ED1B5D3 /* dynapse.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = dynapse.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/dynapse.h; sourceTree = SOURCE_ROOT; };
+		D78B4DD22EB545588EE00872 /* serial.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = serial.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices/serial.hpp; sourceTree = SOURCE_ROOT; };
+		DD56E7B288FC1751CB116A9D /* device_discover.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = device_discover.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/device_discover.c; sourceTree = SOURCE_ROOT; };
+		E100ED9DCB412957A879CD5A /* ofxDatGuiControls.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiControls.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiControls.h; sourceTree = SOURCE_ROOT; };
+		E4328143138ABC890047C5CB /* openFrameworksLib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = openFrameworksLib.xcodeproj; path = ../../../libs/openFrameworksCompiled/project/osx/openFrameworksLib.xcodeproj; sourceTree = SOURCE_ROOT; };
+		E4B69B5B0A3A1756003C02F2 /* example_siliconretinaGuiDebug.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_siliconretinaGuiDebug.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E4B69E1D0A3A1BDC003C02F2 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = src/main.cpp; sourceTree = SOURCE_ROOT; };
+		E4B69E1E0A3A1BDC003C02F2 /* ofApp.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 30; name = ofApp.cpp; path = src/ofApp.cpp; sourceTree = SOURCE_ROOT; };
+		E4B69E1F0A3A1BDC003C02F2 /* ofApp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ofApp.h; path = src/ofApp.h; sourceTree = SOURCE_ROOT; };
+		E4B6FCAD0C3E899E008CF71C /* openFrameworks-Info.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = "openFrameworks-Info.plist"; sourceTree = "<group>"; };
+		E4EB691F138AFCF100A09F29 /* CoreOF.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = CoreOF.xcconfig; path = ../../../libs/openFrameworksCompiled/project/osx/CoreOF.xcconfig; sourceTree = SOURCE_ROOT; };
+		E4EB6923138AFD0F00A09F29 /* Project.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Project.xcconfig; sourceTree = "<group>"; };
+		E6BF861CFA656ED539F40510 /* device.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = device.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/device.c; sourceTree = SOURCE_ROOT; };
+		E821615051B5C7A06E1D7D2A /* frame_utils.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = frame_utils.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/frame_utils.c; sourceTree = SOURCE_ROOT; };
+		E905447D0A06334E78C3B5D7 /* common.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = common.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/common.h; sourceTree = SOURCE_ROOT; };
+		EA3864F0FE98DAE3A323B9A6 /* portable_aligned_alloc.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = portable_aligned_alloc.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/portable_aligned_alloc.h; sourceTree = SOURCE_ROOT; };
+		EBF035B7141D4B9A5EC1F311 /* frame.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = frame.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/frame.hpp; sourceTree = SOURCE_ROOT; };
+		EFAA888A6737BBD933745A2B /* spike.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = spike.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/spike.h; sourceTree = SOURCE_ROOT; };
+		F065774D21AECF9FF7185087 /* libcaer.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = libcaer.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/libcaer.hpp; sourceTree = SOURCE_ROOT; };
+		F4A0DD8CC530FEA384F3135C /* config.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = config.hpp; path = ../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events/config.hpp; sourceTree = SOURCE_ROOT; };
+		F59384ED57A7C6A7A8B0351D /* ofxDatGuiEvents.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiEvents.h; path = ../../../addons/ofxDatGui/src/core/ofxDatGuiEvents.h; sourceTree = SOURCE_ROOT; };
+		F74BDB9757D0DE7E14A91BFE /* dynapse.c */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.c; fileEncoding = 30; name = dynapse.c; path = ../../../addons/ofxSiliconRetina/libs/libcaer/src/dynapse.c; sourceTree = SOURCE_ROOT; };
+		FB567BAD41AC1A5055008C77 /* point1d.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = point1d.h; path = ../../../addons/ofxSiliconRetina/libs/libcaer/include/events/point1d.h; sourceTree = SOURCE_ROOT; };
+		FDA86F4C2F1F1964D35391C6 /* ofxDatGuiButton.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDatGuiButton.h; path = ../../../addons/ofxDatGui/src/components/ofxDatGuiButton.h; sourceTree = SOURCE_ROOT; };
+		FF5E5A2063AD8AB2FAAC253C /* ofxDVS.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 30; name = ofxDVS.hpp; path = ../../../addons/ofxSiliconRetina/src/ofxDVS.hpp; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E4B69B590A3A1756003C02F2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4328149138ABC9F0047C5CB /* openFrameworksDebug.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		002FF9EF75984C23C81C71C8 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				53A28478E031D1938A2DCF57 /* c11threads_posix.h */,
+				52FDA5E3611A2CACB05DEF82 /* autoexposure.c */,
+				43DA9F18637C47D997E7C9C2 /* log.c */,
+				784A13640E955EEFCA725235 /* dvs128.h */,
+				DD56E7B288FC1751CB116A9D /* device_discover.c */,
+				63D2850AAF18F81E7C571D5C /* usb_utils.h */,
+				7BD0E40F8704635D8EB37573 /* davis.h */,
+				F74BDB9757D0DE7E14A91BFE /* dynapse.c */,
+				7496240E9D66FF79259CFDE5 /* ringbuffer.c */,
+				28FA4A7D685DD34C092E7467 /* portable_time.h */,
+				7717E25A36D8D541B102BE0C /* filters_dvs_noise.c */,
+				029A24B6109F5BA124FF948D /* spi_config_interface.h */,
+				810FBA9BD09ADA751EBB156A /* davis_common.h */,
+				EA3864F0FE98DAE3A323B9A6 /* portable_aligned_alloc.h */,
+				AD975112D95064883DCD661B /* dvs128.c */,
+				705B1940FB40D163491A002A /* timestamps.h */,
+				E821615051B5C7A06E1D7D2A /* frame_utils.c */,
+				469D2715EA0B563F3BE4E0C3 /* autoexposure.h */,
+				C00785839FF816C256DF7271 /* davis.c */,
+				9A19279480BF6ADC7339B83C /* usb_utils.c */,
+				977A63DCB5549D78F04662F6 /* container_generation.h */,
+				E6BF861CFA656ED539F40510 /* device.c */,
+				778BD2072DF7540DE4CBAC01 /* data_exchange.h */,
+				D419A64ABB608B507ED1B5D3 /* dynapse.h */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+		0EF29D3ABD6E4147AE024D7A /* ofxSmartFont */ = {
+			isa = PBXGroup;
+			children = (
+				C954E0E8B7DB9D6983309883 /* ofxSmartFont.cpp */,
+				896211FFD7650884437CE42C /* ofxSmartFont.h */,
+			);
+			name = ofxSmartFont;
+			sourceTree = "<group>";
+		};
+		15E4481F0FB2FCE8B0CC7824 /* ofxSiliconRetina */ = {
+			isa = PBXGroup;
+			children = (
+				FF856C20036809D724F03682 /* src */,
+				C24EAFEA5F387DDCE4534137 /* libs */,
+			);
+			name = ofxSiliconRetina;
+			sourceTree = "<group>";
+		};
+		2F1D6B225F788C78882946DA /* include */ = {
+			isa = PBXGroup;
+			children = (
+				72B6D9F6396CBAB509A90777 /* libusb.h */,
+			);
+			name = include;
+			sourceTree = "<group>";
+		};
+		532229F30BAEC9C98697224B /* filters */ = {
+			isa = PBXGroup;
+			children = (
+				762144BEC7D70C4EDEDABBDD /* dvs_noise.h */,
+			);
+			name = filters;
+			sourceTree = "<group>";
+		};
+		54228D9D1044B7CEECAC2C1E /* events */ = {
+			isa = PBXGroup;
+			children = (
+				428C4CB0EB43C04F643E0D92 /* imu9.hpp */,
+				68A2055A71B308DB85642920 /* point4d.hpp */,
+				D0310B3B3AA2AFDC3A18BD71 /* point3d.hpp */,
+				F4A0DD8CC530FEA384F3135C /* config.hpp */,
+				03E29596675835AF0F0A4DAE /* point2d.hpp */,
+				A59F18BF347F3B181E15E00E /* spike.hpp */,
+				C73A6E54E482429BC299C0CC /* special.hpp */,
+				B6AA6B59B8FE890B2C949DDB /* ear.hpp */,
+				B994F12156F66283973F8516 /* point1d.hpp */,
+				16A3B6CC38E2D46CC8B05DC6 /* polarity.hpp */,
+				0ADD4FB97D3DE60EE6868198 /* sample.hpp */,
+				544E689EA4AF0BFB65F33347 /* common.hpp */,
+				356CDFDDD3E86A3220D2FB4A /* utils.hpp */,
+				EBF035B7141D4B9A5EC1F311 /* frame.hpp */,
+				2B627BC08F693B1239A9BFC0 /* packetContainer.hpp */,
+				888ADC17FCFFD54DFE06DF15 /* imu6.hpp */,
+				8E76F649C29DEAD64B6612BC /* matrix4x4.hpp */,
+			);
+			name = events;
+			sourceTree = "<group>";
+		};
+		56E2337A4AB320BE86D6C848 /* libcaer */ = {
+			isa = PBXGroup;
+			children = (
+				76678BE55273B99FF15AB51D /* libcaer.h */,
+			);
+			name = libcaer;
+			sourceTree = "<group>";
+		};
+		5B18A1385EF7E060409D458E /* events */ = {
+			isa = PBXGroup;
+			children = (
+				B43F5C5937BFF8945582095B /* point4d.h */,
+				3AA8706AC57581F726B577DB /* imu9.h */,
+				FB567BAD41AC1A5055008C77 /* point1d.h */,
+				BC4B3F96692EFFA67F082B09 /* matrix4x4.h */,
+				7C418F41FED8092EDB344226 /* config.h */,
+				3880D6C34C0802C7DFC4D517 /* frame.h */,
+				EFAA888A6737BBD933745A2B /* spike.h */,
+				B92D50DFDB10A7157D71A4C3 /* ear.h */,
+				E905447D0A06334E78C3B5D7 /* common.h */,
+				8FFE2A94B121C509C3A3B7E7 /* polarity.h */,
+				812AB7A89C8DC53A2D8762D7 /* special.h */,
+				B187AEDED3FB36C22B4B1930 /* imu6.h */,
+				91A1FD5552BA0B1FF7FBCA41 /* point2d.h */,
+				347FB6E5D0C4F6C4012A6F23 /* sample.h */,
+				1BAE97339B248DC41DE8EAE9 /* packetContainer.h */,
+				6046C51C5BD9DCBF06986B54 /* point3d.h */,
+			);
+			name = events;
+			sourceTree = "<group>";
+		};
+		69146F0BA46E48E576618E5E /* libs */ = {
+			isa = PBXGroup;
+			children = (
+				0EF29D3ABD6E4147AE024D7A /* ofxSmartFont */,
+			);
+			name = libs;
+			sourceTree = "<group>";
+		};
+		6948EE371B920CB800B5AC1A /* local_addons */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = local_addons;
+			sourceTree = "<group>";
+		};
+		7F5207BD341C03D294BDC040 /* devices */ = {
+			isa = PBXGroup;
+			children = (
+				BE45EC8F077F42B9E58D35E3 /* dvs128.h */,
+				BDCC71E8A80F1767CF24236D /* device.h */,
+				3E8E6C7C22C3AACF7B6FA5A2 /* davis.h */,
+				65FE9E8FDC3D2EFDE62216A0 /* serial.h */,
+				032054F629840A307CFA709B /* edvs.h */,
+				88E9B9A95A2EE775CFFC4633 /* usb.h */,
+				A03D6682911AA46D81FD9A38 /* device_discover.h */,
+				5554E02EE2BA451645586113 /* dynapse.h */,
+			);
+			name = devices;
+			sourceTree = "<group>";
+		};
+		87298478136173E0A77EEAF0 /* devices */ = {
+			isa = PBXGroup;
+			children = (
+				A9BA291E147FE297B5741E71 /* dvs128.hpp */,
+				9EFE95E860A7A5A2A564B01A /* davis.hpp */,
+				C8452CA28632BBFC4B598A8A /* device_discover.hpp */,
+				C584D43EA5E4BBC13BC302EB /* usb.hpp */,
+				CDFA6FF8B79081171FDC4623 /* dynapse.hpp */,
+				D78B4DD22EB545588EE00872 /* serial.hpp */,
+				C03DAFD90924C951E6F5238C /* device.hpp */,
+				0F916E887A97E15CFBF16476 /* edvs.hpp */,
+			);
+			name = devices;
+			sourceTree = "<group>";
+		};
+		8870759BC9CAEA1E4E9EA3A8 /* core */ = {
+			isa = PBXGroup;
+			children = (
+				422C4E1AAC7EC4D30B17702D /* ofxDatGuiIntObject.h */,
+				1A3E3B8F332A1A3C7EDF4998 /* ofxDatGuiComponent.cpp */,
+				9B5051062C6A871714E6F5F4 /* ofxDatGuiConstants.h */,
+				F59384ED57A7C6A7A8B0351D /* ofxDatGuiEvents.h */,
+				BCC84C6EB3417706F4F762F0 /* ofxDatGuiComponent.h */,
+			);
+			name = core;
+			sourceTree = "<group>";
+		};
+		911FE1C75E520EE70A7B4830 /* themes */ = {
+			isa = PBXGroup;
+			children = (
+				B498F0559F473CF855EF6062 /* ofxDatGuiTheme.h */,
+				21E1E3071CB7B11914428B62 /* ofxDatGuiThemes.h */,
+			);
+			name = themes;
+			sourceTree = "<group>";
+		};
+		947FCD1248D8B0A16B53C1AA /* components */ = {
+			isa = PBXGroup;
+			children = (
+				C84ED7FCC017328C6F58283D /* ofxDatGuiColorPicker.h */,
+				D0D6A66BEBA820EA1D396889 /* ofxDatGuiSlider.h */,
+				64C563B8158C37E9D07AE29D /* ofxDatGuiFRM.h */,
+				0A42C807BEF3A18E8E105A3B /* ofxDatGuiTimeGraph.h */,
+				04C339FF9ADCF05DF2DA62A3 /* ofxDatGuiTextInputField.h */,
+				FDA86F4C2F1F1964D35391C6 /* ofxDatGuiButton.h */,
+				E100ED9DCB412957A879CD5A /* ofxDatGuiControls.h */,
+				744031A3E8F8DAF9FE6F3EA8 /* ofxDatGuiGroups.h */,
+				545BBA6F6669BED2DA497BC6 /* ofxDatGuiScrollView.h */,
+				787315438BF1DD00C81DF413 /* ofxDatGuiLabel.h */,
+				902724601B82C6AD81BBCD71 /* ofxDatGui2dPad.h */,
+				C085A33340AB0C1DB647AC2F /* ofxDatGuiTextInput.h */,
+				CDF7278CB636137FE7BF91A5 /* ofxDatGuiMatrix.h */,
+			);
+			name = components;
+			sourceTree = "<group>";
+		};
+		BB4B014C10F69532006C3DED /* addons */ = {
+			isa = PBXGroup;
+			children = (
+				D8DD1043C333F6F63C8685E6 /* ofxDatGui */,
+				15E4481F0FB2FCE8B0CC7824 /* ofxSiliconRetina */,
+			);
+			name = addons;
+			sourceTree = "<group>";
+		};
+		C24EAFEA5F387DDCE4534137 /* libs */ = {
+			isa = PBXGroup;
+			children = (
+				C8C62617C126D6112E2A0CB0 /* libusb-1.0 */,
+				C3518AABF7FB59ADA0538CFD /* libcaer */,
+			);
+			name = libs;
+			sourceTree = "<group>";
+		};
+		C3518AABF7FB59ADA0538CFD /* libcaer */ = {
+			isa = PBXGroup;
+			children = (
+				C65C25D200141BCC66128297 /* include */,
+				D6C183F726A191AB65A0E52B /* includecpp */,
+				002FF9EF75984C23C81C71C8 /* src */,
+			);
+			name = libcaer;
+			sourceTree = "<group>";
+		};
+		C65C25D200141BCC66128297 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				264909ECC3D3AA06B5221895 /* libcaer.h */,
+				61DC1359831D4C2E555E351A /* frame_utils.h */,
+				532229F30BAEC9C98697224B /* filters */,
+				1A4C63A98C53F8BEA4B545E0 /* network.h */,
+				5DDAE67229D9A61724BA9CE0 /* log.h */,
+				9F230FAC78D55B68D531E535 /* portable_endian.h */,
+				5B18A1385EF7E060409D458E /* events */,
+				56E2337A4AB320BE86D6C848 /* libcaer */,
+				58182A9271AE3010E3AA6228 /* ringbuffer.h */,
+				7F5207BD341C03D294BDC040 /* devices */,
+			);
+			name = include;
+			sourceTree = "<group>";
+		};
+		C8C62617C126D6112E2A0CB0 /* libusb-1.0 */ = {
+			isa = PBXGroup;
+			children = (
+				2F1D6B225F788C78882946DA /* include */,
+			);
+			name = "libusb-1.0";
+			sourceTree = "<group>";
+		};
+		D6C183F726A191AB65A0E52B /* includecpp */ = {
+			isa = PBXGroup;
+			children = (
+				F7E312A04BA6E2BA1E0F3239 /* filters */,
+				81C4C697CCE865D196B5095F /* ringbuffer.hpp */,
+				F065774D21AECF9FF7185087 /* libcaer.hpp */,
+				8D16A064B037249393ED4907 /* network.hpp */,
+				54228D9D1044B7CEECAC2C1E /* events */,
+				87298478136173E0A77EEAF0 /* devices */,
+			);
+			name = includecpp;
+			sourceTree = "<group>";
+		};
+		D8DD1043C333F6F63C8685E6 /* ofxDatGui */ = {
+			isa = PBXGroup;
+			children = (
+				E9B32C117486580389FAFF01 /* src */,
+			);
+			name = ofxDatGui;
+			sourceTree = "<group>";
+		};
+		E4328144138ABC890047C5CB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E4328148138ABC890047C5CB /* openFrameworksDebug.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E4B69B4A0A3A1720003C02F2 = {
+			isa = PBXGroup;
+			children = (
+				E4B6FCAD0C3E899E008CF71C /* openFrameworks-Info.plist */,
+				E4EB6923138AFD0F00A09F29 /* Project.xcconfig */,
+				E4B69E1C0A3A1BDC003C02F2 /* src */,
+				E4EEC9E9138DF44700A80321 /* openFrameworks */,
+				BB4B014C10F69532006C3DED /* addons */,
+				6948EE371B920CB800B5AC1A /* local_addons */,
+				E4B69B5B0A3A1756003C02F2 /* example_siliconretinaGuiDebug.app */,
+			);
+			sourceTree = "<group>";
+		};
+		E4B69E1C0A3A1BDC003C02F2 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				E4B69E1D0A3A1BDC003C02F2 /* main.cpp */,
+				E4B69E1E0A3A1BDC003C02F2 /* ofApp.cpp */,
+				E4B69E1F0A3A1BDC003C02F2 /* ofApp.h */,
+			);
+			path = src;
+			sourceTree = SOURCE_ROOT;
+		};
+		E4EEC9E9138DF44700A80321 /* openFrameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E4EB691F138AFCF100A09F29 /* CoreOF.xcconfig */,
+				E4328143138ABC890047C5CB /* openFrameworksLib.xcodeproj */,
+			);
+			name = openFrameworks;
+			sourceTree = "<group>";
+		};
+		E9B32C117486580389FAFF01 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				8870759BC9CAEA1E4E9EA3A8 /* core */,
+				9705D66270ED89ECA6E6FECE /* ofxDatGui.h */,
+				26490D7CC31EF7D6ED5F925A /* ofxDatGui.cpp */,
+				69146F0BA46E48E576618E5E /* libs */,
+				947FCD1248D8B0A16B53C1AA /* components */,
+				911FE1C75E520EE70A7B4830 /* themes */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+		F7E312A04BA6E2BA1E0F3239 /* filters */ = {
+			isa = PBXGroup;
+			children = (
+				AD43857550375E7F1C348739 /* dvs_noise.hpp */,
+			);
+			name = filters;
+			sourceTree = "<group>";
+		};
+		FF856C20036809D724F03682 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				FF5E5A2063AD8AB2FAAC253C /* ofxDVS.hpp */,
+				1FD5DE589407BAEC49F9E7E3 /* ofxDVS.cpp */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E4B69B5A0A3A1756003C02F2 /* example_siliconretinaGui */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E4B69B5F0A3A1757003C02F2 /* Build configuration list for PBXNativeTarget "example_siliconretinaGui" */;
+			buildPhases = (
+				E4B69B580A3A1756003C02F2 /* Sources */,
+				E4B69B590A3A1756003C02F2 /* Frameworks */,
+				E4B6FFFD0C3F9AB9008CF71C /* ShellScript */,
+				E4C2427710CC5ABF004149E2 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E4EEB9AC138B136A00A80321 /* PBXTargetDependency */,
+			);
+			name = example_siliconretinaGui;
+			productName = myOFApp;
+			productReference = E4B69B5B0A3A1756003C02F2 /* example_siliconretinaGuiDebug.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E4B69B4C0A3A1720003C02F2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0600;
+			};
+			buildConfigurationList = E4B69B4D0A3A1720003C02F2 /* Build configuration list for PBXProject "example_siliconretinaGui" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = E4B69B4A0A3A1720003C02F2;
+			productRefGroup = E4B69B4A0A3A1720003C02F2;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = E4328144138ABC890047C5CB /* Products */;
+					ProjectRef = E4328143138ABC890047C5CB /* openFrameworksLib.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				E4B69B5A0A3A1756003C02F2 /* example_siliconretinaGui */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		E4328148138ABC890047C5CB /* openFrameworksDebug.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = openFrameworksDebug.a;
+			remoteRef = E4328147138ABC890047C5CB /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E4B6FFFD0C3F9AB9008CF71C /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/\"\n# Copy default icon file into App/Resources\nrsync -aved \"$ICON_FILE\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/\"\n# Copy libfmod and change install directory for fmod to run\nrsync -aved ../../../libs/fmodex/lib/osx/libfmodex.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Frameworks/\";\ninstall_name_tool -change @executable_path/libfmodex.dylib @executable_path/../Frameworks/libfmodex.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\n# Copy GLUT framework (must remove for AppStore submissions)\nrsync -aved ../../../libs/glut/lib/osx/GLUT.framework \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Frameworks/\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E4B69B580A3A1756003C02F2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4B69E200A3A1BDC003C02F2 /* main.cpp in Sources */,
+				E4B69E210A3A1BDC003C02F2 /* ofApp.cpp in Sources */,
+				D3C1C48E59CAA2D68C0DD477 /* ofxDatGuiComponent.cpp in Sources */,
+				C9466C434D1CF8AB968D298D /* ofxDatGui.cpp in Sources */,
+				9CF4130A7E6DA19A3DC42B9A /* ofxSmartFont.cpp in Sources */,
+				20B09BDF2518F5E343BEA41D /* ofxDVS.cpp in Sources */,
+				FB1858EF104D56E41EE52D04 /* autoexposure.c in Sources */,
+				3A778AE3ADACC3F218128EFF /* log.c in Sources */,
+				8CBE50155AA576B4E92640B2 /* device_discover.c in Sources */,
+				25418C9D4B3B57222099CD60 /* dynapse.c in Sources */,
+				C3CF806F30E886EA12663E2E /* ringbuffer.c in Sources */,
+				576E756DB3BD0D8EC00AC7F5 /* filters_dvs_noise.c in Sources */,
+				5E9F18E67D74FB3C83421BF5 /* dvs128.c in Sources */,
+				DDE0DD29AC05468A869F7378 /* frame_utils.c in Sources */,
+				95E1FB372640C3F8AE8B1275 /* davis.c in Sources */,
+				988A453C859F755B2BE778CD /* usb_utils.c in Sources */,
+				408E92C787DE6EDE5D3E4693 /* device.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E4EEB9AC138B136A00A80321 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = openFrameworks;
+			targetProxy = E4EEB9AB138B136A00A80321 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		E4B69B4E0A3A1720003C02F2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E4EB6923138AFD0F00A09F29 /* Project.xcconfig */;
+			buildSettings = {
+				CONFIGURATION_BUILD_DIR = "$(SRCROOT)/bin/";
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				GCC_AUTO_VECTORIZATION = YES;
+				GCC_ENABLE_SSE3_EXTENSIONS = YES;
+				GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = YES;
+				GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO = NO;
+				GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNUSED_VALUE = NO;
+				GCC_WARN_UNUSED_VARIABLE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(OF_CORE_HEADERS)",
+					src,
+					../../../addons/ofxDatGui/src,
+					../../../addons/ofxDatGui/src/components,
+					../../../addons/ofxDatGui/src/core,
+					../../../addons/ofxDatGui/src/libs,
+					../../../addons/ofxDatGui/src/libs/ofxSmartFont,
+					../../../addons/ofxDatGui/src/themes,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles/caer.dir,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-D__MACOSX_CORE__",
+					"-mtune=native",
+				);
+				OTHER_LDFLAGS = (
+					"$(OF_CORE_FRAMEWORKS)",
+					"$(OF_CORE_LIBS)",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.3.1.0.dylib,
+				);
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		E4B69B4F0A3A1720003C02F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E4EB6923138AFD0F00A09F29 /* Project.xcconfig */;
+			buildSettings = {
+				CONFIGURATION_BUILD_DIR = "$(SRCROOT)/bin/";
+				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
+				GCC_AUTO_VECTORIZATION = YES;
+				GCC_ENABLE_SSE3_EXTENSIONS = YES;
+				GCC_ENABLE_SUPPLEMENTAL_SSE3_INSTRUCTIONS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = YES;
+				GCC_WARN_ABOUT_INVALID_OFFSETOF_MACRO = NO;
+				GCC_WARN_ALLOW_INCOMPLETE_PROTOCOL = NO;
+				GCC_WARN_UNINITIALIZED_AUTOS = NO;
+				GCC_WARN_UNUSED_VALUE = NO;
+				GCC_WARN_UNUSED_VARIABLE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(OF_CORE_HEADERS)",
+					src,
+					../../../addons/ofxDatGui/src,
+					../../../addons/ofxDatGui/src/components,
+					../../../addons/ofxDatGui/src/core,
+					../../../addons/ofxDatGui/src/libs,
+					../../../addons/ofxDatGui/src/libs/ofxSmartFont,
+					../../../addons/ofxDatGui/src/themes,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles/caer.dir,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-D__MACOSX_CORE__",
+					"-mtune=native",
+				);
+				OTHER_LDFLAGS = (
+					"$(OF_CORE_FRAMEWORKS)",
+					"$(OF_CORE_LIBS)",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.3.1.0.dylib,
+				);
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		E4B69B600A3A1757003C02F2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E4EB6923138AFD0F00A09F29 /* Project.xcconfig */;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+				);
+				FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../../../libs/glut/lib/osx\"";
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = NONE;
+				HEADER_SEARCH_PATHS = (
+					"$(OF_CORE_HEADERS)",
+					src,
+					../../../addons/ofxDatGui/src,
+					../../../addons/ofxDatGui/src/components,
+					../../../addons/ofxDatGui/src/core,
+					../../../addons/ofxDatGui/src/libs,
+					../../../addons/ofxDatGui/src/libs/ofxSmartFont,
+					../../../addons/ofxDatGui/src/themes,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles/caer.dir,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
+					/usr/local/include/,
+				);
+				ICON = "$(ICON_NAME_DEBUG)";
+				ICON_FILE = "$(ICON_FILE_PATH)$(ICON)";
+				INFOPLIST_FILE = "openFrameworks-Info.plist";
+				INSTALL_PATH = /Applications;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/loca/lib,
+				);
+				OTHER_CFLAGS = (
+					"-D_XOPEN_SOURCE=700",
+					"-DHAVE_PTHREADS",
+					"-D_DEFAULT_SOURCE",
+					"-std=c11",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"-D__MACOSX_CORE__",
+					"-mtune=native",
+					"-std=c++11",
+				);
+				OTHER_LDFLAGS = (
+					"$(OF_CORE_FRAMEWORKS)",
+					"$(OF_CORE_LIBS)",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.3.1.0.dylib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)Debug";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		E4B69B610A3A1757003C02F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E4EB6923138AFD0F00A09F29 /* Project.xcconfig */;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1)",
+				);
+				FRAMEWORK_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../../../libs/glut/lib/osx\"";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = NONE;
+				HEADER_SEARCH_PATHS = (
+					"$(OF_CORE_HEADERS)",
+					src,
+					../../../addons/ofxDatGui/src,
+					../../../addons/ofxDatGui/src/components,
+					../../../addons/ofxDatGui/src/core,
+					../../../addons/ofxDatGui/src/libs,
+					../../../addons/ofxDatGui/src/libs/ofxSmartFont,
+					../../../addons/ofxDatGui/src/themes,
+					../../../addons/ofxSiliconRetina/libs,
+					../../../addons/ofxSiliconRetina/libs/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaer/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/include/libcaercpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/devices,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/events,
+					../../../addons/ofxSiliconRetina/libs/libcaer/includecpp/filters,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx,
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/win_cb,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles,
+					../../../addons/ofxSiliconRetina/libs/libcaer/src/CMakeFiles/caer.dir,
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/include",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx",
+					../../../addons/ofxSiliconRetina/src,
+					/usr/local/include/,
+				);
+				ICON = "$(ICON_NAME_RELEASE)";
+				ICON_FILE = "$(ICON_FILE_PATH)$(ICON)";
+				INFOPLIST_FILE = "openFrameworks-Info.plist";
+				INSTALL_PATH = /Applications;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/loca/lib,
+				);
+				OTHER_CFLAGS = (
+					"-D_XOPEN_SOURCE=700",
+					"-DHAVE_PTHREADS",
+					"-D_DEFAULT_SOURCE",
+					"-std=c11",
+				);
+				OTHER_CPLUSPLUSFLAGS = (
+					"-D__MACOSX_CORE__",
+					"-mtune=native",
+					"-std=c++11",
+				);
+				OTHER_LDFLAGS = (
+					"$(OF_CORE_FRAMEWORKS)",
+					"$(OF_CORE_LIBS)",
+					"../../../addons/ofxSiliconRetina/libs/libusb-1.0/lib/osx/libusb-1.0.dylib",
+					../../../addons/ofxSiliconRetina/libs/libcaer/lib/osx/libcaer.3.1.0.dylib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+				baseConfigurationReference = E4EB6923138AFD0F00A09F29;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E4B69B4D0A3A1720003C02F2 /* Build configuration list for PBXProject "example_siliconretinaGui" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E4B69B4E0A3A1720003C02F2 /* Debug */,
+				E4B69B4F0A3A1720003C02F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E4B69B5F0A3A1757003C02F2 /* Build configuration list for PBXNativeTarget "example_siliconretinaGui" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E4B69B600A3A1757003C02F2 /* Debug */,
+				E4B69B610A3A1757003C02F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E4B69B4C0A3A1720003C02F2 /* Project object */;
+}

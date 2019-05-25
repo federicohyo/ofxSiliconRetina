@@ -1,7 +1,7 @@
 #include "ringbuffer.h"
 #include "portable_aligned_alloc.h"
-#include <stdatomic.h>
 #include <stdalign.h> // To get alignas() macro.
+#include <stdatomic.h>
 
 // Alignment specification support (with defines for cache line alignment).
 #if !defined(CACHELINE_SIZE)
@@ -24,8 +24,8 @@ caerRingBuffer caerRingBufferInit(size_t size) {
 		return (NULL);
 	}
 
-	caerRingBuffer rBuf = portable_aligned_alloc(CACHELINE_SIZE,
-		sizeof(struct caer_ring_buffer) + (size * sizeof(atomic_uintptr_t)));
+	caerRingBuffer rBuf
+		= portable_aligned_alloc(CACHELINE_SIZE, sizeof(struct caer_ring_buffer) + (size * sizeof(atomic_uintptr_t)));
 	if (rBuf == NULL) {
 		return (NULL);
 	}
@@ -33,7 +33,7 @@ caerRingBuffer caerRingBufferInit(size_t size) {
 	// Initialize counter variables.
 	rBuf->putPos = 0;
 	rBuf->getPos = 0;
-	rBuf->size = size;
+	rBuf->size   = size;
 
 	// Initialize pointers.
 	for (size_t i = 0; i < size; i++) {
@@ -61,7 +61,7 @@ bool caerRingBufferPut(caerRingBuffer rBuf, void *elem) {
 	// If the place where we want to put the new element is NULL, it's still
 	// free and we can use it.
 	if (curr == NULL) {
-		atomic_store_explicit(&rBuf->elements[rBuf->putPos], (uintptr_t ) elem, memory_order_release);
+		atomic_store_explicit(&rBuf->elements[rBuf->putPos], (uintptr_t) elem, memory_order_release);
 
 		// Increase local put pointer.
 		rBuf->putPos = ((rBuf->putPos + 1) & (rBuf->size - 1));

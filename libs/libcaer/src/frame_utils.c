@@ -3,212 +3,111 @@
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
 // Use C++ OpenCV demosaic and contrast functions, defined
 // separately in 'frame_utils_opencv.cpp'.
-extern caerFrameEventPacket caerFrameUtilsOpenCVDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_demosaic_types demosaicType);
-extern void caerFrameUtilsOpenCVContrast(caerFrameEventPacket framePacket,
-	enum caer_frame_utils_contrast_types contrastType);
+extern void caerFrameUtilsOpenCVDemosaic(
+	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_demosaic_types demosaicType);
+extern void caerFrameUtilsOpenCVContrast(
+	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_contrast_types contrastType);
 #endif
 
-enum pixelColorEnum {
-	PXR,
-	PXB,
-	PXG1,
-	PXG2,
-	PXW
+enum pixelColorEnum { PXR, PXB, PXG1, PXG2, PXW };
+
+static const enum pixelColorEnum colorKeys[9][4] = {
+	[MONO] = {PXR, PXR, PXR, PXR}, // This is impossible (MONO), so just use red pixel value, as good as any.
+	[RGBG] = {PXR, PXG2, PXG1, PXB},
+	[GRGB] = {PXG1, PXB, PXR, PXG2},
+	[GBGR] = {PXG2, PXR, PXB, PXG1},
+	[BGRG] = {PXB, PXG1, PXG2, PXR},
+	[RGBW] = {PXR, PXW, PXG1, PXB},
+	[GRWB] = {PXG1, PXB, PXR, PXW},
+	[WBGR] = {PXW, PXR, PXB, PXG1},
+	[BWRG] = {PXB, PXG1, PXW, PXR},
 };
 
-static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame);
-
-static inline enum pixelColorEnum determinePixelColor(enum caer_frame_event_color_filter colorFilter, uint32_t x,
-	uint32_t y) {
-	switch (colorFilter) {
-		case RGBG:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXB);
-				}
-				else {
-					return (PXG1);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXG2);
-				}
-				else {
-					return (PXR);
-				}
-			}
-			break;
-
-		case GRGB:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXG2);
-				}
-				else {
-					return (PXR);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXB);
-				}
-				else {
-					return (PXG1);
-				}
-			}
-			break;
-
-		case GBGR:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXG1);
-				}
-				else {
-					return (PXB);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXR);
-				}
-				else {
-					return (PXG2);
-				}
-			}
-			break;
-
-		case BGRG:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXR);
-				}
-				else {
-					return (PXG2);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXG1);
-				}
-				else {
-					return (PXB);
-				}
-			}
-			break;
-
-		case RGBW:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXB);
-				}
-				else {
-					return (PXG1);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXW);
-				}
-				else {
-					return (PXR);
-				}
-			}
-			break;
-
-		case GRWB:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXW);
-				}
-				else {
-					return (PXR);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXB);
-				}
-				else {
-					return (PXG1);
-				}
-			}
-			break;
-
-		case WBGR:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXG1);
-				}
-				else {
-					return (PXB);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXR);
-				}
-				else {
-					return (PXW);
-				}
-			}
-			break;
-
-		case BWRG:
-			if (x & 0x01) {
-				if (y & 0x01) {
-					return (PXR);
-				}
-				else {
-					return (PXW);
-				}
-			}
-			else {
-				if (y & 0x01) {
-					return (PXG1);
-				}
-				else {
-					return (PXB);
-				}
-			}
-			break;
-
-		case MONO:
-		default:
-			// Just fall through.
-			break;
+void caerFrameUtilsDemosaic(
+	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_demosaic_types demosaicType) {
+	if ((inputFrame == NULL) || (outputFrame == NULL)) {
+		return;
 	}
 
-	// This is impossible (MONO), so just use red pixel value, as good as any.
-	return (PXR);
-}
+	if (caerFrameEventGetChannelNumber(inputFrame) != GRAYSCALE) {
+		caerLog(CAER_LOG_ERROR, __func__,
+			"Demosaic is only possible on input frames with only one channel (intensity -> color).");
+		return;
+	}
 
-static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventConst monoFrame) {
-	uint16_t *colorPixels = caerFrameEventGetPixelArrayUnsafe(colorFrame);
-	const uint16_t *monoPixels = caerFrameEventGetPixelArrayUnsafeConst(monoFrame);
+	if (caerFrameEventGetColorFilter(inputFrame) == MONO) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic is only possible on input frames with a color filter present.");
+		return;
+	}
 
-	enum caer_frame_event_color_filter colorFilter = caerFrameEventGetColorFilter(monoFrame);
-	int32_t lengthY = caerFrameEventGetLengthY(monoFrame);
-	int32_t lengthX = caerFrameEventGetLengthX(monoFrame);
-	int32_t idxCENTER = 0;
-	int32_t idxCOLOR = 0;
+	const enum caer_frame_event_color_channels outputColorChannels = caerFrameEventGetChannelNumber(outputFrame);
+
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+	if ((demosaicType == DEMOSAIC_STANDARD || demosaicType == DEMOSAIC_OPENCV_STANDARD
+			|| demosaicType == DEMOSAIC_OPENCV_EDGE_AWARE)
+		&& outputColorChannels != RGB) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic to color requires output frame to be RGB.");
+		return;
+	}
+	else if ((demosaicType == DEMOSAIC_TO_GRAY || demosaicType == DEMOSAIC_OPENCV_TO_GRAY)
+			 && outputColorChannels != GRAYSCALE) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic to grayscale requires output frame to be GRAYSCALE.");
+		return;
+	}
+#else
+	if (demosaicType == DEMOSAIC_STANDARD && outputColorChannels != RGB) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic to color requires output frame to be RGB.");
+		return;
+	}
+	else if (demosaicType == DEMOSAIC_TO_GRAY && outputColorChannels != GRAYSCALE) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic to grayscale requires output frame to be GRAYSCALE.");
+		return;
+	}
+#endif
+
+	if ((caerFrameEventGetLengthX(inputFrame) != caerFrameEventGetLengthX(outputFrame))
+		|| (caerFrameEventGetLengthY(inputFrame) != caerFrameEventGetLengthY(outputFrame))) {
+		caerLog(CAER_LOG_ERROR, __func__, "Demosaic only possible on compatible frames (equal X/Y lengths).");
+		return;
+	}
+
+	if ((demosaicType != DEMOSAIC_STANDARD) && (demosaicType != DEMOSAIC_TO_GRAY)) {
+#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
+		caerFrameUtilsOpenCVDemosaic(inputFrame, outputFrame, demosaicType);
+#else
+		caerLog(CAER_LOG_ERROR, __func__,
+			"Selected OpenCV demosaic type, but OpenCV support is disabled. Either "
+			"enable it or change to use 'DEMOSAIC_STANDARD' or 'DEMOSAIC_TO_GRAY'.");
+#endif
+
+		return;
+	}
+
+	// Then the actual pixels.
+	const uint16_t *inPixels = caerFrameEventGetPixelArrayUnsafeConst(inputFrame);
+	uint16_t *outPixels      = caerFrameEventGetPixelArrayUnsafe(outputFrame);
+
+	enum caer_frame_event_color_filter colorFilter = caerFrameEventGetColorFilter(inputFrame);
+	int32_t lengthX                                = caerFrameEventGetLengthX(inputFrame);
+	int32_t lengthY                                = caerFrameEventGetLengthY(inputFrame);
+	int32_t idxCENTER                              = 0;
+	int32_t idxOUTPUT                              = 0;
 
 	for (int32_t y = 0; y < lengthY; y++) {
 		for (int32_t x = 0; x < lengthX; x++) {
 			// Calculate all neighbor indexes.
-			int32_t idxLEFT = idxCENTER - 1;
+			int32_t idxLEFT  = idxCENTER - 1;
 			int32_t idxRIGHT = idxCENTER + 1;
 
 			int32_t idxCENTERUP = idxCENTER - lengthX;
-			int32_t idxLEFTUP = idxCENTERUP - 1;
-			int32_t idxRIGHTUP = idxCENTERUP + 1;
+			int32_t idxLEFTUP   = idxCENTERUP - 1;
+			int32_t idxRIGHTUP  = idxCENTERUP + 1;
 
 			int32_t idxCENTERDOWN = idxCENTER + lengthX;
-			int32_t idxLEFTDOWN = idxCENTERDOWN - 1;
-			int32_t idxRIGHTDOWN = idxCENTERDOWN + 1;
+			int32_t idxLEFTDOWN   = idxCENTERDOWN - 1;
+			int32_t idxRIGHTDOWN  = idxCENTERDOWN + 1;
 
-			enum pixelColorEnum pixelColor = determinePixelColor(colorFilter, U32T(x), U32T(y));
+			enum pixelColorEnum pixelColor = colorKeys[colorFilter][((x & 0x01) << 1) | (y & 0x01)];
 			int32_t RComp;
 			int32_t GComp;
 			int32_t BComp;
@@ -216,62 +115,64 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 			switch (pixelColor) {
 				case PXR: {
 					// This is a R pixel. It is always surrounded by G and B only.
-					RComp = monoPixels[idxCENTER];
+					RComp = inPixels[idxCENTER];
 
 					if (y == 0) {
 						// First row.
 						if (x == 0) {
 							// First column.
-							GComp = (monoPixels[idxCENTERDOWN] + monoPixels[idxRIGHT]) / 2;
-							BComp = monoPixels[idxRIGHTDOWN];
+							GComp = (inPixels[idxCENTERDOWN] + inPixels[idxRIGHT]) / 2;
+							BComp = inPixels[idxRIGHTDOWN];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							GComp = (monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]) / 2;
-							BComp = monoPixels[idxLEFTDOWN];
+							GComp = (inPixels[idxCENTERDOWN] + inPixels[idxLEFT]) / 2;
+							BComp = inPixels[idxLEFTDOWN];
 						}
 						else {
 							// In-between columns.
-							GComp = (monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 3;
-							BComp = (monoPixels[idxRIGHTDOWN] + monoPixels[idxLEFTDOWN]) / 2;
+							GComp = (inPixels[idxCENTERDOWN] + inPixels[idxLEFT] + inPixels[idxRIGHT]) / 3;
+							BComp = (inPixels[idxRIGHTDOWN] + inPixels[idxLEFTDOWN]) / 2;
 						}
 					}
 					else if (y == (lengthY - 1)) {
 						// Last row.
 						if (x == 0) {
 							// First column.
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxRIGHT]) / 2;
-							BComp = monoPixels[idxRIGHTUP];
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxRIGHT]) / 2;
+							BComp = inPixels[idxRIGHTUP];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxLEFT]) / 2;
-							BComp = monoPixels[idxLEFTUP];
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxLEFT]) / 2;
+							BComp = inPixels[idxLEFTUP];
 						}
 						else {
 							// In-between columns.
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 3;
-							BComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP]) / 2;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxLEFT] + inPixels[idxRIGHT]) / 3;
+							BComp = (inPixels[idxRIGHTUP] + inPixels[idxLEFTUP]) / 2;
 						}
 					}
 					else {
 						// In-between rows.
 						if (x == 0) {
 							// First column.
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxRIGHT]) / 3;
-							BComp = (monoPixels[idxRIGHTUP] + monoPixels[idxRIGHTDOWN]) / 2;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN] + inPixels[idxRIGHT]) / 3;
+							BComp = (inPixels[idxRIGHTUP] + inPixels[idxRIGHTDOWN]) / 2;
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]) / 3;
-							BComp = (monoPixels[idxLEFTUP] + monoPixels[idxLEFTDOWN]) / 2;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN] + inPixels[idxLEFT]) / 3;
+							BComp = (inPixels[idxLEFTUP] + inPixels[idxLEFTDOWN]) / 2;
 						}
 						else {
 							// In-between columns.
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]
-								+ monoPixels[idxRIGHT]) / 4;
-							BComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP] + monoPixels[idxRIGHTDOWN]
-								+ monoPixels[idxLEFTDOWN]) / 4;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN] + inPixels[idxLEFT]
+										+ inPixels[idxRIGHT])
+									/ 4;
+							BComp = (inPixels[idxRIGHTUP] + inPixels[idxLEFTUP] + inPixels[idxRIGHTDOWN]
+										+ inPixels[idxLEFTDOWN])
+									/ 4;
 						}
 					}
 
@@ -280,62 +181,64 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 
 				case PXB: {
 					// This is a B pixel. It is always surrounded by G and R only.
-					BComp = monoPixels[idxCENTER];
+					BComp = inPixels[idxCENTER];
 
 					if (y == 0) {
 						// First row.
 						if (x == 0) {
 							// First column.
-							RComp = monoPixels[idxRIGHTDOWN];
-							GComp = (monoPixels[idxCENTERDOWN] + monoPixels[idxRIGHT]) / 2;
+							RComp = inPixels[idxRIGHTDOWN];
+							GComp = (inPixels[idxCENTERDOWN] + inPixels[idxRIGHT]) / 2;
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							RComp = monoPixels[idxLEFTDOWN];
-							GComp = (monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]) / 2;
+							RComp = inPixels[idxLEFTDOWN];
+							GComp = (inPixels[idxCENTERDOWN] + inPixels[idxLEFT]) / 2;
 						}
 						else {
 							// In-between columns.
-							RComp = (monoPixels[idxRIGHTDOWN] + monoPixels[idxLEFTDOWN]) / 2;
-							GComp = (monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 3;
+							RComp = (inPixels[idxRIGHTDOWN] + inPixels[idxLEFTDOWN]) / 2;
+							GComp = (inPixels[idxCENTERDOWN] + inPixels[idxLEFT] + inPixels[idxRIGHT]) / 3;
 						}
 					}
 					else if (y == (lengthY - 1)) {
 						// Last row.
 						if (x == 0) {
 							// First column.
-							RComp = monoPixels[idxRIGHTUP];
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxRIGHT]) / 2;
+							RComp = inPixels[idxRIGHTUP];
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxRIGHT]) / 2;
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							RComp = monoPixels[idxLEFTUP];
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxLEFT]) / 2;
+							RComp = inPixels[idxLEFTUP];
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxLEFT]) / 2;
 						}
 						else {
 							// In-between columns.
-							RComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP]) / 2;
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 3;
+							RComp = (inPixels[idxRIGHTUP] + inPixels[idxLEFTUP]) / 2;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxLEFT] + inPixels[idxRIGHT]) / 3;
 						}
 					}
 					else {
 						// In-between rows.
 						if (x == 0) {
 							// First column.
-							RComp = (monoPixels[idxRIGHTUP] + monoPixels[idxRIGHTDOWN]) / 2;
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxRIGHT]) / 3;
+							RComp = (inPixels[idxRIGHTUP] + inPixels[idxRIGHTDOWN]) / 2;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN] + inPixels[idxRIGHT]) / 3;
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							RComp = (monoPixels[idxLEFTUP] + monoPixels[idxLEFTDOWN]) / 2;
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]) / 3;
+							RComp = (inPixels[idxLEFTUP] + inPixels[idxLEFTDOWN]) / 2;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN] + inPixels[idxLEFT]) / 3;
 						}
 						else {
 							// In-between columns.
-							RComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP] + monoPixels[idxRIGHTDOWN]
-								+ monoPixels[idxLEFTDOWN]) / 4;
-							GComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN] + monoPixels[idxLEFT]
-								+ monoPixels[idxRIGHT]) / 4;
+							RComp = (inPixels[idxRIGHTUP] + inPixels[idxLEFTUP] + inPixels[idxRIGHTDOWN]
+										+ inPixels[idxLEFTDOWN])
+									/ 4;
+							GComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN] + inPixels[idxLEFT]
+										+ inPixels[idxRIGHT])
+									/ 4;
 						}
 					}
 
@@ -344,57 +247,57 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 
 				case PXG1: {
 					// This is a G1 (first green) pixel. It is always surrounded by all of R, G, B.
-					GComp = monoPixels[idxCENTER];
+					GComp = inPixels[idxCENTER];
 
 					if (y == 0) {
 						// First row.
-						BComp = monoPixels[idxCENTERDOWN];
+						BComp = inPixels[idxCENTERDOWN];
 
 						if (x == 0) {
 							// First column.
-							RComp = monoPixels[idxRIGHT];
+							RComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							RComp = monoPixels[idxLEFT];
+							RComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							RComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							RComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 					else if (y == (lengthY - 1)) {
 						// Last row.
-						BComp = monoPixels[idxCENTERUP];
+						BComp = inPixels[idxCENTERUP];
 
 						if (x == 0) {
 							// First column.
-							RComp = monoPixels[idxRIGHT];
+							RComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							RComp = monoPixels[idxLEFT];
+							RComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							RComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							RComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 					else {
 						// In-between rows.
-						BComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN]) / 2;
+						BComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN]) / 2;
 
 						if (x == 0) {
 							// First column.
-							RComp = monoPixels[idxRIGHT];
+							RComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							RComp = monoPixels[idxLEFT];
+							RComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							RComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							RComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 
@@ -403,57 +306,57 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 
 				case PXG2: {
 					// This is a G2 (second green) pixel. It is always surrounded by all of R, G, B.
-					GComp = monoPixels[idxCENTER];
+					GComp = inPixels[idxCENTER];
 
 					if (y == 0) {
 						// First row.
-						RComp = monoPixels[idxCENTERDOWN];
+						RComp = inPixels[idxCENTERDOWN];
 
 						if (x == 0) {
 							// First column.
-							BComp = monoPixels[idxRIGHT];
+							BComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							BComp = monoPixels[idxLEFT];
+							BComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							BComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							BComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 					else if (y == (lengthY - 1)) {
 						// Last row.
-						RComp = monoPixels[idxCENTERUP];
+						RComp = inPixels[idxCENTERUP];
 
 						if (x == 0) {
 							// First column.
-							BComp = monoPixels[idxRIGHT];
+							BComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							BComp = monoPixels[idxLEFT];
+							BComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							BComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							BComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 					else {
 						// In-between rows.
-						RComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN]) / 2;
+						RComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN]) / 2;
 
 						if (x == 0) {
 							// First column.
-							BComp = monoPixels[idxRIGHT];
+							BComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							BComp = monoPixels[idxLEFT];
+							BComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							BComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							BComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 
@@ -461,67 +364,69 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 				}
 
 				case PXW: {
-					// This is a W pixel, modified Bayer pattern instead of G2. It is always surrounded by all of R, G, B.
+					// This is a W pixel, modified Bayer pattern instead of G2.
+					// It is always surrounded by all of R, G, B.
 					// TODO: how can W itself contribute to the three colors?
 					if (y == 0) {
 						// First row.
-						RComp = monoPixels[idxCENTERDOWN];
+						RComp = inPixels[idxCENTERDOWN];
 
 						if (x == 0) {
 							// First column.
-							GComp = monoPixels[idxRIGHTDOWN];
-							BComp = monoPixels[idxRIGHT];
+							GComp = inPixels[idxRIGHTDOWN];
+							BComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							GComp = monoPixels[idxLEFTDOWN];
-							BComp = monoPixels[idxLEFT];
+							GComp = inPixels[idxLEFTDOWN];
+							BComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							GComp = (monoPixels[idxRIGHTDOWN] + monoPixels[idxLEFTDOWN]) / 2;
-							BComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							GComp = (inPixels[idxRIGHTDOWN] + inPixels[idxLEFTDOWN]) / 2;
+							BComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 					else if (y == (lengthY - 1)) {
 						// Last row.
-						RComp = monoPixels[idxCENTERUP];
+						RComp = inPixels[idxCENTERUP];
 
 						if (x == 0) {
 							// First column.
-							GComp = monoPixels[idxRIGHTUP];
-							BComp = monoPixels[idxRIGHT];
+							GComp = inPixels[idxRIGHTUP];
+							BComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							GComp = monoPixels[idxLEFTUP];
-							BComp = monoPixels[idxRIGHT];
+							GComp = inPixels[idxLEFTUP];
+							BComp = inPixels[idxRIGHT];
 						}
 						else {
 							// In-between columns.
-							GComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP]) / 2;
-							BComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							GComp = (inPixels[idxRIGHTUP] + inPixels[idxLEFTUP]) / 2;
+							BComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 					else {
 						// In-between rows.
-						RComp = (monoPixels[idxCENTERUP] + monoPixels[idxCENTERDOWN]) / 2;
+						RComp = (inPixels[idxCENTERUP] + inPixels[idxCENTERDOWN]) / 2;
 
 						if (x == 0) {
 							// First column.
-							GComp = (monoPixels[idxRIGHTUP] + monoPixels[idxRIGHTDOWN]) / 2;
-							BComp = monoPixels[idxRIGHT];
+							GComp = (inPixels[idxRIGHTUP] + inPixels[idxRIGHTDOWN]) / 2;
+							BComp = inPixels[idxRIGHT];
 						}
 						else if (x == (lengthX - 1)) {
 							// Last column.
-							GComp = (monoPixels[idxLEFTUP] + monoPixels[idxLEFTDOWN]) / 2;
-							BComp = monoPixels[idxLEFT];
+							GComp = (inPixels[idxLEFTUP] + inPixels[idxLEFTDOWN]) / 2;
+							BComp = inPixels[idxLEFT];
 						}
 						else {
 							// In-between columns.
-							GComp = (monoPixels[idxRIGHTUP] + monoPixels[idxLEFTUP] + monoPixels[idxRIGHTDOWN]
-								+ monoPixels[idxLEFTDOWN]) / 4;
-							BComp = (monoPixels[idxLEFT] + monoPixels[idxRIGHT]) / 2;
+							GComp = (inPixels[idxRIGHTUP] + inPixels[idxLEFTUP] + inPixels[idxRIGHTDOWN]
+										+ inPixels[idxLEFTDOWN])
+									/ 4;
+							BComp = (inPixels[idxLEFT] + inPixels[idxRIGHT]) / 2;
 						}
 					}
 
@@ -533,114 +438,60 @@ static void frameUtilsDemosaicFrame(caerFrameEvent colorFrame, caerFrameEventCon
 					break;
 			}
 
-			// Set color frame pixel values for all color channels.
-			colorPixels[idxCOLOR] = U16T(RComp);
-			colorPixels[idxCOLOR + 1] = U16T(GComp);
-			colorPixels[idxCOLOR + 2] = U16T(BComp);
+			if (outputColorChannels == GRAYSCALE) {
+				// Set output frame pixel value for grayscale channel.
+				outPixels[idxOUTPUT] = U16T((RComp + GComp + BComp) / 3);
 
-			// Go to next pixel.
-			idxCENTER++;
-			idxCOLOR += RGB;
+				// Go to next pixel.
+				idxCENTER++;
+				idxOUTPUT += GRAYSCALE;
+			}
+			else {
+				// Set output frame pixel values for all color channels.
+				outPixels[idxOUTPUT]     = U16T(RComp);
+				outPixels[idxOUTPUT + 1] = U16T(GComp);
+				outPixels[idxOUTPUT + 2] = U16T(BComp);
+
+				// Go to next pixel.
+				idxCENTER++;
+				idxOUTPUT += RGB;
+			}
 		}
 	}
 }
 
-caerFrameEventPacket caerFrameUtilsDemosaic(caerFrameEventPacketConst framePacket,
-	enum caer_frame_utils_demosaic_types demosaicType) {
-	if (framePacket == NULL) {
-		return (NULL);
+void caerFrameUtilsContrast(
+	caerFrameEventConst inputFrame, caerFrameEvent outputFrame, enum caer_frame_utils_contrast_types contrastType) {
+	if ((inputFrame == NULL) || (outputFrame == NULL)) {
+		return;
 	}
 
-	if (demosaicType != DEMOSAIC_STANDARD) {
-#if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
-		return (caerFrameUtilsOpenCVDemosaic(framePacket, demosaicType));
-#else
-		caerLog(CAER_LOG_WARNING, __func__,
-			"Selected OpenCV demosaic type, but OpenCV support is disabled. Either enable it or change to use 'DEMOSAIC_STANDARD'.");
-#endif
-	}
-
-	int32_t countValid = 0;
-	int32_t maxLengthX = 0;
-	int32_t maxLengthY = 0;
-
-	// This only works on valid frames coming from a camera: only one color channel,
-	// but with color filter information defined.
-	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
-			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
-			countValid++;
-
-			if (caerFrameEventGetLengthX(caerFrameIteratorElement) > maxLengthX) {
-				maxLengthX = caerFrameEventGetLengthX(caerFrameIteratorElement);
-			}
-
-			if (caerFrameEventGetLengthY(caerFrameIteratorElement) > maxLengthY) {
-				maxLengthY = caerFrameEventGetLengthY(caerFrameIteratorElement);
-			}
-		}
-	CAER_FRAME_ITERATOR_VALID_END
-
-	// Check if any frames did respect the requirements.
-	if (countValid == 0) {
-		return (NULL);
-	}
-
-	// Allocate new frame with RGB channels to hold resulting color image.
-	caerFrameEventPacket colorFramePacket = caerFrameEventPacketAllocate(countValid,
-		caerEventPacketHeaderGetEventSource(&framePacket->packetHeader),
-		caerEventPacketHeaderGetEventTSOverflow(&framePacket->packetHeader), maxLengthX, maxLengthY, RGB);
-	if (colorFramePacket == NULL) {
-		return (NULL);
-	}
-
-	int32_t colorIndex = 0;
-
-	// Now that we have a valid new color frame packet, we can convert the frames one by one.
-	CAER_FRAME_CONST_ITERATOR_VALID_START(framePacket)
-		if ((caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE)
-			&& (caerFrameEventGetColorFilter(caerFrameIteratorElement) != MONO)) {
-			// If all conditions are met, copy from framePacket's mono frame to colorFramePacket's RGB frame.
-			caerFrameEvent colorFrame = caerFrameEventPacketGetEvent(colorFramePacket, colorIndex);
-			colorIndex++;
-
-			// First copy all the metadata.
-			caerFrameEventSetColorFilter(colorFrame, caerFrameEventGetColorFilter(caerFrameIteratorElement));
-			caerFrameEventSetLengthXLengthYChannelNumber(colorFrame, caerFrameEventGetLengthX(caerFrameIteratorElement),
-				caerFrameEventGetLengthY(caerFrameIteratorElement), RGB, colorFramePacket);
-			caerFrameEventSetPositionX(colorFrame, caerFrameEventGetPositionX(caerFrameIteratorElement));
-			caerFrameEventSetPositionY(colorFrame, caerFrameEventGetPositionY(caerFrameIteratorElement));
-			caerFrameEventSetROIIdentifier(colorFrame, caerFrameEventGetROIIdentifier(caerFrameIteratorElement));
-			caerFrameEventSetTSStartOfFrame(colorFrame, caerFrameEventGetTSStartOfFrame(caerFrameIteratorElement));
-			caerFrameEventSetTSEndOfFrame(colorFrame, caerFrameEventGetTSEndOfFrame(caerFrameIteratorElement));
-			caerFrameEventSetTSStartOfExposure(colorFrame,
-				caerFrameEventGetTSStartOfExposure(caerFrameIteratorElement));
-			caerFrameEventSetTSEndOfExposure(colorFrame, caerFrameEventGetTSEndOfExposure(caerFrameIteratorElement));
-
-			// Then the actual pixels.
-			frameUtilsDemosaicFrame(colorFrame, caerFrameIteratorElement);
-
-			// Finally validate the new frame.
-			caerFrameEventValidate(colorFrame, colorFramePacket);
-		}
-	CAER_FRAME_ITERATOR_VALID_END
-
-	return (colorFramePacket);
-}
-
-void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_utils_contrast_types contrastType) {
-	if (framePacket == NULL) {
+	if ((caerFrameEventGetChannelNumber(inputFrame) != caerFrameEventGetChannelNumber(outputFrame))
+		|| (caerFrameEventGetLengthX(inputFrame) != caerFrameEventGetLengthX(outputFrame))
+		|| (caerFrameEventGetLengthY(inputFrame) != caerFrameEventGetLengthY(outputFrame))) {
+		caerLog(CAER_LOG_ERROR, __func__,
+			"Contrast enhancement only possible on compatible frames (same number of "
+			"color channels and equal X/Y lengths).");
 		return;
 	}
 
 	if (contrastType != CONTRAST_STANDARD) {
 #if defined(LIBCAER_HAVE_OPENCV) && LIBCAER_HAVE_OPENCV == 1
-		caerFrameUtilsOpenCVContrast(framePacket, contrastType);
-		return;
+		caerFrameUtilsOpenCVContrast(inputFrame, outputFrame, contrastType);
 #else
-		caerLog(CAER_LOG_WARNING, __func__,
-			"Selected OpenCV contrast enhancement type, but OpenCV support is disabled. Either enable it or change to use 'CONTRAST_STANDARD'.");
+		caerLog(CAER_LOG_ERROR, __func__,
+			"Selected OpenCV contrast enhancement type, but OpenCV support is "
+			"disabled. Either enable it or change to use 'CONTRAST_STANDARD'.");
 #endif
+
+		return;
+	}
+
+	if (caerFrameEventGetChannelNumber(inputFrame) != GRAYSCALE) {
+		caerLog(CAER_LOG_ERROR, __func__,
+			"Standard contrast enhancement only works with grayscale images. For color "
+			"images support, please use one of the OpenCV contrast enhancement types.");
+		return;
 	}
 
 	// O(x, y) = alpha * I(x, y) + beta, where alpha maximizes the range
@@ -648,43 +499,36 @@ void caerFrameUtilsContrast(caerFrameEventPacket framePacket, enum caer_frame_ut
 	// Only works with grayscale images currently. Doing so for color (RGB/RGBA) images would require
 	// conversion into another color space that has an intensity channel separate from the color
 	// channels, such as Lab or YCrCb. The same algorithm would then be applied on the intensity only.
-	CAER_FRAME_ITERATOR_VALID_START(framePacket)
-		if (caerFrameEventGetChannelNumber(caerFrameIteratorElement) == GRAYSCALE) {
-			uint16_t *pixels = caerFrameEventGetPixelArrayUnsafe(caerFrameIteratorElement);
-			int32_t lengthY = caerFrameEventGetLengthY(caerFrameIteratorElement);
-			int32_t lengthX = caerFrameEventGetLengthX(caerFrameIteratorElement);
+	const uint16_t *inPixels = caerFrameEventGetPixelArrayUnsafeConst(inputFrame);
+	uint16_t *outPixels      = caerFrameEventGetPixelArrayUnsafe(outputFrame);
 
-			// On first pass, determine minimum and maximum values.
-			int32_t minValue = INT32_MAX;
-			int32_t maxValue = INT32_MIN;
+	size_t pixelsSize = caerFrameEventGetPixelsMaxIndex(inputFrame);
 
-			for (int32_t idx = 0; idx < (lengthY * lengthX); idx++) {
-				if (pixels[idx] < minValue) {
-					minValue = pixels[idx];
-				}
+	// On first pass, determine minimum and maximum values.
+	int32_t minValue = INT32_MAX;
+	int32_t maxValue = INT32_MIN;
 
-				if (pixels[idx] > maxValue) {
-					maxValue = pixels[idx];
-				}
-			}
-
-			// Use min/max to calculate input range.
-			int32_t range = maxValue - minValue;
-
-			// Calculate alpha (contrast).
-			float alpha = ((float) UINT16_MAX) / ((float) range);
-
-			// Calculate beta (brightness).
-			float beta = ((float) -minValue) * alpha;
-
-			// Apply alpha and beta to pixels array.
-			for (int32_t idx = 0; idx < (lengthY * lengthX); idx++) {
-				pixels[idx] = U16T(alpha * ((float ) pixels[idx]) + beta);
-			}
+	for (size_t idx = 0; idx < pixelsSize; idx++) {
+		if (inPixels[idx] < minValue) {
+			minValue = inPixels[idx];
 		}
-		else {
-			caerLog(CAER_LOG_WARNING, __func__,
-				"Standard contrast enhancement only works with grayscale images. For color images support, please use one of the OpenCV contrast enhancement types.");
+
+		if (inPixels[idx] > maxValue) {
+			maxValue = inPixels[idx];
 		}
-	CAER_FRAME_ITERATOR_VALID_END
+	}
+
+	// Use min/max to calculate input range.
+	int32_t range = maxValue - minValue;
+
+	// Calculate alpha (contrast).
+	float alpha = ((float) UINT16_MAX) / ((float) range);
+
+	// Calculate beta (brightness).
+	float beta = ((float) -minValue) * alpha;
+
+	// Apply alpha and beta to pixels array.
+	for (size_t idx = 0; idx < pixelsSize; idx++) {
+		outPixels[idx] = U16T(alpha * ((float) inPixels[idx]) + beta);
+	}
 }

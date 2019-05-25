@@ -7,13 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct IMU9Event: public caer_imu9_event {
+struct IMU9Event : public caer_imu9_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerIMU9EventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerIMU9EventGetTimestamp64(this, reinterpret_cast<caerIMU9EventPacketConst>(packet.getHeaderPointer())));
+		return (
+			caerIMU9EventGetTimestamp64(this, reinterpret_cast<caerIMU9EventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -119,7 +120,7 @@ struct IMU9Event: public caer_imu9_event {
 
 static_assert(std::is_pod<IMU9Event>::value, "IMU9Event is not POD.");
 
-class IMU9EventPacket: public EventPacketCommon<IMU9EventPacket, IMU9Event> {
+class IMU9EventPacket : public EventPacketCommon<IMU9EventPacket, IMU9Event> {
 public:
 	// Constructors.
 	IMU9EventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -128,7 +129,7 @@ public:
 		caerIMU9EventPacket packet = caerIMU9EventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -137,7 +138,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, IMU9_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -146,7 +147,7 @@ public:
 
 		constructorCheckEventType(packetHeader, IMU9_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -154,20 +155,19 @@ protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
 		caerIMU9Event evtBase = caerIMU9EventPacketGetEvent(reinterpret_cast<caerIMU9EventPacket>(header), index);
-		IMU9Event *evt = static_cast<IMU9Event *>(evtBase);
+		IMU9Event *evt        = static_cast<IMU9Event *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerIMU9EventConst evtBase = caerIMU9EventPacketGetEventConst(
-			reinterpret_cast<caerIMU9EventPacketConst>(header), index);
+		caerIMU9EventConst evtBase
+			= caerIMU9EventPacketGetEventConst(reinterpret_cast<caerIMU9EventPacketConst>(header), index);
 		const IMU9Event *evt = static_cast<const IMU9Event *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

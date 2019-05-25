@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct Matrix4x4Event: public caer_matrix4x4_event {
+struct Matrix4x4Event : public caer_matrix4x4_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerMatrix4x4EventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerMatrix4x4EventGetTimestamp64(this,
-			reinterpret_cast<caerMatrix4x4EventPacketConst>(packet.getHeaderPointer())));
+		return (caerMatrix4x4EventGetTimestamp64(
+			this, reinterpret_cast<caerMatrix4x4EventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -184,7 +184,7 @@ struct Matrix4x4Event: public caer_matrix4x4_event {
 
 static_assert(std::is_pod<Matrix4x4Event>::value, "Matrix4x4Event is not POD.");
 
-class Matrix4x4EventPacket: public EventPacketCommon<Matrix4x4EventPacket, Matrix4x4Event> {
+class Matrix4x4EventPacket : public EventPacketCommon<Matrix4x4EventPacket, Matrix4x4Event> {
 public:
 	// Constructors.
 	Matrix4x4EventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -193,7 +193,7 @@ public:
 		caerMatrix4x4EventPacket packet = caerMatrix4x4EventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -202,7 +202,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, MATRIX4x4_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -211,29 +211,28 @@ public:
 
 		constructorCheckEventType(packetHeader, MATRIX4x4_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
-		caerMatrix4x4Event evtBase = caerMatrix4x4EventPacketGetEvent(reinterpret_cast<caerMatrix4x4EventPacket>(header),
-			index);
+		caerMatrix4x4Event evtBase
+			= caerMatrix4x4EventPacketGetEvent(reinterpret_cast<caerMatrix4x4EventPacket>(header), index);
 		Matrix4x4Event *evt = static_cast<Matrix4x4Event *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerMatrix4x4EventConst evtBase = caerMatrix4x4EventPacketGetEventConst(
-			reinterpret_cast<caerMatrix4x4EventPacketConst>(header), index);
+		caerMatrix4x4EventConst evtBase
+			= caerMatrix4x4EventPacketGetEventConst(reinterpret_cast<caerMatrix4x4EventPacketConst>(header), index);
 		const Matrix4x4Event *evt = static_cast<const Matrix4x4Event *>(evtBase);
 
 		return (*evt);
 	}
 };
-
 }
 }
 

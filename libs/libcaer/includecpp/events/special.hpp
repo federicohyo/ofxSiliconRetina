@@ -7,14 +7,14 @@
 namespace libcaer {
 namespace events {
 
-struct SpecialEvent: public caer_special_event {
+struct SpecialEvent : public caer_special_event {
 	int32_t getTimestamp() const noexcept {
 		return (caerSpecialEventGetTimestamp(this));
 	}
 
 	int64_t getTimestamp64(const EventPacket &packet) const noexcept {
-		return (caerSpecialEventGetTimestamp64(this,
-			reinterpret_cast<caerSpecialEventPacketConst>(packet.getHeaderPointer())));
+		return (caerSpecialEventGetTimestamp64(
+			this, reinterpret_cast<caerSpecialEventPacketConst>(packet.getHeaderPointer())));
 	}
 
 	void setTimestamp(int32_t ts) {
@@ -56,7 +56,7 @@ struct SpecialEvent: public caer_special_event {
 
 static_assert(std::is_pod<SpecialEvent>::value, "SpecialEvent is not POD.");
 
-class SpecialEventPacket: public EventPacketCommon<SpecialEventPacket, SpecialEvent> {
+class SpecialEventPacket : public EventPacketCommon<SpecialEventPacket, SpecialEvent> {
 public:
 	// Constructors.
 	SpecialEventPacket(size_type eventCapacity, int16_t eventSource, int32_t tsOverflow) {
@@ -65,7 +65,7 @@ public:
 		caerSpecialEventPacket packet = caerSpecialEventPacketAllocate(eventCapacity, eventSource, tsOverflow);
 		constructorCheckNullptr(packet);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = true; // Always owner on new allocation!
 	}
 
@@ -74,7 +74,7 @@ public:
 
 		constructorCheckEventType(&packet->packetHeader, SPECIAL_EVENT);
 
-		header = &packet->packetHeader;
+		header        = &packet->packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
@@ -83,23 +83,23 @@ public:
 
 		constructorCheckEventType(packetHeader, SPECIAL_EVENT);
 
-		header = packetHeader;
+		header        = packetHeader;
 		isMemoryOwner = takeMemoryOwnership;
 	}
 
 protected:
 	// Event access methods.
 	reference virtualGetEvent(size_type index) noexcept override {
-		caerSpecialEvent evtBase = caerSpecialEventPacketGetEvent(reinterpret_cast<caerSpecialEventPacket>(header),
-			index);
+		caerSpecialEvent evtBase
+			= caerSpecialEventPacketGetEvent(reinterpret_cast<caerSpecialEventPacket>(header), index);
 		SpecialEvent *evt = static_cast<SpecialEvent *>(evtBase);
 
 		return (*evt);
 	}
 
 	const_reference virtualGetEvent(size_type index) const noexcept override {
-		caerSpecialEventConst evtBase = caerSpecialEventPacketGetEventConst(
-			reinterpret_cast<caerSpecialEventPacketConst>(header), index);
+		caerSpecialEventConst evtBase
+			= caerSpecialEventPacketGetEventConst(reinterpret_cast<caerSpecialEventPacketConst>(header), index);
 		const SpecialEvent *evt = static_cast<const SpecialEvent *>(evtBase);
 
 		return (*evt);
@@ -107,8 +107,8 @@ protected:
 
 public:
 	reference findEventByType(uint8_t type) {
-		caerSpecialEvent evtBase = caerSpecialEventPacketFindEventByType(
-			reinterpret_cast<caerSpecialEventPacket>(header), type);
+		caerSpecialEvent evtBase
+			= caerSpecialEventPacketFindEventByType(reinterpret_cast<caerSpecialEventPacket>(header), type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Special Event of particular type not found.");
 		}
@@ -119,8 +119,8 @@ public:
 	}
 
 	const_reference findEventByType(uint8_t type) const {
-		caerSpecialEventConst evtBase = caerSpecialEventPacketFindEventByTypeConst(
-			reinterpret_cast<caerSpecialEventPacketConst>(header), type);
+		caerSpecialEventConst evtBase
+			= caerSpecialEventPacketFindEventByTypeConst(reinterpret_cast<caerSpecialEventPacketConst>(header), type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Special Event of particular type not found.");
 		}
@@ -131,8 +131,8 @@ public:
 	}
 
 	reference findValidEventByType(uint8_t type) {
-		caerSpecialEvent evtBase = caerSpecialEventPacketFindValidEventByType(
-			reinterpret_cast<caerSpecialEventPacket>(header), type);
+		caerSpecialEvent evtBase
+			= caerSpecialEventPacketFindValidEventByType(reinterpret_cast<caerSpecialEventPacket>(header), type);
 		if (evtBase == nullptr) {
 			throw std::range_error("Valid Special Event of particular type not found.");
 		}
@@ -154,7 +154,6 @@ public:
 		return (*evt);
 	}
 };
-
 }
 }
 

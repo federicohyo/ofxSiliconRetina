@@ -1,4 +1,4 @@
-# Install script for directory: /media/federico/space/inilabs/libcaer/include
+# Install script for directory: /Volumes/128GB/libcaer/include
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -27,27 +27,31 @@ if(NOT CMAKE_INSTALL_COMPONENT)
   endif()
 endif()
 
-# Install shared libraries without execute permission?
-if(NOT DEFINED CMAKE_INSTALL_SO_NO_EXE)
-  set(CMAKE_INSTALL_SO_NO_EXE "1")
+# Is this installation the result of a crosscompile?
+if(NOT DEFINED CMAKE_CROSSCOMPILING)
+  set(CMAKE_CROSSCOMPILING "FALSE")
 endif()
 
-if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libcaer" TYPE FILE FILES
-    "/media/federico/space/inilabs/libcaer/include/libcaer.h"
-    "/media/federico/space/inilabs/libcaer/include/log.h"
-    "/media/federico/space/inilabs/libcaer/include/network.h"
-    "/media/federico/space/inilabs/libcaer/include/portable_endian.h"
-    "/media/federico/space/inilabs/libcaer/include/frame_utils.h"
-    "/media/federico/space/inilabs/libcaer/include/ringbuffer.h"
+    "/Volumes/128GB/libcaer/include/libcaer.h"
+    "/Volumes/128GB/libcaer/include/log.h"
+    "/Volumes/128GB/libcaer/include/network.h"
+    "/Volumes/128GB/libcaer/include/portable_endian.h"
+    "/Volumes/128GB/libcaer/include/frame_utils.h"
+    "/Volumes/128GB/libcaer/include/ringbuffer.h"
     )
 endif()
 
-if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libcaer" TYPE DIRECTORY FILES "/media/federico/space/inilabs/libcaer/include/events" FILES_MATCHING REGEX "/[^/]*\\.h$")
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libcaer" TYPE DIRECTORY FILES "/Volumes/128GB/libcaer/include/events" FILES_MATCHING REGEX "/[^/]*\\.h$")
 endif()
 
-if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libcaer" TYPE DIRECTORY FILES "/media/federico/space/inilabs/libcaer/include/devices" FILES_MATCHING REGEX "/[^/]*\\.h$")
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libcaer" TYPE DIRECTORY FILES "/Volumes/128GB/libcaer/include/devices" FILES_MATCHING REGEX "/[^/]*\\.h$")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/libcaer" TYPE DIRECTORY FILES "/Volumes/128GB/libcaer/include/filters" FILES_MATCHING REGEX "/[^/]*\\.h$")
 endif()
 
