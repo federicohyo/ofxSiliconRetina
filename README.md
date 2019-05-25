@@ -76,6 +76,10 @@ PLEASE SELECT SENSOR FAMILY  DVS128 / DAVIS (FX2/FX3)
 Version history
 ------------
 
+### (25 May 2019):
+
+Compatible with libcaer 3.1.0 (this version works with logic 18.0 and firmware 5). These versions are the only one that currently work both in libcaer (3.1.0) and jAER.
+
 ### (2 June 2017):
 
 Added aedat3.1 recording and playback capabilities (very limited in playback, no time or slow down control possible).
