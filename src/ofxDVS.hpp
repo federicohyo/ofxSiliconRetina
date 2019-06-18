@@ -281,6 +281,7 @@ public:
         // set the pointer back to where it was
         istreamf.clear();
         istreamf.seekg(posHeaderParsed);
+	return true;
     }
 
     bool tryFile(){
