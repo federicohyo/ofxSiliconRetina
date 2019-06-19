@@ -1210,7 +1210,7 @@ void ofxDVS::initImageGenerator(){
     }
     imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
     rectifyPolarities = false;
-    numSpikes = 2000.0;
+    numSpikes = 1500.0;
     counterSpikes = 0;
     drawImageGen = false;
     decaySpikeFeatures = 0.02;
