@@ -5,6 +5,8 @@ ofxSiliconRetina
 
 ![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/docs/viewer.png "Viewer")
 
+![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/docs/hands_gif.gif "HandGestures")
+
 The statistic panel shows the display running only at about 60 fps. Nonetheless, the event-data are being timestamped with a single micro-seconds (us) resolution (see https://inilabs.com/products/dynamic-and-active-pixel-vision-sensor/). 
 
 ![alt text](https://github.com/federicohyo/ofxSiliconRetina/blob/master/docs/viewer_mesh_3dgif.gif "Mesh Example")
