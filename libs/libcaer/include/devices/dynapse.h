@@ -9,6 +9,7 @@
 
 #include "../events/special.h"
 #include "../events/spike.h"
+
 #include "usb.h"
 
 #ifdef __cplusplus
@@ -523,8 +524,8 @@ extern "C" {
 
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_Y_NORTH 0
 #define DYNAPSE_CONFIG_SRAM_DIRECTION_Y_SOUTH 1
-#define DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST 0
-#define DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST 1
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_X_EAST  0
+#define DYNAPSE_CONFIG_SRAM_DIRECTION_X_WEST  1
 
 /**
  * Number of chips on the board.
@@ -595,117 +596,117 @@ extern "C" {
  * See 'https://ai-ctx.com/support/'
  * section 'Neuron’s behaviors and parameters tuning'.
  */
-#define DYNAPSE_CONFIG_BIAS_C0_PULSE_PWLK_P 0
+#define DYNAPSE_CONFIG_BIAS_C0_PULSE_PWLK_P      0
 #define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_S_N 2
 #define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_INH_F_N 4
 #define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_EXC_S_N 6
 #define DYNAPSE_CONFIG_BIAS_C0_PS_WEIGHT_EXC_F_N 8
-#define DYNAPSE_CONFIG_BIAS_C0_IF_RFR_N 10
-#define DYNAPSE_CONFIG_BIAS_C0_IF_TAU1_N 12
-#define DYNAPSE_CONFIG_BIAS_C0_IF_AHTAU_N 14
-#define DYNAPSE_CONFIG_BIAS_C0_IF_CASC_N 16
-#define DYNAPSE_CONFIG_BIAS_C0_IF_TAU2_N 18
-#define DYNAPSE_CONFIG_BIAS_C0_IF_BUF_P 20
-#define DYNAPSE_CONFIG_BIAS_C0_IF_AHTHR_N 22
-#define DYNAPSE_CONFIG_BIAS_C0_IF_THR_N 24
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_S_P 26
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_F_P 28
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_F_P 30
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_S_P 32
-#define DYNAPSE_CONFIG_BIAS_C0_IF_NMDA_N 34
-#define DYNAPSE_CONFIG_BIAS_C0_IF_DC_P 36
-#define DYNAPSE_CONFIG_BIAS_C0_IF_AHW_P 38
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_S_P 40
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_F_P 42
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_TAU_F_P 44
-#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_TAU_S_P 46
-#define DYNAPSE_CONFIG_BIAS_C0_R2R_P 48
+#define DYNAPSE_CONFIG_BIAS_C0_IF_RFR_N          10
+#define DYNAPSE_CONFIG_BIAS_C0_IF_TAU1_N         12
+#define DYNAPSE_CONFIG_BIAS_C0_IF_AHTAU_N        14
+#define DYNAPSE_CONFIG_BIAS_C0_IF_CASC_N         16
+#define DYNAPSE_CONFIG_BIAS_C0_IF_TAU2_N         18
+#define DYNAPSE_CONFIG_BIAS_C0_IF_BUF_P          20
+#define DYNAPSE_CONFIG_BIAS_C0_IF_AHTHR_N        22
+#define DYNAPSE_CONFIG_BIAS_C0_IF_THR_N          24
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_S_P    26
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_THR_F_P    28
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_F_P    30
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_THR_S_P    32
+#define DYNAPSE_CONFIG_BIAS_C0_IF_NMDA_N         34
+#define DYNAPSE_CONFIG_BIAS_C0_IF_DC_P           36
+#define DYNAPSE_CONFIG_BIAS_C0_IF_AHW_P          38
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_S_P    40
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPII_TAU_F_P    42
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_TAU_F_P    44
+#define DYNAPSE_CONFIG_BIAS_C0_NPDPIE_TAU_S_P    46
+#define DYNAPSE_CONFIG_BIAS_C0_R2R_P             48
 
-#define DYNAPSE_CONFIG_BIAS_C1_PULSE_PWLK_P 1
+#define DYNAPSE_CONFIG_BIAS_C1_PULSE_PWLK_P      1
 #define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_INH_S_N 3
 #define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_INH_F_N 5
 #define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_EXC_S_N 7
 #define DYNAPSE_CONFIG_BIAS_C1_PS_WEIGHT_EXC_F_N 9
-#define DYNAPSE_CONFIG_BIAS_C1_IF_RFR_N 11
-#define DYNAPSE_CONFIG_BIAS_C1_IF_TAU1_N 13
-#define DYNAPSE_CONFIG_BIAS_C1_IF_AHTAU_N 15
-#define DYNAPSE_CONFIG_BIAS_C1_IF_CASC_N 17
-#define DYNAPSE_CONFIG_BIAS_C1_IF_TAU2_N 19
-#define DYNAPSE_CONFIG_BIAS_C1_IF_BUF_P 21
-#define DYNAPSE_CONFIG_BIAS_C1_IF_AHTHR_N 23
-#define DYNAPSE_CONFIG_BIAS_C1_IF_THR_N 25
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_THR_S_P 27
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_THR_F_P 29
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_THR_F_P 31
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_THR_S_P 33
-#define DYNAPSE_CONFIG_BIAS_C1_IF_NMDA_N 35
-#define DYNAPSE_CONFIG_BIAS_C1_IF_DC_P 37
-#define DYNAPSE_CONFIG_BIAS_C1_IF_AHW_P 39
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_S_P 41
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_F_P 43
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_TAU_F_P 45
-#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_TAU_S_P 47
-#define DYNAPSE_CONFIG_BIAS_C1_R2R_P 49
+#define DYNAPSE_CONFIG_BIAS_C1_IF_RFR_N          11
+#define DYNAPSE_CONFIG_BIAS_C1_IF_TAU1_N         13
+#define DYNAPSE_CONFIG_BIAS_C1_IF_AHTAU_N        15
+#define DYNAPSE_CONFIG_BIAS_C1_IF_CASC_N         17
+#define DYNAPSE_CONFIG_BIAS_C1_IF_TAU2_N         19
+#define DYNAPSE_CONFIG_BIAS_C1_IF_BUF_P          21
+#define DYNAPSE_CONFIG_BIAS_C1_IF_AHTHR_N        23
+#define DYNAPSE_CONFIG_BIAS_C1_IF_THR_N          25
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_THR_S_P    27
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_THR_F_P    29
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_THR_F_P    31
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_THR_S_P    33
+#define DYNAPSE_CONFIG_BIAS_C1_IF_NMDA_N         35
+#define DYNAPSE_CONFIG_BIAS_C1_IF_DC_P           37
+#define DYNAPSE_CONFIG_BIAS_C1_IF_AHW_P          39
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_S_P    41
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPII_TAU_F_P    43
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_TAU_F_P    45
+#define DYNAPSE_CONFIG_BIAS_C1_NPDPIE_TAU_S_P    47
+#define DYNAPSE_CONFIG_BIAS_C1_R2R_P             49
 
 #define DYNAPSE_CONFIG_BIAS_U_BUFFER 50
-#define DYNAPSE_CONFIG_BIAS_U_SSP 51
-#define DYNAPSE_CONFIG_BIAS_U_SSN 52
+#define DYNAPSE_CONFIG_BIAS_U_SSP    51
+#define DYNAPSE_CONFIG_BIAS_U_SSN    52
 
-#define DYNAPSE_CONFIG_BIAS_C2_PULSE_PWLK_P 64
+#define DYNAPSE_CONFIG_BIAS_C2_PULSE_PWLK_P      64
 #define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_INH_S_N 66
 #define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_INH_F_N 68
 #define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_EXC_S_N 70
 #define DYNAPSE_CONFIG_BIAS_C2_PS_WEIGHT_EXC_F_N 72
-#define DYNAPSE_CONFIG_BIAS_C2_IF_RFR_N 74
-#define DYNAPSE_CONFIG_BIAS_C2_IF_TAU1_N 76
-#define DYNAPSE_CONFIG_BIAS_C2_IF_AHTAU_N 78
-#define DYNAPSE_CONFIG_BIAS_C2_IF_CASC_N 80
-#define DYNAPSE_CONFIG_BIAS_C2_IF_TAU2_N 82
-#define DYNAPSE_CONFIG_BIAS_C2_IF_BUF_P 84
-#define DYNAPSE_CONFIG_BIAS_C2_IF_AHTHR_N 86
-#define DYNAPSE_CONFIG_BIAS_C2_IF_THR_N 88
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_THR_S_P 90
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_THR_F_P 92
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_THR_F_P 94
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_THR_S_P 96
-#define DYNAPSE_CONFIG_BIAS_C2_IF_NMDA_N 98
-#define DYNAPSE_CONFIG_BIAS_C2_IF_DC_P 100
-#define DYNAPSE_CONFIG_BIAS_C2_IF_AHW_P 102
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_S_P 104
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_F_P 106
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_TAU_F_P 108
-#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_TAU_S_P 110
-#define DYNAPSE_CONFIG_BIAS_C2_R2R_P 112
+#define DYNAPSE_CONFIG_BIAS_C2_IF_RFR_N          74
+#define DYNAPSE_CONFIG_BIAS_C2_IF_TAU1_N         76
+#define DYNAPSE_CONFIG_BIAS_C2_IF_AHTAU_N        78
+#define DYNAPSE_CONFIG_BIAS_C2_IF_CASC_N         80
+#define DYNAPSE_CONFIG_BIAS_C2_IF_TAU2_N         82
+#define DYNAPSE_CONFIG_BIAS_C2_IF_BUF_P          84
+#define DYNAPSE_CONFIG_BIAS_C2_IF_AHTHR_N        86
+#define DYNAPSE_CONFIG_BIAS_C2_IF_THR_N          88
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_THR_S_P    90
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_THR_F_P    92
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_THR_F_P    94
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_THR_S_P    96
+#define DYNAPSE_CONFIG_BIAS_C2_IF_NMDA_N         98
+#define DYNAPSE_CONFIG_BIAS_C2_IF_DC_P           100
+#define DYNAPSE_CONFIG_BIAS_C2_IF_AHW_P          102
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_S_P    104
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPII_TAU_F_P    106
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_TAU_F_P    108
+#define DYNAPSE_CONFIG_BIAS_C2_NPDPIE_TAU_S_P    110
+#define DYNAPSE_CONFIG_BIAS_C2_R2R_P             112
 
-#define DYNAPSE_CONFIG_BIAS_C3_PULSE_PWLK_P 65
+#define DYNAPSE_CONFIG_BIAS_C3_PULSE_PWLK_P      65
 #define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_INH_S_N 67
 #define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_INH_F_N 69
 #define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_EXC_S_N 71
 #define DYNAPSE_CONFIG_BIAS_C3_PS_WEIGHT_EXC_F_N 73
-#define DYNAPSE_CONFIG_BIAS_C3_IF_RFR_N 75
-#define DYNAPSE_CONFIG_BIAS_C3_IF_TAU1_N 77
-#define DYNAPSE_CONFIG_BIAS_C3_IF_AHTAU_N 79
-#define DYNAPSE_CONFIG_BIAS_C3_IF_CASC_N 81
-#define DYNAPSE_CONFIG_BIAS_C3_IF_TAU2_N 83
-#define DYNAPSE_CONFIG_BIAS_C3_IF_BUF_P 85
-#define DYNAPSE_CONFIG_BIAS_C3_IF_AHTHR_N 87
-#define DYNAPSE_CONFIG_BIAS_C3_IF_THR_N 89
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_THR_S_P 91
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_THR_F_P 93
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_THR_F_P 95
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_THR_S_P 97
-#define DYNAPSE_CONFIG_BIAS_C3_IF_NMDA_N 99
-#define DYNAPSE_CONFIG_BIAS_C3_IF_DC_P 101
-#define DYNAPSE_CONFIG_BIAS_C3_IF_AHW_P 103
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_TAU_S_P 105
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_TAU_F_P 107
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_TAU_F_P 109
-#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_TAU_S_P 111
-#define DYNAPSE_CONFIG_BIAS_C3_R2R_P 113
+#define DYNAPSE_CONFIG_BIAS_C3_IF_RFR_N          75
+#define DYNAPSE_CONFIG_BIAS_C3_IF_TAU1_N         77
+#define DYNAPSE_CONFIG_BIAS_C3_IF_AHTAU_N        79
+#define DYNAPSE_CONFIG_BIAS_C3_IF_CASC_N         81
+#define DYNAPSE_CONFIG_BIAS_C3_IF_TAU2_N         83
+#define DYNAPSE_CONFIG_BIAS_C3_IF_BUF_P          85
+#define DYNAPSE_CONFIG_BIAS_C3_IF_AHTHR_N        87
+#define DYNAPSE_CONFIG_BIAS_C3_IF_THR_N          89
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_THR_S_P    91
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_THR_F_P    93
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_THR_F_P    95
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_THR_S_P    97
+#define DYNAPSE_CONFIG_BIAS_C3_IF_NMDA_N         99
+#define DYNAPSE_CONFIG_BIAS_C3_IF_DC_P           101
+#define DYNAPSE_CONFIG_BIAS_C3_IF_AHW_P          103
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_TAU_S_P    105
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPII_TAU_F_P    107
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_TAU_F_P    109
+#define DYNAPSE_CONFIG_BIAS_C3_NPDPIE_TAU_S_P    111
+#define DYNAPSE_CONFIG_BIAS_C3_R2R_P             113
 
 #define DYNAPSE_CONFIG_BIAS_D_BUFFER 114
-#define DYNAPSE_CONFIG_BIAS_D_SSP 115
-#define DYNAPSE_CONFIG_BIAS_D_SSN 116
+#define DYNAPSE_CONFIG_BIAS_D_SSP    115
+#define DYNAPSE_CONFIG_BIAS_D_SSN    116
 
 /**
  * Dynap-se device-related information.
@@ -747,7 +748,7 @@ struct caer_dynapse_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_dynapse_info caerDynapseInfoGet(caerDeviceHandle handle);
 
 /**
  * On-chip coarse-fine bias current configuration for Dynap-se.
@@ -779,7 +780,8 @@ struct caer_bias_dynapse {
  *
  * @return internal integer representation for device configuration.
  */
-uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias);
+
 /**
  * Transform internal integer representation, as received by calls to
  * caerDeviceConfigGet(), into a coarse-fine bias structure, for easier
@@ -789,7 +791,7 @@ uint32_t caerBiasDynapseGenerate(const struct caer_bias_dynapse dynapseBias);
  *
  * @return coarse-fine bias structure.
  */
-struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
+LIBRARY_PUBLIC_VISIBILITY struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
 
 /**
  * Transfer 16bit words from memory to device SRAM, with configurable
@@ -802,7 +804,8 @@ struct caer_bias_dynapse caerBiasDynapseParse(const uint32_t dynapseBias);
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, size_t numWords);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteSramWords(
+	caerDeviceHandle handle, const uint16_t *data, uint32_t baseAddr, size_t numWords);
 
 /**
  * Specifies the poisson spike generator's spike rate.
@@ -814,7 +817,8 @@ bool caerDynapseWriteSramWords(caerDeviceHandle handle, const uint16_t *data, ui
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAddr, float rateHz);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWritePoissonSpikeRate(
+	caerDeviceHandle handle, uint16_t neuronAddr, float rateHz);
 
 /**
  * THIS FUNCTION IS DEPRECATED. USE caerDynapseWriteSramN() INSTEAD!
@@ -842,8 +846,8 @@ bool caerDynapseWritePoissonSpikeRate(caerDeviceHandle handle, uint16_t neuronAd
  * @return true on success, false otherwise.
  */
 DEPRECATED_FUNCTION("Replaced by caerDynapseWriteSramN(), which has an improved interface.")
-bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore, uint8_t virtualCoreId,
-	bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuronAddrCore,
+	uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t sramId, uint8_t destinationCore);
 
 /**
  * Write one of the 4 SRAMs of a single neuron. Writing the SRAM means writing the destination
@@ -864,8 +868,8 @@ bool caerDynapseWriteSram(caerDeviceHandle handle, uint8_t coreId, uint8_t neuro
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx,
-	uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t sramId,
+	uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
 
 /**
  * Write a single CAM, to specify which spikes are allowed as input into a neuron.
@@ -881,7 +885,7 @@ bool caerDynapseWriteSramN(caerDeviceHandle handle, uint16_t neuronAddr, uint8_t
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseWriteCam(
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseWriteCam(
 	caerDeviceHandle handle, uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
 
 /**
@@ -895,7 +899,8 @@ bool caerDynapseWriteCam(
  *
  * @return true on success, false otherwise.
  */
-bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, size_t numConfig);
+LIBRARY_PUBLIC_VISIBILITY bool caerDynapseSendDataToUSB(
+	caerDeviceHandle handle, const uint32_t *data, size_t numConfig);
 
 /**
  * Generate bits to write a single CAM, to specify which spikes are allowed as input into a neuron.
@@ -909,7 +914,8 @@ bool caerDynapseSendDataToUSB(caerDeviceHandle handle, const uint32_t *data, siz
  *
  * @return bits to send to device.
  */
-uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerDynapseGenerateCamBits(
+	uint16_t inputNeuronAddr, uint16_t neuronAddr, uint8_t camId, uint8_t synapseType);
 
 /**
  * Generate bits to write one of the 4 SRAMs of a single neuron.
@@ -928,8 +934,8 @@ uint32_t caerDynapseGenerateCamBits(uint16_t inputNeuronAddr, uint16_t neuronAdd
  *
  * @return bits to send to device.
  */
-uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_t virtualCoreId, bool sx, uint8_t dx,
-	bool sy, uint8_t dy, uint8_t destinationCore);
+LIBRARY_PUBLIC_VISIBILITY uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId,
+	uint8_t virtualCoreId, bool sx, uint8_t dx, bool sy, uint8_t dy, uint8_t destinationCore);
 
 /**
  * Map core ID and column/row address to the correct chip global neuron address.
@@ -940,7 +946,7 @@ uint32_t caerDynapseGenerateSramBits(uint16_t neuronAddr, uint8_t sramId, uint8_
  *
  * @return chip global neuron address.
  */
-uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t rowY);
 
 /**
  * Map core ID and per-core neuron address to the correct chip global neuron address.
@@ -950,7 +956,7 @@ uint16_t caerDynapseCoreXYToNeuronId(uint8_t coreId, uint8_t columnX, uint8_t ro
  *
  * @return chip global neuron address.
  */
-uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
 
 /**
  * Get the X (column) address for a spike event, in pixels.
@@ -960,7 +966,7 @@ uint16_t caerDynapseCoreAddrToNeuronId(uint8_t coreId, uint8_t neuronAddrCore);
  *
  * @return the event X address in pixels.
  */
-uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
 
 /**
  * Get the Y (row) address for a spike event, in pixels.
@@ -970,7 +976,7 @@ uint16_t caerDynapseSpikeEventGetX(caerSpikeEventConst event);
  *
  * @return the event Y address in pixels.
  */
-uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
+LIBRARY_PUBLIC_VISIBILITY uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
 
 /**
  * Get the chip ID, core ID and neuron ID from the X and Y
@@ -984,7 +990,7 @@ uint16_t caerDynapseSpikeEventGetY(caerSpikeEventConst event);
  *
  * @return a SpikeEvent struct holding chip ID, core ID and neuron ID.
  */
-struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y);
+LIBRARY_PUBLIC_VISIBILITY struct caer_spike_event caerDynapseSpikeEventFromXY(uint16_t x, uint16_t y);
 
 #ifdef __cplusplus
 }

@@ -9,6 +9,7 @@
 
 #include "../events/polarity.h"
 #include "../events/special.h"
+
 #include "usb.h"
 
 #ifdef __cplusplus
@@ -142,8 +143,8 @@ struct caer_dvs128_info {
 	/// If not NULL, pointed-to memory is *only* valid while the corresponding
 	/// device is open! After calling deviceClose() this is invalid memory!
 	char *deviceString;
-	/// Logic (FPGA/CPLD) version.
-	int16_t logicVersion;
+	/// USB firmware version.
+	int16_t firmwareVersion;
 	/// Whether the device is a time-stamp master or slave.
 	bool deviceIsMaster;
 	/// DVS X axis resolution.
@@ -162,7 +163,7 @@ struct caer_dvs128_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_dvs128_info caerDVS128InfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_dvs128_info caerDVS128InfoGet(caerDeviceHandle handle);
 
 #ifdef __cplusplus
 }

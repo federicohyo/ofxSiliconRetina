@@ -42,7 +42,8 @@ extern "C" {
  * @param deviceID a unique ID to identify the device from others. Will be used as the
  *                 source for EventPackets being generated from its data.
  * @param deviceType type of the device to open. Currently supported are:
- *                   CAER_DEVICE_DVS128, CAER_DEVICE_DAVIS, CAER_DEVICE_DYNAPSE
+ *                   CAER_DEVICE_DVS128, CAER_DEVICE_DAVIS, CAER_DEVICE_DYNAPSE, CAER_DEVICE_DVS132S,
+ *                   CAER_DEVICE_DVXPLORER, CAER_DEVICE_SAMSUNG_EVK
  * @param busNumberRestrict restrict the search for viable devices to only this USB bus number.
  * @param devAddressRestrict restrict the search for viable devices to only this USB device address.
  * @param serialNumberRestrict restrict the search for viable devices to only devices which do
@@ -52,8 +53,8 @@ extern "C" {
  *         or NULL on error. Always check for this! On error, errno is also set to
  *         provide more precise information about the failure cause.
  */
-caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType, uint8_t busNumberRestrict,
-	uint8_t devAddressRestrict, const char *serialNumberRestrict);
+LIBRARY_PUBLIC_VISIBILITY caerDeviceHandle caerDeviceOpen(uint16_t deviceID, uint16_t deviceType,
+	uint8_t busNumberRestrict, uint8_t devAddressRestrict, const char *serialNumberRestrict);
 
 #ifdef __cplusplus
 }

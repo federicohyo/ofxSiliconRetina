@@ -31,9 +31,9 @@ extern "C" {
  * possible baud-rates for serial port communication.
  */
 //@{
-#define CAER_HOST_CONFIG_SERIAL_BAUD_RATE_2M 2000000
-#define CAER_HOST_CONFIG_SERIAL_BAUD_RATE_4M 4000000
-#define CAER_HOST_CONFIG_SERIAL_BAUD_RATE_8M 8000000
+#define CAER_HOST_CONFIG_SERIAL_BAUD_RATE_2M  2000000
+#define CAER_HOST_CONFIG_SERIAL_BAUD_RATE_4M  4000000
+#define CAER_HOST_CONFIG_SERIAL_BAUD_RATE_8M  8000000
 #define CAER_HOST_CONFIG_SERIAL_BAUD_RATE_12M 12000000
 //@}
 
@@ -51,7 +51,7 @@ extern "C" {
  *         or NULL on error. Always check for this! On error, errno is also set to
  *         provide more precise information about the failure cause.
  */
-caerDeviceHandle caerDeviceOpenSerial(
+LIBRARY_PUBLIC_VISIBILITY caerDeviceHandle caerDeviceOpenSerial(
 	uint16_t deviceID, uint16_t deviceType, const char *serialPortName, uint32_t serialBaudRate);
 
 #ifdef __cplusplus

@@ -9,6 +9,7 @@
 
 #include "../events/polarity.h"
 #include "../events/special.h"
+
 #include "serial.h"
 
 #ifdef __cplusplus
@@ -146,7 +147,7 @@ struct caer_edvs_info {
  * @return a copy of the device information structure if successful,
  *         an empty structure (all zeros) on failure.
  */
-struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle);
+LIBRARY_PUBLIC_VISIBILITY struct caer_edvs_info caerEDVSInfoGet(caerDeviceHandle handle);
 
 #ifdef __cplusplus
 }

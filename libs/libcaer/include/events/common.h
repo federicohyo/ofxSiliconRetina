@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #ifndef CAER_EVENTS_HEADER_ONLY
-#define caerLogEHO caerLog
+#	define caerLogEHO caerLog
 #else
 static inline void caerLogEHO(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) {
 	// Ignore logLevel, all event packet messages are critical.
@@ -49,7 +49,7 @@ static inline void caerLogEHO(enum caer_log_level logLevel, const char *subSyste
  */
 //@{
 #define VALID_MARK_SHIFT 0
-#define VALID_MARK_MASK 0x00000001
+#define VALID_MARK_MASK  0x00000001
 //@}
 
 /**
@@ -75,15 +75,15 @@ enum caer_default_event_types {
 	FRAME_EVENT     = 2,  //!< Frame (intensity, APS) events.
 	IMU6_EVENT      = 3,  //!< 6 axes IMU events.
 	IMU9_EVENT      = 4,  //!< 9 axes IMU events.
-	SAMPLE_EVENT    = 5,  //!< ADC sample events.
-	EAR_EVENT       = 6,  //!< Ear (cochlea) events.
-	CONFIG_EVENT    = 7,  //!< Device configuration events.
-	POINT1D_EVENT   = 8,  //!< 1D measurement events.
-	POINT2D_EVENT   = 9,  //!< 2D measurement events.
-	POINT3D_EVENT   = 10, //!< 3D measurement events.
-	POINT4D_EVENT   = 11, //!< 4D measurement events.
+	SAMPLE_EVENT    = 5,  //!< ADC sample events (deprecated).
+	EAR_EVENT       = 6,  //!< Ear (cochlea) events (deprecated).
+	CONFIG_EVENT    = 7,  //!< Device configuration events (deprecated).
+	POINT1D_EVENT   = 8,  //!< 1D measurement events (deprecated).
+	POINT2D_EVENT   = 9,  //!< 2D measurement events (deprecated).
+	POINT3D_EVENT   = 10, //!< 3D measurement events (deprecated).
+	POINT4D_EVENT   = 11, //!< 4D measurement events (deprecated).
 	SPIKE_EVENT     = 12, //!< Spike events.
-	MATRIX4x4_EVENT = 13, //!< 4D matrix events.
+	MATRIX4x4_EVENT = 13, //!< 4D matrix events (deprecated).
 };
 
 /**
@@ -484,9 +484,9 @@ static inline bool caerGenericEventCopy(void *eventPtrDestination, const void *e
 	caerEventPacketHeaderConst headerPtrDestination, caerEventPacketHeaderConst headerPtrSource) {
 	if ((caerEventPacketHeaderGetEventType(headerPtrDestination) != caerEventPacketHeaderGetEventType(headerPtrSource))
 		|| (caerEventPacketHeaderGetEventSize(headerPtrDestination)
-			   != caerEventPacketHeaderGetEventSize(headerPtrSource))
+			!= caerEventPacketHeaderGetEventSize(headerPtrSource))
 		|| (caerEventPacketHeaderGetEventTSOverflow(headerPtrDestination)
-			   != caerEventPacketHeaderGetEventTSOverflow(headerPtrSource))) {
+			!= caerEventPacketHeaderGetEventTSOverflow(headerPtrSource))) {
 		return (false);
 	}
 
@@ -617,7 +617,7 @@ static inline bool caerEventPacketEquals(
 	}
 
 	size_t memCmpSize
-		= (size_t)(caerEventPacketHeaderGetEventNumber(firstPacket) * caerEventPacketHeaderGetEventSize(firstPacket));
+		= (size_t) (caerEventPacketHeaderGetEventNumber(firstPacket) * caerEventPacketHeaderGetEventSize(firstPacket));
 	if (memcmp(((const uint8_t *) firstPacket) + CAER_EVENT_PACKET_HEADER_SIZE,
 			((const uint8_t *) secondPacket) + CAER_EVENT_PACKET_HEADER_SIZE, memCmpSize)
 		!= 0) {
@@ -643,7 +643,7 @@ static inline void caerEventPacketClear(caerEventPacketHeader packet) {
 	// eventCapacity are by definition all zeroed out, so nothing to do
 	// there. Also reset the eventValid and eventNumber header fields.
 	size_t memZeroSize
-		= (size_t)(caerEventPacketHeaderGetEventNumber(packet) * caerEventPacketHeaderGetEventSize(packet));
+		= (size_t) (caerEventPacketHeaderGetEventNumber(packet) * caerEventPacketHeaderGetEventSize(packet));
 	memset(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE, 0, memZeroSize);
 
 	caerEventPacketHeaderSetEventValid(packet, 0);
@@ -688,7 +688,7 @@ static inline void caerEventPacketClean(caerEventPacketHeader packet) {
 }
 
 // Reset remaining memory, up to capacity, to zero (all events invalid).
-memset(((uint8_t *) packet) + offset, 0, (size_t)((eventCapacity - eventValid) * eventSize));
+memset(((uint8_t *) packet) + offset, 0, (size_t) ((eventCapacity - eventValid) * eventSize));
 
 // Event capacity remains unchanged, event number shrunk to event valid number.
 caerEventPacketHeaderSetEventNumber(packet, eventValid);
@@ -728,7 +728,7 @@ static inline caerEventPacketHeader caerEventPacketResize(caerEventPacketHeader 
 	}
 
 	int32_t eventSize         = caerEventPacketHeaderGetEventSize(packet);
-	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(newEventCapacity * eventSize);
+	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (newEventCapacity * eventSize);
 
 	// Reallocate memory used to hold events.
 	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
@@ -742,10 +742,10 @@ static inline caerEventPacketHeader caerEventPacketResize(caerEventPacketHeader 
 
 	if (newEventCapacity > oldEventCapacity) {
 		// Capacity increased: we simply zero out the newly added events.
-		size_t oldEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(oldEventCapacity * eventSize);
+		size_t oldEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (oldEventCapacity * eventSize);
 
 		memset(
-			((uint8_t *) packet) + oldEventPacketSize, 0, (size_t)((newEventCapacity - oldEventCapacity) * eventSize));
+			((uint8_t *) packet) + oldEventPacketSize, 0, (size_t) ((newEventCapacity - oldEventCapacity) * eventSize));
 	}
 	else {
 		// Capacity decreased: the events were cleaned, so eventValid == eventNumber.
@@ -788,15 +788,16 @@ static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader pa
 	int32_t oldEventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
 
 	if (newEventCapacity <= oldEventCapacity) {
-		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet", "Called caerEventPacketGrow() with a new capacity value (%" PRIi32
-													  ") that is equal or smaller than the old one (%" PRIi32 "). "
-													  "Only strictly growing an event packet is supported!",
+		caerLogEHO(CAER_LOG_CRITICAL, "Event Packet",
+			"Called caerEventPacketGrow() with a new capacity value (%" PRIi32
+			") that is equal or smaller than the old one (%" PRIi32 "). "
+			"Only strictly growing an event packet is supported!",
 			newEventCapacity, oldEventCapacity);
 		return (NULL);
 	}
 
 	int32_t eventSize         = caerEventPacketHeaderGetEventSize(packet);
-	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(newEventCapacity * eventSize);
+	size_t newEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (newEventCapacity * eventSize);
 
 	// Grow memory used to hold events.
 	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
@@ -809,9 +810,9 @@ static inline caerEventPacketHeader caerEventPacketGrow(caerEventPacketHeader pa
 	}
 
 	// Zero out new event memory (all events invalid).
-	size_t oldEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(oldEventCapacity * eventSize);
+	size_t oldEventPacketSize = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (oldEventCapacity * eventSize);
 
-	memset(((uint8_t *) packet) + oldEventPacketSize, 0, (size_t)((newEventCapacity - oldEventCapacity) * eventSize));
+	memset(((uint8_t *) packet) + oldEventPacketSize, 0, (size_t) ((newEventCapacity - oldEventCapacity) * eventSize));
 
 	// Update capacity header field.
 	caerEventPacketHeaderSetEventCapacity(packet, newEventCapacity);
@@ -861,7 +862,7 @@ static inline caerEventPacketHeader caerEventPacketAppend(
 
 	int32_t eventSize = caerEventPacketHeaderGetEventSize(packet); // Is the same! Checked above.
 	size_t newEventPacketSize
-		= CAER_EVENT_PACKET_HEADER_SIZE + (size_t)((packetEventCapacity + appendPacketEventCapacity) * eventSize);
+		= CAER_EVENT_PACKET_HEADER_SIZE + (size_t) ((packetEventCapacity + appendPacketEventCapacity) * eventSize);
 
 	// Grow memory used to hold events.
 	packet = (caerEventPacketHeader) realloc(packet, newEventPacketSize);
@@ -875,13 +876,14 @@ static inline caerEventPacketHeader caerEventPacketAppend(
 
 	// Copy appendPacket event memory at start of free space in packet.
 	memcpy(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE + (packetEventNumber * eventSize),
-		((uint8_t *) appendPacket) + CAER_EVENT_PACKET_HEADER_SIZE, (size_t)(appendPacketEventNumber * eventSize));
+		((uint8_t *) appendPacket) + CAER_EVENT_PACKET_HEADER_SIZE, (size_t) (appendPacketEventNumber * eventSize));
 
 	// Zero out remaining event memory (all events invalid).
 	memset(((uint8_t *) packet) + CAER_EVENT_PACKET_HEADER_SIZE
 			   + ((packetEventNumber + appendPacketEventNumber) * eventSize),
-		0, (size_t)(((packetEventCapacity + appendPacketEventCapacity) - (packetEventNumber + appendPacketEventNumber))
-					* eventSize));
+		0,
+		(size_t) (((packetEventCapacity + appendPacketEventCapacity) - (packetEventNumber + appendPacketEventNumber))
+				  * eventSize));
 
 	// Update header fields.
 	caerEventPacketHeaderSetEventValid(packet, (packetEventValid + appendPacketEventValid));
@@ -908,8 +910,8 @@ static inline caerEventPacketHeader caerEventPacketCopy(caerEventPacketHeaderCon
 	int32_t eventSize     = caerEventPacketHeaderGetEventSize(packet);
 	int32_t eventNumber   = caerEventPacketHeaderGetEventNumber(packet);
 	int32_t eventCapacity = caerEventPacketHeaderGetEventCapacity(packet);
-	size_t packetMem      = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(eventSize * eventCapacity);
-	size_t dataMem        = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(eventSize * eventNumber);
+	size_t packetMem      = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventCapacity);
+	size_t dataMem        = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventNumber);
 
 	// Allocate memory for new event packet.
 	caerEventPacketHeader packetCopy = (caerEventPacketHeader) malloc(packetMem);
@@ -951,7 +953,7 @@ static inline caerEventPacketHeader caerEventPacketCopyOnlyEvents(caerEventPacke
 		return (NULL);
 	}
 
-	size_t packetMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(eventSize * eventNumber);
+	size_t packetMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventNumber);
 
 	// Allocate memory for new event packet.
 	caerEventPacketHeader packetCopy = (caerEventPacketHeader) malloc(packetMem);
@@ -993,7 +995,7 @@ static inline caerEventPacketHeader caerEventPacketCopyOnlyValidEvents(caerEvent
 		return (NULL);
 	}
 
-	size_t packetMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t)(eventSize * eventValid);
+	size_t packetMem = CAER_EVENT_PACKET_HEADER_SIZE + (size_t) (eventSize * eventValid);
 
 	// Allocate memory for new event packet.
 	caerEventPacketHeader packetCopy = (caerEventPacketHeader) malloc(packetMem);

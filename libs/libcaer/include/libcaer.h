@@ -67,7 +67,7 @@ extern "C" {
 /**
  * libcaer version (MAJOR * 10000 + MINOR * 100 + PATCH).
  */
-#define LIBCAER_VERSION ((3 * 10000) + (1 * 100) + 0)
+#define LIBCAER_VERSION ((3 * 10000) + (3 * 100) + 14)
 /**
  * libcaer name string.
  */
@@ -75,7 +75,7 @@ extern "C" {
 /**
  * libcaer version string.
  */
-#define LIBCAER_VERSION_STRING "3.1.0"
+#define LIBCAER_VERSION_STRING "3.3.14"
 
 /**
  * libcaer serial devices support.
@@ -85,7 +85,7 @@ extern "C" {
 /**
  * libcaer OpenCV support.
  */
-#define LIBCAER_HAVE_OPENCV 0
+#define LIBCAER_HAVE_OPENCV 1
 
 /**
  * Error codes, used for the errno variable to give
@@ -296,6 +296,18 @@ static inline uint32_t caerByteArrayToInteger(const uint8_t *byteArray, const ui
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifndef SSIZE_MAX
+
+#if SIZE_MAX == 4294967295
+// ssize_t for 32bit system
+#define ssize_t int32_t
+#else
+// ssize_t for 64bit system
+#define ssize_t int64_t
+#endif
+
 #endif
 
 #endif /* LIBCAER_H_ */

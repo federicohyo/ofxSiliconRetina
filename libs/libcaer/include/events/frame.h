@@ -35,11 +35,11 @@ extern "C" {
  */
 //@{
 #define FRAME_COLOR_CHANNELS_SHIFT 1
-#define FRAME_COLOR_CHANNELS_MASK 0x00000007
-#define FRAME_COLOR_FILTER_SHIFT 4
-#define FRAME_COLOR_FILTER_MASK 0x0000000F
+#define FRAME_COLOR_CHANNELS_MASK  0x00000007
+#define FRAME_COLOR_FILTER_SHIFT   4
+#define FRAME_COLOR_FILTER_MASK    0x0000000F
 #define FRAME_ROI_IDENTIFIER_SHIFT 8
-#define FRAME_ROI_IDENTIFIER_MASK 0x0000007F
+#define FRAME_ROI_IDENTIFIER_MASK  0x0000007F
 //@}
 
 /**
@@ -250,9 +250,9 @@ static inline caerFrameEvent caerFrameEventPacketGetEvent(caerFrameEventPacket p
 	}
 
 	// Return a pointer to the specified event.
-	return ((caerFrameEvent)(
-		((uint8_t *) &packet->packetHeader)
-		+ (CAER_EVENT_PACKET_HEADER_SIZE + U64T(n * caerEventPacketHeaderGetEventSize(&packet->packetHeader)))));
+	return ((caerFrameEvent) (((uint8_t *) &packet->packetHeader)
+							  + (CAER_EVENT_PACKET_HEADER_SIZE
+								  + U64T(n * caerEventPacketHeaderGetEventSize(&packet->packetHeader)))));
 }
 
 /**
@@ -277,9 +277,9 @@ static inline caerFrameEventConst caerFrameEventPacketGetEventConst(caerFrameEve
 	}
 
 	// Return a pointer to the specified event.
-	return ((caerFrameEventConst)(
-		((const uint8_t *) &packet->packetHeader)
-		+ (CAER_EVENT_PACKET_HEADER_SIZE + U64T(n * caerEventPacketHeaderGetEventSize(&packet->packetHeader)))));
+	return ((caerFrameEventConst) (((const uint8_t *) &packet->packetHeader)
+								   + (CAER_EVENT_PACKET_HEADER_SIZE
+									   + U64T(n * caerEventPacketHeaderGetEventSize(&packet->packetHeader)))));
 }
 
 /**
@@ -743,7 +743,7 @@ static inline void caerFrameEventSetLengthXLengthYChannelNumber(caerFrameEvent e
  */
 static inline size_t caerFrameEventGetPixelsMaxIndex(caerFrameEventConst event) {
 	enum caer_frame_event_color_channels channels = caerFrameEventGetChannelNumber(event);
-	return ((size_t)(caerFrameEventGetLengthX(event) * caerFrameEventGetLengthY(event) * I32T(channels)));
+	return ((size_t) (caerFrameEventGetLengthX(event) * caerFrameEventGetLengthY(event) * I32T(channels)));
 }
 
 /**
@@ -921,7 +921,7 @@ static inline uint16_t caerFrameEventGetPixelForChannel(
 		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
 			"Called caerFrameEventGetPixelForChannel() with invalid channel number of %" PRIu8
 			", should be between 0 and %" PRIu8 ".",
-			channel, (uint8_t)(channelNumber - 1));
+			channel, (uint8_t) (channelNumber - 1));
 		return (0);
 	}
 
@@ -969,7 +969,7 @@ static inline void caerFrameEventSetPixelForChannel(
 		caerLogEHO(CAER_LOG_CRITICAL, "Frame Event",
 			"Called caerFrameEventSetPixelForChannel() with invalid channel number of %" PRIu8
 			", should be between 0 and %" PRIu8 ".",
-			channel, (uint8_t)(channelNumber - 1));
+			channel, (uint8_t) (channelNumber - 1));
 		return;
 	}
 

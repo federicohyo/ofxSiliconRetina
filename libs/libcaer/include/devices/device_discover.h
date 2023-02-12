@@ -10,8 +10,11 @@
 
 #include "davis.h"
 #include "dvs128.h"
+#include "dvs132s.h"
+#include "dvxplorer.h"
 #include "dynapse.h"
 #include "edvs.h"
+#include "samsung_evk.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +37,9 @@ struct caer_device_discovery_result {
 		struct caer_edvs_info edvsInfo;
 		struct caer_davis_info davisInfo;
 		struct caer_dynapse_info dynapseInfo;
+		struct caer_dvs132s_info dvs132sInfo;
+		struct caer_dvx_info dvXplorerInfo;
+		struct caer_samsung_evk_info samsungEVKInfo;
 	} deviceInfo;
 };
 
@@ -61,7 +67,7 @@ typedef struct caer_device_discovery_result *caerDeviceDiscoveryResult;
  * @return number of discovered devices, 0 if no device could be found;
  *         or -1 if an error occurred.
  */
-ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices);
+LIBRARY_PUBLIC_VISIBILITY ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discoveredDevices);
 
 /**
  * Open a specific device based on information returned by caerDeviceDiscover(),
@@ -75,7 +81,8 @@ ssize_t caerDeviceDiscover(int16_t deviceType, caerDeviceDiscoveryResult *discov
  * @return a valid device handle that can be used with the other libcaer functions,
  *         or NULL on error. Always check for this!
  */
-caerDeviceHandle caerDeviceDiscoverOpen(uint16_t deviceID, caerDeviceDiscoveryResult discoveredDevice);
+LIBRARY_PUBLIC_VISIBILITY caerDeviceHandle caerDeviceDiscoverOpen(
+	uint16_t deviceID, caerDeviceDiscoveryResult discoveredDevice);
 
 #ifdef __cplusplus
 }

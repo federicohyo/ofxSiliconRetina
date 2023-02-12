@@ -3,14 +3,14 @@
 
 #ifdef __cplusplus
 
-#include <cstdint>
-#include <cstdlib>
+#	include <cstdint>
+#	include <cstdlib>
 
 #else
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#	include <stdbool.h>
+#	include <stdint.h>
+#	include <stdlib.h>
 
 #endif
 
@@ -26,6 +26,7 @@ bool caerRingBufferPut(caerRingBuffer rBuf, void *elem);
 bool caerRingBufferFull(caerRingBuffer rBuf);
 void *caerRingBufferGet(caerRingBuffer rBuf);
 void *caerRingBufferLook(caerRingBuffer rBuf);
+bool caerRingBufferEmpty(caerRingBuffer rBuf);
 
 #ifdef __cplusplus
 }

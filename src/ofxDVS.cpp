@@ -54,11 +54,11 @@ void ofxDVS::setup() {
     }
     
     // viewer started in live or file mode
-	sizeX = thread.sizeX;
-	sizeY = thread.sizeY;
+    sizeX = thread.sizeX;
+    sizeY = thread.sizeY;
     chipId = thread.chipId;
     chipName = chipIDToName(chipId, false);
-	thread.unlock();
+    thread.unlock();
 
 	fsint = 2;
     /*thread_alpha.lock();
@@ -736,7 +736,9 @@ void ofxDVS::drawMouseDistanceToSpikes(){
 
 //--------------------------------------------------------------
 void ofxDVS::draw() {
-    
+   
+    ofBackground(125,125,125);
+
     myCam.begin();
     ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
     drawFrames();
@@ -1213,7 +1215,7 @@ void ofxDVS::initImageGenerator(){
     numSpikes = 1500.0;
     counterSpikes = 0;
     drawImageGen = false;
-    decaySpikeFeatures = 0.02;
+    decaySpikeFeatures = 0.001;
     newImageGen = false;
 }
 
@@ -1349,9 +1351,9 @@ void ofxDVS::updateImageGenerator(){
             
             // update surfaceMap
             if(packetsPolarity[i].pol){
-                spikeFeatures[(int)pos.x][(int)pos.y] = 1.0;
+                spikeFeatures[(int)pos.x][(int)pos.y] = 0.1;
             }else{
-                spikeFeatures[(int)pos.x][(int)pos.y] = 1.0;
+                spikeFeatures[(int)pos.x][(int)pos.y] = 0.1;
             }
             
             surfaceMapLastTs[(int)pos.x][(int)pos.y] = packetsPolarity[i].timestamp;
@@ -1360,7 +1362,7 @@ void ofxDVS::updateImageGenerator(){
         }
     }
     
-    /*
+    
     // Decay the map.
     for (size_t x = 0; x < sizeX; x++) {
         for (size_t y = 0; y < sizeY; y++) {
@@ -1401,7 +1403,7 @@ void ofxDVS::updateImageGenerator(){
             imageGenerator.setColor(col_idx,row_idx,this_pixel);
         }
     }
-    imageGenerator.update();*/
+    //imageGenerator.update();
 
     if(numSpikes <= counterSpikes){
 
@@ -1472,11 +1474,11 @@ void ofxDVS::updateImageGenerator(){
             }
         }
         // clear map
-        for (int col_idx = 0; col_idx < sizeX; col_idx++) {
+        /*for (int col_idx = 0; col_idx < sizeX; col_idx++) {
             for (int row_idx = 0; row_idx < sizeY; row_idx++) {
                 spikeFeatures[col_idx][row_idx]  = 0.0;
             }
-        }
+        }*/
         imageGenerator.update();
         newImageGen = true;
     }

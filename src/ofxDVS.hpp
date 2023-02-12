@@ -2,9 +2,10 @@
 //  ofxDVS.hpp
 //  ofxDVS
 //
-//  Created by Federico Corradi on 19.05.17.
+//  Created by Federico Corradi on 19.05.23.
 //
 //
+// sudo ln -s /usr/include/opencv4/opencv2/ /usr/include/opencv2
 
 #ifndef ofxDVS_hpp
 #define ofxDVS_hpp
@@ -12,7 +13,10 @@
 #include "libcaer.h"
 #include "devices/davis.h"
 #include "devices/dvs128.h"
-#include <atomic>
+#include "devices/device_discover.h"
+#include "devices/dvxplorer.h"
+
+
 
 #ifdef _WIN32
 #include <windows.h>
@@ -26,12 +30,13 @@
 #include <dirent.h>
 #include <string.h>
 #include <cstdio>
-
+#include <atomic>
 #include <string>
 
 /// PLEASE SELECT SENSOR DAVIS or DVS128
-#define DAVIS  1
+#define DAVIS 0 
 #define DVS128 0
+#define DVXPLORER 1
 
 // and decide on parameters
 #define DEBUG 0
@@ -403,7 +408,12 @@ public:
                 // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
                 camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
         #endif
-            }
+	#if DVXPLORER == 1
+		camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
+		//auto handle = libcaer::devices::dvXplorer(1);
+		//handle.sendDefaultConfig();
+	#endif
+	  }
             if (camera_handle == NULL) {
                 ofLog(OF_LOG_ERROR,"error opening the device\n");
                 if(tryFile()){
@@ -435,6 +445,9 @@ public:
     #if DVS128 == 1
             caer_dvs128_info infocam = caerDVS128InfoGet(camera_handle);
     #endif
+    #if DVXPLORER == 1
+     	   caer_dvx_info infocam = caerDVXplorerInfoGet(camera_handle);
+    #endif
 
             sizeX = infocam.dvsSizeX;
             sizeY = infocam.dvsSizeY;
@@ -459,7 +472,7 @@ public:
                 }
                 unlock();
 
-                nanosleep((const struct timespec[]){{0, 500L}}, NULL);
+                nanosleep((const struct timespec[]){{0, 10L}}, NULL);
 
                 //check aps status
                 if( apsStatus != apsStatusLocal){
@@ -477,6 +490,8 @@ public:
                     caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, dvsStatusLocal);
     #elif DVS128 == 1
                     caerDeviceConfigSet(camera_handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, dvsStatusLocal);
+    //#elif DVXPLORER ==1
+	//	    caerDeviceConfigSet(camera_handle, DVX_CONFIG_DVS, DVX_CONFIG_RUN, dvsStatusLocal); 
     #endif
                 }
                 //check imu status

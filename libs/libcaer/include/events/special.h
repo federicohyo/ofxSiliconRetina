@@ -23,9 +23,9 @@ extern "C" {
  */
 //@{
 #define SPECIAL_TYPE_SHIFT 1
-#define SPECIAL_TYPE_MASK 0x0000007F
+#define SPECIAL_TYPE_MASK  0x0000007F
 #define SPECIAL_DATA_SHIFT 8
-#define SPECIAL_DATA_MASK 0x00FFFFFF
+#define SPECIAL_DATA_MASK  0x00FFFFFF
 //@}
 
 /**
@@ -51,6 +51,7 @@ enum caer_special_event_types {
 	APS_FRAME_END                   = 15, //!< An APS frame capture has completed (Frame Event is alongside).
 	APS_EXPOSURE_START              = 16, //!< An APS frame exposure has started (Frame Event will follow).
 	APS_EXPOSURE_END                = 17, //!< An APS frame exposure has completed (Frame Event will follow).
+	EVENT_READOUT_START             = 18, //!< Start of a new event readout from synchronous scanning sensors.
 };
 
 /**

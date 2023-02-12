@@ -11,25 +11,39 @@
 
 #	include <cstdarg>
 #	include <cstdint>
+#	include <cstddef>
 
 #else
 
 #	include <stdarg.h>
 #	include <stdint.h>
+#	include <stddef.h>
 
 #endif
 
+// printf() like formatting checks.
 #if defined(__GNUC__) || defined(__clang__)
 #	if defined(__USE_MINGW_ANSI_STDIO)
-#		define ATTRIBUTE_FORMAT(N) __attribute__((format(gnu_printf, N, (N + 1))))
+#		define ATTRIBUTE_FORMAT(N)    __attribute__((format(gnu_printf, N, (N + 1))))
 #		define ATTRIBUTE_FORMAT_VA(N) __attribute__((format(gnu_printf, N, 0)))
 #	else
-#		define ATTRIBUTE_FORMAT(N) __attribute__((format(printf, N, (N + 1))))
+#		define ATTRIBUTE_FORMAT(N)    __attribute__((format(printf, N, (N + 1))))
 #		define ATTRIBUTE_FORMAT_VA(N) __attribute__((format(printf, N, 0)))
 #	endif
 #else
 #	define ATTRIBUTE_FORMAT(N)
 #	define ATTRIBUTE_FORMAT_VA(N)
+#endif
+
+// Shared objects visibility (DLL/SO).
+#if defined(_WIN32) || defined(_WIN64) || defined(__CYGWIN__)
+#	ifdef __GNUC__
+#		define LIBRARY_PUBLIC_VISIBILITY __attribute__((dllexport)) __attribute__((cdecl))
+#	else
+#		define LIBRARY_PUBLIC_VISIBILITY __declspec(dllexport)
+#	endif
+#else
+#	define LIBRARY_PUBLIC_VISIBILITY __attribute__((visibility("default")))
 #endif
 
 #ifdef __cplusplus
@@ -64,7 +78,7 @@ enum caer_log_level {
  *
  * @param logLevel the system-wide log level.
  */
-void caerLogLevelSet(enum caer_log_level logLevel);
+LIBRARY_PUBLIC_VISIBILITY void caerLogLevelSet(enum caer_log_level logLevel);
 
 /**
  * Get the current system-wide log level.
@@ -73,7 +87,7 @@ void caerLogLevelSet(enum caer_log_level logLevel);
  *
  * @return the current system-wide log level.
  */
-enum caer_log_level caerLogLevelGet(void);
+LIBRARY_PUBLIC_VISIBILITY enum caer_log_level caerLogLevelGet(void);
 
 /**
  * Logging callback, called on any caerLog() invocation.
@@ -87,12 +101,12 @@ typedef void (*caerLogCallback)(const char *msg, size_t msgLength);
  *
  * @param callback the callback function. NULL to disable.
  */
-void caerLogCallbackSet(caerLogCallback callback);
+LIBRARY_PUBLIC_VISIBILITY void caerLogCallbackSet(caerLogCallback callback);
 
 /**
  * Get current callback function for log messages.
  */
-caerLogCallback caerLogCallbackGet(void);
+LIBRARY_PUBLIC_VISIBILITY caerLogCallback caerLogCallbackGet(void);
 
 /**
  * Set to which file descriptors log messages are sent.
@@ -104,21 +118,21 @@ caerLogCallback caerLogCallbackGet(void);
  * @param fd1 first file descriptor to log to. A negative value will disable it.
  * @param fd2 second file descriptor to log to. A negative value will disable it.
  */
-void caerLogFileDescriptorsSet(int fd1, int fd2);
+LIBRARY_PUBLIC_VISIBILITY void caerLogFileDescriptorsSet(int fd1, int fd2);
 
 /**
  * Get the current output file descriptor 1.
  *
  * @return the current output file descriptor 1.
  */
-int caerLogFileDescriptorsGetFirst(void);
+LIBRARY_PUBLIC_VISIBILITY int caerLogFileDescriptorsGetFirst(void);
 
 /**
  * Get the current output file descriptor 2.
  *
  * @return the current output file descriptor 2.
  */
-int caerLogFileDescriptorsGetSecond(void);
+LIBRARY_PUBLIC_VISIBILITY int caerLogFileDescriptorsGetSecond(void);
 
 /**
  * Disable all logging for this thread only.
@@ -127,7 +141,7 @@ int caerLogFileDescriptorsGetSecond(void);
  * @param disableLogging true to disable logging for this thread,
  *                       false to enable it again.
  */
-void caerLogDisable(bool disableLogging);
+LIBRARY_PUBLIC_VISIBILITY void caerLogDisable(bool disableLogging);
 
 /**
  * Status of logging for this thread.
@@ -135,7 +149,7 @@ void caerLogDisable(bool disableLogging);
  * @return true if logging is disabled for this thread,
  *         false if it is enabled.
  */
-bool caerLogDisabled(void);
+LIBRARY_PUBLIC_VISIBILITY bool caerLogDisabled(void);
 
 /**
  * Main logging function.
@@ -150,7 +164,8 @@ bool caerLogDisabled(void);
  * @param format the message format string (see printf()).
  * @param ... the parameters to be formatted according to the format string (see printf()).
  */
-void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...) ATTRIBUTE_FORMAT(3);
+LIBRARY_PUBLIC_VISIBILITY void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *format, ...)
+	ATTRIBUTE_FORMAT(3);
 
 /**
  * Secondary logging function.
@@ -168,8 +183,8 @@ void caerLog(enum caer_log_level logLevel, const char *subSystem, const char *fo
  * @param args the parameters to be formatted according to the format string (see printf()).
  *             This is an argument list as returned by va_start().
  */
-void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args)
-	ATTRIBUTE_FORMAT_VA(3);
+LIBRARY_PUBLIC_VISIBILITY void caerLogVA(
+	enum caer_log_level logLevel, const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA(3);
 
 /**
  * Tertiary logging function.
@@ -189,8 +204,8 @@ void caerLogVA(enum caer_log_level logLevel, const char *subSystem, const char *
  * @param args the parameters to be formatted according to the format string (see printf()).
  *             This is an argument list as returned by va_start().
  */
-void caerLogVAFull(uint8_t systemLogLevel, enum caer_log_level logLevel, const char *subSystem, const char *format,
-	va_list args) ATTRIBUTE_FORMAT_VA(4);
+LIBRARY_PUBLIC_VISIBILITY void caerLogVAFull(uint8_t systemLogLevel, enum caer_log_level logLevel,
+	const char *subSystem, const char *format, va_list args) ATTRIBUTE_FORMAT_VA(4);
 
 #ifdef __cplusplus
 }

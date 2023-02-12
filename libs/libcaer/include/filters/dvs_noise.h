@@ -63,14 +63,14 @@ typedef struct caer_filter_dvs_noise *caerFilterDVSNoise;
  *
  * @return DVS noise filter instance, NULL on error.
  */
-caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY);
+LIBRARY_PUBLIC_VISIBILITY caerFilterDVSNoise caerFilterDVSNoiseInitialize(uint16_t sizeX, uint16_t sizeY);
 
 /**
  * Destroy a DVS noise filter instance and free its memory.
  *
  * @param noiseFilter a valid DVS noise filter instance.
  */
-void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter);
+LIBRARY_PUBLIC_VISIBILITY void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter);
 
 /**
  * Apply the DVS noise filter to the given polarity events packet.
@@ -81,7 +81,8 @@ void caerFilterDVSNoiseDestroy(caerFilterDVSNoise noiseFilter);
  * @param polarity a valid polarity event packet. If NULL, no operation
  *                 is performed.
  */
-void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarity);
+LIBRARY_PUBLIC_VISIBILITY void caerFilterDVSNoiseApply(
+	caerFilterDVSNoise noiseFilter, caerPolarityEventPacket polarity);
 
 /**
  * Apply the DVS noise filter to the given polarity events packet.
@@ -92,7 +93,8 @@ void caerFilterDVSNoiseApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPa
  * @param polarity a valid polarity event packet. If NULL, no operation
  *                 is performed.
  */
-void caerFilterDVSNoiseStatsApply(caerFilterDVSNoise noiseFilter, caerPolarityEventPacketConst polarity);
+LIBRARY_PUBLIC_VISIBILITY void caerFilterDVSNoiseStatsApply(
+	caerFilterDVSNoise noiseFilter, caerPolarityEventPacketConst polarity);
 
 /**
  * Set DVS noise filter configuration parameters.
@@ -103,7 +105,8 @@ void caerFilterDVSNoiseStatsApply(caerFilterDVSNoise noiseFilter, caerPolarityEv
  *
  * @return true if operation successful, false otherwise.
  */
-bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t param);
+LIBRARY_PUBLIC_VISIBILITY bool caerFilterDVSNoiseConfigSet(
+	caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t param);
 
 /**
  * Get DVS noise filter configuration parameters.
@@ -115,7 +118,8 @@ bool caerFilterDVSNoiseConfigSet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
  *
  * @return true if operation successful, false otherwise.
  */
-bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t *param);
+LIBRARY_PUBLIC_VISIBILITY bool caerFilterDVSNoiseConfigGet(
+	caerFilterDVSNoise noiseFilter, uint8_t paramAddr, uint64_t *param);
 
 /**
  * Get an array of currently learned hot pixels, in order of activity
@@ -130,7 +134,8 @@ bool caerFilterDVSNoiseConfigGet(caerFilterDVSNoise noiseFilter, uint8_t paramAd
  * @return number of hot pixels in array, 0 if no hot pixels were found;
  *         or -1 if an error occurred.
  */
-ssize_t caerFilterDVSNoiseGetHotPixels(caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels);
+LIBRARY_PUBLIC_VISIBILITY ssize_t caerFilterDVSNoiseGetHotPixels(
+	caerFilterDVSNoise noiseFilter, caerFilterDVSPixel *hotPixels);
 
 /**
  * DVS HotPixel Filter:
