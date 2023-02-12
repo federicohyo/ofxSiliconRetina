@@ -98,3 +98,6 @@ Implemented frames, imu6 events
 
 Implemented polarity events for DVS128, DAVIS240, DAVIS346B 
 
+### (12 Feb 2023):
+
+Implemented polarity events for DVXPLORER
