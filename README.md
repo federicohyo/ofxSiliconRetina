@@ -1,0 +1,63 @@
+ofxDVS
+=====================================
+
+
+
+Introduction
+------------
+This addon let you interface any Dynamic Vision Sensor to openframeworks.
+The Dynamic Vision Sensors are frame-free vision sensors invented, produced and developped by inilabs.com.
+
+License
+-------
+ofxSiliconRetina is distributed under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), and you might consider using this for your repository. By default, `license.md` contains a copy of the MIT license to which you can add your name and the year.
+
+Installation
+------------
+Copy this addon inside the folder `openFrameworks/addons/`. 
+
+This addons depends only on ofxStats, available here: https://github.com/tado/ofxStats 
+
+Dependencies - included in this package -
+------------
+This addons includes libcaer and libusb, if missing the one from your architecture. 
+Please compile and copy them into the libs folder.
+
+libcaer can be obained here: https://github.com/inilabs/libcaer
+libusb can be obtained here: https://github.com/libusb/libusb
+
+HotKeys
+-----------
+
+s: enable/disable stats
+
+d: enable/disable dvs
+
+a: enable/disable aps
+
+i: enable/disable imu
+
+s: start/stop recording files* 
+
+n: load recording file
+
++: faster playback
+
+-: slower playback
+
+* aedat3.1 file format: https://inilabs.com/support/software/fileformat/ 
+
+
+Compatibility
+------------
+Tested on OF release 0.9.x 
+
+Known issues
+------------
+
+Please select the correct device by changing the definition line in ofxSiliconRetina/src/ofxDVS.hpp
+
+PLEASE SELECT SENSOR FAMILY  DVS128 / DAVIS (FX2/FX3)
+#define DAVIS
+
+

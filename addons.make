@@ -1,0 +1,4 @@
+ofxPoco
+ofxGui
+ofxNetwork
+ofxDatGui
