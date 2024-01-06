@@ -3,6 +3,7 @@
 //  ofxDVS
 //
 //  Created by Federico Corradi on 19.05.17.
+//  updated since then till 2024
 //
 //
 
@@ -1108,10 +1109,92 @@ void ofxDVS::updateMeshSpikes(){
 //--------------------------------------------------------------
 void ofxDVS::drawSpikes() {
     
-    if(doDrawSpikes){
+    /*if(doDrawSpikes){
         ofPushMatrix();
         mesh.draw();
         ofPopMatrix();
+    }*/
+    if(doDrawSpikes){
+        for (int i = 0; i < packetsPolarity.size(); i++) {
+            int x =(int)packetsPolarity[i].pos.x;
+            int y =(int)packetsPolarity[i].pos.y;
+            if(packetsPolarity[i].valid){
+                visualizerMap[x][y] += 65;
+            }
+            //thread_alpha.visualizerMap[x][y] = visualizerMap[x][y];
+        }
+        for( int i=0; i<sizeX; ++i ) {
+            for( int j=0; j<sizeY; ++j ) {
+                if(visualizerMap[i][j] != 0){
+                    visualizerMap[i][j] -= fsint;
+                    if(visualizerMap[i][j] < 0){
+                        visualizerMap[i][j] = 0;
+                    }
+                }
+                //clear polarity
+                imagePolarity.setColor(i, j, ofColor(0,0,0));
+            }
+        }
+        
+        mesh.clear();
+        //imagePolarity.clear();
+        vector<polarity> packets = getPolarity();
+        for(int i=0;i < packets.size();i++) {
+            
+            int x = (int)packetsPolarity[i].pos.x;
+            int y = (int)packetsPolarity[i].pos.y;
+            int alpha = 255;//(int)ceil(visualizerMap[x][y]);
+            
+            //long tdiff = (int) ofRandom(1000) % 1000;//packets[i].timestamp - dvs.ofxLastTs;
+            long tdiff = 0;
+            if( packets[i].timestamp < tmp){
+                //ofLog(OF_LOG_NOTICE, "Detected lower timestamp.. ");
+                tmp = packets[i].timestamp;
+            }
+            if(started == false){
+                tdiff = 0;
+                tmp = packets[i].timestamp;
+                started = true;
+            }else{
+                tdiff = packets[i].timestamp - tmp;
+            }
+            if(tdiff > nus){
+                mesh.clear();
+                tdiff = 0;
+                tmp = packets[i].timestamp;//tmp-nus;
+            }
+            long timeus = 0;
+            if(m == 0){
+                timeus = 0;
+            }else{
+                timeus = tdiff>>m;
+            }
+            mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,sizeX,0,ofGetWidth()),ofMap(packets[i].pos.y,sizeY,0,0,ofGetHeight()), timeus));
+            mesh.addTexCoord(ofVec2f(packets[i].pos.x,packets[i].pos.y));
+            //int alphaus = (int)ceil(((float)tdiff/(float)nus)*256);
+            ofColor colSO = ofColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha);
+            ofColor colSF = ofColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike],alpha);
+            ofColor this_pixel;
+            if(packets[i].pol){
+                mesh.addColor(colSO);
+                this_pixel.set(colSO);
+            }else{
+                mesh.addColor(colSF);
+                this_pixel.set(colSF);
+            }
+            if(imagePolarity.isAllocated()){
+                imagePolarity.setColor(int(packets[i].pos.x), int(packets[i].pos.y), ofColor(spkOffR[paletteSpike],spkOffG[paletteSpike],spkOffB[paletteSpike]));
+            }else{
+                ofLog(OF_LOG_ERROR, "imagePol not allocated");
+            }
+            newImagePol = true;
+        }
+        imagePolarity.update();
+        mesh.setMode(OF_PRIMITIVE_POINTS);
+        ofPushMatrix();
+        mesh.draw();
+        ofPopMatrix();
+
     }
 }
 

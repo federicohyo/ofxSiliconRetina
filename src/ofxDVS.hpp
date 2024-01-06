@@ -3,7 +3,7 @@
 //  ofxDVS
 //
 //  Created by Federico Corradi on 19.05.17.
-//
+// // udpated 2024
 //
 
 #ifndef ofxDVS_hpp
@@ -13,6 +13,7 @@
 #include "libcaer.h"
 #include "devices/davis.h"
 #include "devices/dvs128.h"
+#include "devices/dvxplorer.h"
 #include <atomic>
 
 #ifdef _WIN32
@@ -31,8 +32,9 @@
 #include <string>
 
 /// PLEASE SELECT SENSOR DAVIS or DVS128
-#define DAVIS  1
+#define DAVIS  0
 #define DVS128 0
+#define DVXPLORER 1
 
 // and decide on parameters
 #define DEBUG 0
@@ -176,6 +178,10 @@ public:
             sizeX = 640;
             sizeY = 480;
         }
+        /*else if (caerStrEquals(sourceString, "DVXPLORER")) {
+            sizeX = 640;
+            sizeY = 480;
+        }*/
         else if (caerStrEquals(sourceString, "DAVIS208")) {
             sizeX = 208;
             sizeY = 192;
@@ -409,6 +415,11 @@ public:
                 // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
                 camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
         #endif
+		#if DVXPLORER == 1
+			camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
+			//auto handle = libcaer::devices::dvXplorer(1);
+			//handle.sendDefaultConfig();
+		#endif
             }
             if (camera_handle == NULL) {
                 ofLog(OF_LOG_ERROR,"error opening the device\n");
@@ -441,7 +452,11 @@ public:
     #if DVS128 == 1
             caer_dvs128_info infocam = caerDVS128InfoGet(camera_handle);
     #endif
-
+	#if DVXPLORER == 1
+            caer_dvx_info infocam = caerDVXplorerInfoGet(camera_handle);
+			//camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
+	#endif
+				
             sizeX = infocam.dvsSizeX;
             sizeY = infocam.dvsSizeY;
             chipId = infocam.chipID;
@@ -455,7 +470,7 @@ public:
             deviceReady = true;
             
             // reset timestamp at start
-            caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RESET, true);
+            //caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RESET, true);
 
             while(isThreadRunning())
             {
