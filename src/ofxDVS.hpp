@@ -408,11 +408,11 @@ public:
                 // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
                 camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
         #endif
-	#if DVXPLORER == 1
-		camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
-		//auto handle = libcaer::devices::dvXplorer(1);
-		//handle.sendDefaultConfig();
-	#endif
+		#if DVXPLORER == 1
+			camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
+			//auto handle = libcaer::devices::dvXplorer(1);
+			//handle.sendDefaultConfig();
+		#endif
 	  }
             if (camera_handle == NULL) {
                 ofLog(OF_LOG_ERROR,"error opening the device\n");

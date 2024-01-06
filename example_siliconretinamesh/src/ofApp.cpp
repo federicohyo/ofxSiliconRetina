@@ -108,7 +108,7 @@ void ofApp::draw(){
     }
     
     ofSetColor(ofColor::gray);
-    ofDrawLine(nearestVertex, mouse);
+    //ofDrawLine(nearestVertex, mouse);
     
     ofNoFill();
     ofSetColor(ofColor::yellow);
