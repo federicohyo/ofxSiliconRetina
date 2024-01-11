@@ -105,7 +105,7 @@ void ofxDVS::setup() {
     // reset timestamp
     ofResetElapsedTimeCounter();
     ofxLastTs = 0;
-    targetSpeed = 0.01; // real_time
+    targetSpeed = 0.1; // real_time
     paused = false;
     started = 0;
     isStarted = false;
@@ -115,6 +115,14 @@ void ofxDVS::setup() {
     hours = 0;
     doDrawSpikes = true;
     imuTemp = 35;
+    //
+    /*timestampcurrentelapsedlive = 0;
+    timestampcurrentelapsedfile = 0;
+    timestampcurrentelapsedfile_0 = 0;
+    timestampcurrentelapsedfile_1 = 0;
+    timestampcurrentelapsedlive_buf = 0;
+    timestampcurrentelapsedfile_buf = 0;
+    tip = true;*/
     
     // mesh
     tmp = 0;
@@ -643,6 +651,7 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
 }
 
+
 //--------------------------------------------------------------
 void ofxDVS::update() {
     
@@ -655,26 +664,39 @@ void ofxDVS::update() {
             long firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
             long highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
             long current_file_dt = highestTs-firstTs;
-            long current_ofx_dt = ofGetElapsedTimeMicros() - ofxLastTs;
-            
+            long current_ofx_dt = ofGetElapsedTimeMicros() - ofxLastTs; // application started - last update
+            //ofLog(OF_LOG_NOTICE, "current_ofx_dt %04lu", current_ofx_dt*100);
             bool delpc = false;
             if(targetSpeed <= 0){
             	targetSpeed = 0.0000001;
             }
+            //is live of file faster?
+            //ofLog(OF_LOG_NOTICE, "file dt %04lu", current_file_dt);
+
             if( current_file_dt <  (float)current_ofx_dt/targetSpeed){
                 //cout << "highestTs " << highestTs << " FirstTS " << firstTs << " ofxLastTs " << ofxLastTs << endl;
                 //cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;
                 delpc = organizeData(packetContainer);
+                //nanosleep((const struct timespec[]){{0, 5000000L}}, NULL);
                 
                 // update time information
                 long ts = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+                //ofLog(OF_LOG_NOTICE, "timestamp %04lu", ts);
+                // just start
                 if(ts != -1){
                     if(isStarted == false){
                         started = ts;
+                       // timestampcurrentelapsedfile = 0;
+                       // timestampcurrentelapsedlive_buf = 0;
+                       // timestampcurrentelapsedfile_buf = 0;
                         isStarted = true;
                     }
+                    // we restart
                     if(ts < started){
                         started = ts;
+                       // timestampcurrentelapsedfile = 0;
+                       // timestampcurrentelapsedlive_buf = 0;
+                       // timestampcurrentelapsedfile_buf = 0;
                     }
                     unsigned long current =  ts - started;
                     microseconds = current - (minutes*60)*1e6 - seconds*1e6;
@@ -692,7 +714,7 @@ void ofxDVS::update() {
                 if(i>0){
                     i = i-1;
                 }
-            }
+            }// target speed
             // recording status
             if(isRecording){
                 // order packet containers in time - file format aedat 3.1 standard -
@@ -710,7 +732,6 @@ void ofxDVS::update() {
                     size_t sizePacket = caerEventPacketGetSize(packetHeader);
                     caerEventPacketHeaderSetEventSource(packetHeader, caerEventPacketHeaderGetEventSource(packetHeader));
                     myFile.write((char*)packetHeader, sizePacket);
-
                 }
             }
             // free all packet containers here
@@ -725,18 +746,7 @@ void ofxDVS::update() {
         // done with the resource
         thread.unlock();
         
-        // check how fast we are going, if we are too slow, drop some data
-        /*thread.lock();
-        if(thread.container.size() > maxContainerQueued){
-            ofLog(OF_LOG_WARNING, "Visualization is too slow, dropping events to keep real-time.");
-            packetContainer = thread.container.back(); // this is a pointer
-            thread.container.pop_back();
-            caerEventPacketContainerFree(packetContainer);
-            thread.container.clear();
-            thread.container.shrink_to_fit();
-        }
-        thread.unlock();*/
-        
+        // check how fast we are going, if we are too slow, drop some data    
     }else{
         // we are paused..
         thread.lock();
@@ -1290,7 +1300,9 @@ void ofxDVS::changeLoadFile() {
     
     //thread.lock();
     thread.fileInput = !thread.fileInput;
+    ofLog(OF_LOG_WARNING,"FileInput mode a");
     if(thread.fileInput){
+    	ofLog(OF_LOG_WARNING,"FileInput mode");
         ofFileDialogResult result = ofSystemLoadDialog("Load aedat file");
         if(result.bSuccess) {
             path = result.getPath();
@@ -1321,6 +1333,7 @@ void ofxDVS::changeLoadFile() {
 
 //--------------------------------------------------------------
 void ofxDVS::loadFile() {
+	ofLog(OF_LOG_WARNING,"loadfiles");
     ofFileDialogResult result = ofSystemLoadDialog("Load aedat file");
     if(result.bSuccess) {
         path = result.getPath();

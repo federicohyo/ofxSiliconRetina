@@ -864,6 +864,14 @@ public:
     long minutes;
     long hours;
     char timeString[256];
+    // 
+ /*   long timestampcurrentelapsedlive;
+    long timestampcurrentelapsedlive_buf;
+    long timestampcurrentelapsedfile;
+    long timestampcurrentelapsedfile_0;
+    long timestampcurrentelapsedfile_1;
+    long timestampcurrentelapsedfile_buf;
+    bool tip;*/
     
     // imu temperature
     float imuTemp;
