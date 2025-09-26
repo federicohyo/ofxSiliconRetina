@@ -960,7 +960,7 @@ public:
     // ---- YOLO overlay ----
     struct YoloDet { ofRectangle box; float score; int cls; };
     std::vector<YoloDet> yolo_dets;
-    float yolo_conf_thresh = 0.25f;
+    float yolo_conf_thresh = 0.8f;
     float yolo_iou_thresh  = 0.45f;
     int   yolo_input_w = 640, yolo_input_h = 640; // filled from model on first run
     bool  yolo_draw = true;                       // draw overlay when true
