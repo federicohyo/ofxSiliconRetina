@@ -966,6 +966,11 @@ public:
     bool  yolo_draw = true;                       // draw overlay when true
     //int yolo_num_classes = 2;
 
+    // VTEI window (GUI-controlled)
+    float vtei_win_ms = 50.0f;   // default 50 ms
+    long  vtei_win_us = 50000;   // = vtei_win_ms * 1000
+
+
 private:
     // Build VTEI (5 channels) in CHW order at (W,H)
     std::vector<float> buildVTEI_(int W, int H);

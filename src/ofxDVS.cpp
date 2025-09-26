@@ -377,7 +377,7 @@ void ofxDVS::setup() {
     f1->addButton("Enable NN");  // toggles model execution
     f1->addToggle("Draw YOLO", true);
     f1->addSlider("YOLO Conf", 0.0, 1.0, yolo_conf_thresh);
-
+    f1->addSlider("VTEI Window (ms)", 5, 200, vtei_win_ms);
 
     numPaused = 0;
     numPausedRec = 0;
@@ -2117,7 +2117,7 @@ std::vector<float> ofxDVS::buildVTEI_(int W, int H)
         if (!e.valid) continue;
         if (e.timestamp > latest_ts) latest_ts = e.timestamp;
     }
-    const long win_us = 50000; // 50 ms window
+    const long win_us = vtei_win_us; // 50 ms window
     for (const auto &e : packetsPolarity) {
         if (!e.valid) continue;
         if (e.timestamp + win_us >= latest_ts) {
@@ -2644,6 +2644,12 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
     else if (e.target->getLabel() == "YOLO Conf") {
         yolo_conf_thresh = e.value;
     }
+    else if (e.target->getLabel() == "VTEI Window (ms)") {
+        vtei_win_ms = e.value;
+        vtei_win_us = (long)std::round(vtei_win_ms * 1000.0f); // ms -> us
+        ofLogNotice() << "VTEI window set to " << vtei_win_ms << " ms (" << vtei_win_us << " us)";
+    }
+
 
 
     myCam.reset(); // no mesh turning when using GUI
