@@ -8,7 +8,7 @@
 #   The location of your root openFrameworks installation
 #       (default) OF_ROOT = ../../.. 
 ################################################################################
-# OF_ROOT = ../../..
+OF_ROOT = ../../..
 
 ################################################################################
 # PROJECT ROOT
@@ -77,7 +77,9 @@
 # add a runtime path to search for those shared libraries, since they aren't 
 # incorporated directly into the final executable application binary.
 # TODO: should this be a default setting?
-PROJECT_LDFLAGS=-Wl,-rpath=./libs,-lcaer
+#PROJECT_LDFLAGS=-Wl,-rpath=./libs,-lcaer
+PROJECT_LDFLAGS += -Wl,-rpath=./libs,-lcaer,-L/usr/lib/x86_64-linux-gnu,-lonnxruntime
+PROJECT_LDFLAGS += -L/home/federico/tue/of_v0.12.0_linux64gcc6_release/addons/ofxDVS/libs/onnxruntime/
 
 ################################################################################
 # PROJECT DEFINES
@@ -106,6 +108,8 @@ PROJECT_LDFLAGS=-Wl,-rpath=./libs,-lcaer
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
 # PROJECT_CFLAGS = 
+PROJECT_CFLAGS += -I/home/federico/tue/of_v0.12.0_linux64gcc6_release/addons/ofxDVS/libs/onnxruntime
+PROJECT_CFLAGS += --std=c++1z -I/usr/local/include/onnxruntime/core/session/ -Wno-volatile
 
 ################################################################################
 # PROJECT OPTIMIZATION CFLAGS

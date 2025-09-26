@@ -9,7 +9,197 @@
 
 #include "ofxDVS.hpp"
 
+#include <deque>
+
 using namespace std::placeholders;
+static constexpr float VIEW_SCALE = 6.0f / 7;
+
+// yolo
+
+#include <algorithm>
+#include <tuple>
+
+static const char* COCO80[80] = {
+"person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light",
+"fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow",
+"elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee",
+"skis","snowboard","sports ball","kite","baseball bat","baseball glove","skateboard","surfboard","tennis racket","bottle",
+"wine glass","cup","fork","knife","spoon","bowl","banana","apple","sandwich","orange",
+"broccoli","carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed",
+"dining table","toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven",
+"toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"
+};
+
+static constexpr int yolo_num_classes = 2;
+static const char* PEDRO_CLASSES[yolo_num_classes] = { "person", "class1" }; // replace with actual names if you have them
+
+
+namespace {
+// Nearest-neighbor letterbox for CHW floats: (C,Hs,Ws) -> (C,Hd,Wd)
+std::vector<float> letterboxCHW(const std::vector<float>& src,
+                                int C, int Hs, int Ws,
+                                int Hd, int Wd,
+                                float &scale, int &padx, int &pady)
+{
+    std::vector<float> dst((size_t)C * Hd * Wd, 0.0f);
+    scale = std::min((float)Wd / (float)Ws, (float)Hd / (float)Hs);
+    const int newW = (int)std::round(Ws * scale);
+    const int newH = (int)std::round(Hs * scale);
+    padx = (Wd - newW) / 2;
+    pady = (Hd - newH) / 2;
+
+    auto atSrc = [&](int c, int y, int x) -> float {
+        return src[(size_t)c * Hs * Ws + (size_t)y * Ws + x];
+    };
+    auto atDst = [&](int c, int y, int x) -> float& {
+        return dst[(size_t)c * Hd * Wd + (size_t)y * Wd + x];
+    };
+
+    for (int y = 0; y < newH; ++y) {
+        int sy = std::min(Hs - 1, (int)std::floor(y / scale));
+        for (int x = 0; x < newW; ++x) {
+            int sx = std::min(Ws - 1, (int)std::floor(x / scale));
+            for (int c = 0; c < C; ++c) {
+                atDst(c, y + pady, x + padx) = atSrc(c, sy, sx);
+            }
+        }
+    }
+    return dst;
+}
+
+inline ofRectangle unletterboxAndProject(
+    float x1, float y1, float x2, float y2,
+    float scale, int padx, int pady,
+    int sensorW, int sensorH, float drawW, float drawH)
+{
+    // model -> sensor
+    float sx1 = (x1 - padx) / scale;
+    float sy1 = (y1 - pady) / scale;
+    float sx2 = (x2 - padx) / scale;
+    float sy2 = (y2 - pady) / scale;
+
+    // clamp to sensor bounds
+    sx1 = std::max(0.f, std::min((float)sensorW, sx1));
+    sy1 = std::max(0.f, std::min((float)sensorH, sy1));
+    sx2 = std::max(0.f, std::min((float)sensorW, sx2));
+    sy2 = std::max(0.f, std::min((float)sensorH, sy2));
+
+    // sensor -> screen
+    const float Sx = drawW / (float)sensorW;
+    const float Sy = drawH / (float)sensorH;
+    float x = sx1 * Sx;
+    float y = sy1 * Sy;
+    float w = (sx2 - sx1) * Sx;
+    float h = (sy2 - sy1) * Sy;
+    return ofRectangle(x, y, w, h);
+}
+
+// IoU for screen-space rectangles
+static float rectIoU(const ofRectangle& A, const ofRectangle& B) {
+    float ax1=A.getX(), ay1=A.getY(), ax2=ax1+A.getWidth(),  ay2=ay1+A.getHeight();
+    float bx1=B.getX(), by1=B.getY(), bx2=bx1+B.getWidth(),  by2=by1+B.getHeight();
+    float x1 = std::max(ax1, bx1), y1 = std::max(ay1, by1);
+    float x2 = std::min(ax2, bx2), y2 = std::min(ay2, by2);
+    float w = std::max(0.f, x2 - x1), h = std::max(0.f, y2 - y1);
+    float inter = w*h;
+    float aA = std::max(0.f, A.getWidth())  * std::max(0.f, A.getHeight());
+    float aB = std::max(0.f, B.getWidth())  * std::max(0.f, B.getHeight());
+    float denom = aA + aB - inter;
+    return denom > 0.f ? inter / denom : 0.f;
+}
+
+// Average current-frame boxes with matches from the last 2 frames
+static std::vector<ofxDVS::YoloDet>
+temporalSmooth3(const std::vector<ofxDVS::YoloDet>& cur,
+                std::deque<std::vector<ofxDVS::YoloDet>>& hist,
+                int max_hist = 3, float match_iou = 0.5f,
+                int min_hits = 2, float min_w = 12.f, float min_h = 12.f)
+{
+    // push current into history (screen coords)
+    hist.push_back(cur);
+    if ((int)hist.size() > max_hist) hist.pop_front();
+
+    std::vector<ofxDVS::YoloDet> out;
+    out.reserve(cur.size());
+
+    for (const auto& d0 : cur) {
+        if (d0.box.getWidth() < min_w || d0.box.getHeight() < min_h) continue;
+
+        float sum_w = d0.score;
+        float x1 = d0.box.getX() * d0.score;
+        float y1 = d0.box.getY() * d0.score;
+        float x2 = (d0.box.getX() + d0.box.getWidth())  * d0.score;
+        float y2 = (d0.box.getY() + d0.box.getHeight()) * d0.score;
+        int   hits = 1;
+
+        for (int t = (int)hist.size() - 2; t >= 0; --t) {
+            const auto& prev = hist[t];
+            int best_j = -1; float best_iou = 0.f; float best_s = 0.f; ofRectangle best_r;
+            for (int j = 0; j < (int)prev.size(); ++j) {
+                if (prev[j].cls != d0.cls) continue;
+                float iou = rectIoU(d0.box, prev[j].box);
+                if (iou > best_iou) { best_iou = iou; best_j = j; best_s = prev[j].score; best_r = prev[j].box; }
+            }
+            if (best_j >= 0 && best_iou >= match_iou) {
+                if (best_r.getWidth() >= min_w && best_r.getHeight() >= min_h) {
+                    x1 += best_r.getX() * best_s;
+                    y1 += best_r.getY() * best_s;
+                    x2 += (best_r.getX() + best_r.getWidth())  * best_s;
+                    y2 += (best_r.getY() + best_r.getHeight()) * best_s;
+                    sum_w += best_s;
+                    ++hits;
+                }
+            }
+        }
+
+        if (hits >= min_hits) {
+            float ax1 = x1 / sum_w, ay1 = y1 / sum_w;
+            float ax2 = x2 / sum_w, ay2 = y2 / sum_w;
+            ofRectangle r(ax1, ay1, ax2 - ax1, ay2 - ay1);
+            if (r.getWidth() >= min_w && r.getHeight() >= min_h) {
+                ofxDVS::YoloDet sm{ r, sum_w / hits, d0.cls };
+                out.push_back(sm);
+            }
+        }
+    }
+    return out;
+}
+
+} // anonymous namespace
+
+
+namespace {
+struct Det { float x1,y1,x2,y2,score; int cls; };
+
+static float IoU(const Det& a, const Det& b){
+    float xx1 = std::max(a.x1, b.x1);
+    float yy1 = std::max(a.y1, b.y1);
+    float xx2 = std::min(a.x2, b.x2);
+    float yy2 = std::min(a.y2, b.y2);
+    float w = std::max(0.0f, xx2 - xx1);
+    float h = std::max(0.0f, yy2 - yy1);
+    float inter = w * h;
+    float areaA = std::max(0.0f, a.x2 - a.x1) * std::max(0.0f, a.y2 - a.y1);
+    float areaB = std::max(0.0f, b.x2 - b.x1) * std::max(0.0f, b.y2 - b.y1);
+    return inter / std::max(1e-6f, areaA + areaB - inter);
+}
+
+static std::vector<Det> nms(std::vector<Det> dets, float iou_thresh){
+    std::vector<Det> keep;
+    std::sort(dets.begin(), dets.end(), [](auto& a, auto& b){ return a.score > b.score; });
+    std::vector<char> removed(dets.size(), 0);
+    for (size_t i = 0; i < dets.size(); ++i){
+        if (removed[i]) continue;
+        keep.push_back(dets[i]);
+        for (size_t j = i + 1; j < dets.size(); ++j){
+            if (!removed[j] && IoU(dets[i], dets[j]) > iou_thresh) removed[j] = 1;
+        }
+    }
+    return keep;
+}
+} // namespace
+
+
 
 //--------------------------------------------------------------
 ofxDVS::ofxDVS() {
@@ -174,6 +364,7 @@ void ofxDVS::setup() {
     f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
     f1->addSlider("DVS Integration", 1, 100, fsint);
     f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
+    f1->addToggle("ENABLE TRACKER", false);
     //myIMU = f1->addValuePlotter("IMU", 0, 1);
     f1->setPosition(x, y);
     f1->expand();
@@ -182,10 +373,219 @@ void ofxDVS::setup() {
     f1->onSliderEvent(this, &ofxDVS::onSliderEvent);
     f1->onMatrixEvent(this, &ofxDVS::onMatrixEvent);
     f1->onTextInputEvent(this, &ofxDVS::onTextInputEvent);
+    // neural net
+    f1->addButton("Enable NN");  // toggles model execution
+    f1->addToggle("Draw YOLO", true);
+    f1->addSlider("YOLO Conf", 0.0, 1.0, yolo_conf_thresh);
+
 
     numPaused = 0;
     numPausedRec = 0;
-    
+
+    // tracker
+    //f1 = new ofxDatGuiFolder("Control", ofColor::fromHex(0xFFD00B));
+    this->tracker_panel.reset( new ofxDatGui( ofxDatGuiAnchor::TOP_RIGHT ) );
+    auto tracker_folder = this->tracker_panel->addFolder(">> Tracker Controls" );
+    this->tracker_panel->setVisible(true);
+
+    auto& cfg = this->rectangularClusterTrackerConfig;
+    tracker_folder->addToggle("FILTER", cfg.filterEnabled);
+    tracker_folder->addSlider("UPDATE INTERVAL ms", 0, 1000, cfg.updateIntervalMs);
+    tracker_folder->addSlider("MAX NUM CLUSTERS", 1, 100, cfg.maxNumClusters);
+    tracker_folder->addBreak()->setHeight(5.0f);
+    // Display
+    tracker_folder->addToggle("ELLIPTICAL CLUSTERS", cfg.useEllipticalClusters);
+    tracker_folder->addSlider("PATH LENGTH", 1, 500, cfg.pathLength);
+    tracker_folder->addToggle("SHOW CLUSTER NUMBER", cfg.showClusterNumber);
+    tracker_folder->addToggle("SHOW CLUSTER EPS", cfg.showClusterEps);
+    tracker_folder->addToggle("SHOW CLUSTER RADIUS", cfg.showClusterRadius);
+    tracker_folder->addToggle("SHOW CLUSTER VELOCITY", cfg.showClusterVelocity);
+    tracker_folder->addToggle("SHOW CLUSTER VEL VECTOR", cfg.showClusterVelocityVector);
+    tracker_folder->addToggle("SHOW CLUSTER MASS", cfg.showClusterMass);
+    tracker_folder->addToggle("SHOW PATHS", cfg.showPaths);
+    tracker_folder->addSlider("VELOCITY VECTOR SCALING", 0, 10, cfg.velocityVectorScaling);
+    tracker_folder->addBreak()->setHeight(5.0f);
+    // Movement
+    tracker_folder->addSlider("MIXING FACTOR", 0, 1, cfg.mixingFactor);
+    tracker_folder->addToggle("PATHS", cfg.pathsEnabled);
+    tracker_folder->addToggle("USE VELOCITY", cfg.useVelocity);
+    tracker_folder->addToggle("USE NEAREST CLUSTER", cfg.useNearestCluster);
+    tracker_folder->addSlider("PREDICTIVE VELOCITY", 0, 100, cfg.predictiveVelocityFactor);
+    tracker_folder->addToggle("initializeVelocityToAverage", cfg.initializeVelocityToAverage);
+    tracker_folder->addSlider("VELOCITY TAU ms", 0, 1000, cfg.velocityTauMs);
+    tracker_folder->addSlider("FRICTION TAU ms", 0, 1000, cfg.frictionTauMs);
+    tracker_folder->addBreak()->setHeight(5.0f);
+    // Sizing
+    tracker_folder->addSlider("SURROUND", 0, 10, cfg.surround);
+    tracker_folder->addToggle("DYNAMIC SIZE", cfg.dynamicSizeEnabled);
+    tracker_folder->addToggle("DYNAMIC ASPECT RATIO", cfg.dynamicAspectRatioEnabled);
+    tracker_folder->addToggle("DYNAMIC ANGLE", cfg.dynamicAngleEnabled);
+    tracker_folder->addSlider("ASPECT RATIO", 0, 2, cfg.aspectRatio);
+    tracker_folder->addSlider("CLUSTER SIZE", 0, 2, cfg.clusterSize);
+    tracker_folder->addToggle("HIGHWAY PERSPECTIVE", cfg.highwayPerspectiveEnabled);
+    tracker_folder->addToggle("ANGLE FOLLOWS VELOCITY", cfg.angleFollowsVelocity);
+    tracker_folder->addBreak()->setHeight(5.0f);
+    // Update
+    tracker_folder->addToggle("ONE POLARITY", cfg.useOnePolarityOnlyEnabled);
+    tracker_folder->addToggle("GROW MERGED SIZE", cfg.growMergedSizeEnabled);
+    tracker_folder->addSlider("velAngDiffDegToNotMerge", 0, 360, cfg.velAngDiffDegToNotMerge);
+    tracker_folder->addBreak()->setHeight(5.0f);
+    // Lifetime
+    tracker_folder->addSlider("THRESHOLD MASS", 0, 100, cfg.thresholdMassForVisibleCluster);
+    tracker_folder->addSlider("THRESHOLD VELOCITY", 0, 100, cfg.thresholdVelocityForVisibleCluster);
+    tracker_folder->addSlider("MASS DECAY TAU us", 0, 100000, cfg.clusterMassDecayTauUs);
+    tracker_folder->addToggle("CLUSTER EXIT PURGING", cfg.enableClusterExitPurging);
+    tracker_folder->addToggle("SURROUND INHIBITION", cfg.surroundInhibitionEnabled);
+    tracker_folder->addSlider("SURROUND INHIBITION COST", 0, 10, cfg.surroundInhibitionCost);
+    tracker_folder->addToggle("DO NOT MERGE", cfg.dontMergeEver);
+    tracker_folder->addBreak()->setHeight(5.0f);
+    // PI Controller
+    tracker_folder->addToggle("SMOOTH MOVE", cfg.smoothMove);
+    tracker_folder->addSlider("SMOOTH WEIGHT", 0, 1000, cfg.smoothWeight);
+    tracker_folder->addSlider("SMOOTH POSITION", 0, 0.1f, cfg.smoothPosition);
+    tracker_folder->addSlider("SMOOTH INTEGRAL", 0, 0.1f, cfg.smoothIntegral);
+
+    this->tracker_panel->onToggleEvent(this, &ofxDVS::onTrackerToggleEvent);         // toggle press
+    this->tracker_panel->onSliderEvent(this, &ofxDVS::onTrackerSliderEvent);         // slide move
+
+    /* 2d visualisation primitives setup
+     */
+
+    this->next_polarities_pixbuf.allocate(this->sizeX, this->sizeY, OF_IMAGE_COLOR);
+    this->next_polarities.allocate (this->next_polarities_pixbuf);
+    this->next_frame.allocate(this->next_polarities_pixbuf);
+    //this->next_polarities.allocate (this->dvs_frame_W, this->dvs_frame_H, GL_RGB);
+    //this->next_frame.allocate(this->dvs_frame_W, this->dvs_frame_H, GL_RGB);
+    updateViewports();
+
+
+    /* 3d visualisation primitives setup
+     */
+
+    this->next_polarities_3d.setMode(OF_PRIMITIVE_POINTS);
+    this->next_polarities_3d.enableColors();
+
+    // DepthTest will make sure that 3d elements that are covered by other elements, won’t be rendered
+    ofEnableDepthTest();  // generally good, but sometimes problematic with 2D primitives
+    ofDisableDepthTest();
+
+    // use circular points instead of square points
+    //glEnable(GL_POINT_SMOOTH);
+
+    // set the mesh points size
+    glPointSize(1);
+
+    // onnx runner
+    try {
+        OnnxRunner::Config nncfg;
+        nncfg.model_path = ofToDataPath("model.onnx", true); // adjust path
+        nncfg.intra_op_num_threads = 1;
+        nncfg.normalize_01 = true;
+        nncfg.verbose = false;
+        nn = std::make_unique<OnnxRunner>(nncfg);
+        nn->load();
+        ofLogNotice() << "NN loaded.";
+    } catch (const std::exception& e) {
+        ofLogError() << "Failed to load NN: " << e.what();
+    }
+
+}
+
+void ofxDVS::updateViewports()
+{
+    this->frame_viewport = ofRectangle(20, 20, this->next_frame.getWidth()* VIEW_SCALE, this->next_frame.getHeight() * VIEW_SCALE);
+    this->polarities_viewport = ofRectangle(350, 20, this->next_polarities.getWidth()* VIEW_SCALE, this->next_polarities.getHeight()* VIEW_SCALE);
+    this->cam_viewport = ofRectangle(700.0, 20, this->sizeX, this->sizeY);
+}
+
+void ofxDVS::onTrackerSliderEvent(ofxDatGuiSliderEvent e) {
+    auto& cfg = this->rectangularClusterTrackerConfig;
+    static std::map<std::string, float*> vars = {
+        { "UPDATE INTERVAL ms",     &cfg.updateIntervalMs },
+        { "MAX NUM CLUSTERS",       &cfg.maxNumClusters },
+        { "PATH LENGTH",            &cfg.pathLength },
+        { "VELOCITY VECTOR SCALING", &cfg.velocityVectorScaling },
+        { "MIXING FACTOR",          &cfg.mixingFactor },
+        { "PREDICTIVE VELOCITY",    &cfg.predictiveVelocityFactor },
+        { "VELOCITY TAU ms",        &cfg.velocityTauMs },
+        { "FRICTION TAU ms",        &cfg.frictionTauMs },
+        { "SURROUND",               &cfg.surround },
+        { "ASPECT RATIO",           &cfg.aspectRatio },
+        { "CLUSTER SIZE",           &cfg.clusterSize },
+        { "velAngDiffDegToNotMerge", &cfg.velAngDiffDegToNotMerge },
+        { "THRESHOLD MASS",         &cfg.thresholdMassForVisibleCluster },
+        { "THRESHOLD VELOCITY",     &cfg.thresholdVelocityForVisibleCluster },
+        { "MASS DECAY TAU us",      &cfg.clusterMassDecayTauUs },
+        { "SURROUND INHIBITION COST", &cfg.surroundInhibitionCost },
+        { "SMOOTH WEIGHT",          &cfg.smoothWeight },
+        { "SMOOTH POSITION",        &cfg.smoothPosition },
+        { "SMOOTH INTEGRAL",        &cfg.smoothIntegral },
+    };
+
+    auto it = vars.find(e.target->getName());
+    if (it != vars.end()) {
+        *(it->second) = e.target->getValue();
+    }
+}
+
+//----------------------------------------------------------------------------
+void ofxDVS::createRectangularClusterTracker() {
+    if (rectangularClusterTrackerEnabled) {
+        this->rectangularClusterTracker = 
+            std::make_unique<RectangularClusterTracker>(
+                this->rectangularClusterTrackerConfig,
+                this->sizeX, this->sizeY);
+    }
+}
+
+//----------------------------------------------------------------------------
+void ofxDVS::enableTracker(bool enabled) {
+    rectangularClusterTrackerEnabled = enabled;
+    if (enabled) {
+        if (!rectangularClusterTracker) {
+            createRectangularClusterTracker();
+        }
+    } else {
+        rectangularClusterTracker.reset();
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+void ofxDVS::onTrackerToggleEvent(ofxDatGuiToggleEvent e) {
+    auto& cfg = this->rectangularClusterTrackerConfig;
+    static std::map<std::string, bool*> vars = {
+        { "FILTER",                 &cfg.filterEnabled },
+        { "ELLIPTICAL CLUSTERS",    &cfg.useEllipticalClusters },
+        { "SHOW CLUSTER NUMBER",    &cfg.showClusterNumber },
+        { "SHOW CLUSTER EPS",       &cfg.showClusterEps },
+        { "SHOW CLUSTER RADIUS",    &cfg.showClusterRadius },
+        { "SHOW CLUSTER VELOCITY",  &cfg.showClusterVelocity },
+        { "SHOW CLUSTER VEL VECTOR", &cfg.showClusterVelocityVector },
+        { "SHOW CLUSTER MASS",      &cfg.showClusterMass },
+        { "SHOW PATHS",             &cfg.showPaths },
+        { "PATHS",                  &cfg.pathsEnabled },
+        { "USE VELOCITY",           &cfg.useVelocity },
+        { "USE NEAREST CLUSTER",    &cfg.useNearestCluster },
+        { "initializeVelocityToAverage", &cfg.initializeVelocityToAverage },
+        { "DYNAMIC SIZE",           &cfg.dynamicSizeEnabled },
+        { "DYNAMIC ASPECT RATIO",   &cfg.dynamicAspectRatioEnabled },
+        { "DYNAMIC ANGLE",          &cfg.dynamicAngleEnabled },
+        { "HIGHWAY PERSPECTIVE",    &cfg.highwayPerspectiveEnabled },
+        { "ANGLE FOLLOWS VELOCITY", &cfg.angleFollowsVelocity },
+        { "ONE POLARITY",           &cfg.useOnePolarityOnlyEnabled },
+        { "GROW MERGED SIZE",       &cfg.growMergedSizeEnabled },
+        { "GROW MERGED SIZE",       &cfg.growMergedSizeEnabled },
+        { "CLUSTER EXIT PURGING",   &cfg.enableClusterExitPurging },
+        { "SURROUND INHIBITION",    &cfg.surroundInhibitionEnabled },
+        { "DO NOT MERGE",           &cfg.dontMergeEver },
+        { "SMOOTH MOVE",            &cfg.smoothMove },
+    };
+
+    auto it = vars.find(e.target->getName());
+    if (it != vars.end()) {
+        *(it->second) = e.target->getChecked();
+    }
 }
 
 //--------------------------------------------------------------
@@ -922,6 +1322,65 @@ void ofxDVS::draw() {
     if(drawGui){
         f1->draw();
     }
+
+
+    //yolo draw bounding boxes
+    if (yolo_draw && !yolo_dets.empty()) {
+        ofPushStyle();
+        ofNoFill();
+        for (auto &d : yolo_dets) {
+            // box
+            ofSetColor(0, 255, 0);
+            ofDrawRectangle(d.box);
+
+            // label
+            //std::string name = (d.cls>=0 && d.cls<80) ? COCO80[d.cls] : ("id:"+ofToString(d.cls));
+            std::string name = (d.cls>=0 && d.cls<yolo_num_classes) ? PEDRO_CLASSES[d.cls]
+                                                        : ("id:"+ofToString(d.cls));
+
+            char buf[128];
+            std::snprintf(buf, sizeof(buf), "%s %.2f", name.c_str(), d.score);
+            ofDrawBitmapStringHighlight(buf, d.box.getX()+2, d.box.getY()+12);
+        }
+        ofPopStyle();
+    }
+
+
+    //tracker
+
+    // polarity events
+    //this->next_polarities.draw(polarities_viewport.getX(), polarities_viewport.getY(), polarities_viewport.getWidth(), polarities_viewport.getHeight());
+
+    //if (this->rectangularClusterTracker) {
+    //    this->rectangularClusterTracker->draw(polarities_viewport);
+    // }
+
+}
+
+/**
+ * Event handler when clicking the mouse
+ *
+ */
+void ofxDVS::mousePressed(int x, int y, int button) {
+    if (this->rectangularClusterTracker) {
+        auto mapper = [](ofRectangle& r, int x, int y, float& mx, float& my) {
+            if (r.inside(x, y)) {
+                mx = (x - r.getX()) / VIEW_SCALE;
+                my = (y - r.getY()) / VIEW_SCALE;
+                return true;
+            }
+            return false;
+        };
+        float mx, my;
+        if (mapper(this->frame_viewport, x, y, mx, my)) {
+            if (button == 0) this->rectangularClusterTracker->setVanishingPoint(mx, my);
+            if (button == 2) this->rectangularClusterTracker->resetVanishingPoint();
+        }
+        if (mapper(this->polarities_viewport, x, y, mx, my)) {
+            if (button == 0) this->rectangularClusterTracker->setVanishingPoint(mx, my);
+            if (button == 2) this->rectangularClusterTracker->resetVanishingPoint();
+        }
+    }
 }
 
 //--------------------------------------------------------------
@@ -1645,6 +2104,98 @@ void ofxDVS::set3DTime(int i){
     }
 }
 
+std::vector<float> ofxDVS::buildVTEI_(int W, int H)
+{
+    // Source (sensor) size
+    const int srcW = sizeX;
+    const int srcH = sizeY;
+
+    // 1) Accumulate pos/neg event counts in last window (e.g. 50ms)
+    std::vector<float> pos(srcW * srcH, 0.0f), neg(srcW * srcH, 0.0f);
+    long latest_ts = 0;
+    for (const auto &e : packetsPolarity) {
+        if (!e.valid) continue;
+        if (e.timestamp > latest_ts) latest_ts = e.timestamp;
+    }
+    const long win_us = 50000; // 50 ms window
+    for (const auto &e : packetsPolarity) {
+        if (!e.valid) continue;
+        if (e.timestamp + win_us >= latest_ts) {
+            int x = int(e.pos.x), y = int(e.pos.y);
+            if ((unsigned)x < (unsigned)srcW && (unsigned)y < (unsigned)srcH) {
+                if (e.pol) pos[y*srcW + x] += 1.0f; else neg[y*srcW + x] += 1.0f;
+            }
+        }
+    }
+    // simple normalization for counts
+    const float count_scale = 5.0f; // tune to match training
+    for (size_t i=0;i<pos.size();++i) {
+        pos[i] = std::min(1.0f, pos[i] / count_scale);
+        neg[i] = std::min(1.0f, neg[i] / count_scale);
+    }
+
+    // 2) Time surface (exponential decay of last timestamp)
+    std::vector<float> T(srcW * srcH, 0.0f);
+    if (surfaceMapLastTs) {
+        const float tau_us = 5e5f; // 0.5s time constant — tune for your training
+        for (int y=0;y<srcH;++y) {
+            for (int x=0;x<srcW;++x) {
+                float last = surfaceMapLastTs[y][x]; // expect microseconds
+                float dt   = std::max(0.0f, float(latest_ts) - last);
+                float val  = std::exp(-dt / tau_us);
+                T[y*srcW + x] = std::clamp(val, 0.0f, 1.0f);
+            }
+        }
+    }
+
+    // 3) Intensity (I) and simple edge magnitude (E) from imageGenerator (no OpenCV)
+    ofImage I = imageGenerator; // make a local copy we can resize/convert
+    I.setImageType(OF_IMAGE_GRAYSCALE);
+    if (I.getWidth() != srcW || I.getHeight() != srcH) I.resize(srcW, srcH);
+
+    std::vector<float> E(srcW * srcH, 0.0f);
+    auto clamp01 = [](float v){ return std::max(0.0f, std::min(1.0f, v)); };
+    const ofPixels &Ip = I.getPixels();
+    auto P = [&](int yy, int xx)->unsigned char { return Ip[yy*srcW + xx]; };
+
+    for (int y=1; y<srcH-1; ++y){
+        for (int x=1; x<srcW-1; ++x){
+            float gx = float(P(y-1,x+1) + 2*P(y,x+1) + P(y+1,x+1)
+                           - P(y-1,x-1) - 2*P(y,x-1) - P(y+1,x-1));
+            float gy = float(P(y+1,x-1) + 2*P(y+1,x) + P(y+1,x+1)
+                           - P(y-1,x-1) - 2*P(y-1,x) - P(y-1,x+1));
+            float mag = std::sqrt(gx*gx + gy*gy) / (4.0f * 255.0f);
+            E[y*srcW + x] = clamp01(mag);
+        }
+    }
+
+    // 4) Resize (nearest) to network size and pack to CHW (C=5: pos,neg,T,E,I)
+    std::vector<float> chw(5 * W * H, 0.0f);
+
+    auto nn_src_idx = [&](int yy, int xx)->int {
+        int sx = std::min(srcW-1, std::max(0, int(std::round((xx + 0.5f) * srcW / float(W) - 0.5f))));
+        int sy = std::min(srcH-1, std::max(0, int(std::round((yy + 0.5f) * srcH / float(H) - 0.5f))));
+        return sy * srcW + sx;
+    };
+
+    for (int yy=0; yy<H; ++yy) {
+        for (int xx=0; xx<W; ++xx) {
+            size_t hw = size_t(yy) * W + xx;
+            int sidx  = nn_src_idx(yy, xx);
+
+            float i01 = Ip[sidx] / 255.0f; // intensity 0..1
+
+            chw[0*(W*H) + hw] = pos[sidx];
+            chw[1*(W*H) + hw] = neg[sidx];
+            chw[2*(W*H) + hw] = T[sidx];
+            chw[3*(W*H) + hw] = E[sidx];
+            chw[4*(W*H) + hw] = i01;
+        }
+    }
+
+    return chw;
+}
+
 //--------------------------------------------------------------
 void ofxDVS::updateImageGenerator(){
     
@@ -1785,9 +2336,162 @@ void ofxDVS::updateImageGenerator(){
             }
         }
         imageGenerator.update();
+
+        // After you update the image generator (e.g., inside update() after updateImageGenerator())
         newImageGen = true;
+
+        if (nnEnabled && nn && nn->isLoaded() && newImageGen) {
+            try {
+                // 0) Sensor & draw sizes
+                const int   sensorW = sizeX;                // e.g. 346 or 640
+                const int   sensorH = sizeY;                // e.g. 260 or 480
+                const float drawW   = (float)ofGetWidth();
+                const float drawH   = (float)ofGetHeight();
+
+                // 1) Model input size
+                auto hw = nn->getInputHW();
+                int Hd = hw.first;
+                int Wd = hw.second;
+                if (Hd <= 0 || Wd <= 0) { Hd = 288; Wd = 352; }  // PEDRo export size
+
+                // 2) Build 5-ch VTEI at sensor size (C=5)
+                const int C5 = 5;
+                std::vector<float> chw5_sensor = buildVTEI_(sensorW, sensorH);
+
+                // 3) Letterbox to model size
+                float lb_scale = 1.f; int lb_padx = 0, lb_pady = 0;
+                std::vector<float> chw5_model = letterboxCHW(
+                    chw5_sensor, C5, /*Hs*/sensorH, /*Ws*/sensorW,
+                    /*Hd*/Hd, /*Wd*/Wd, lb_scale, lb_padx, lb_pady
+                );
+                if (chw5_model.size() != (size_t)C5 * Hd * Wd) {
+                    ofLogError() << "[YOLO] letterbox produced wrong size";
+                    yolo_dets.clear();
+                    return;
+                }
+
+                // 4) Run ONNX (direct CHW float)
+                auto outmap = nn->runCHW(chw5_model, C5, Hd, Wd);
+                if (outmap.empty()) { yolo_dets.clear(); return; }
+
+                // Prefer "output0" explicitly; otherwise take first entry
+                const std::vector<float>* pv = nullptr;
+                auto it0 = outmap.find("output0");
+                if (it0 != outmap.end()) pv = &it0->second;
+                else                     pv = &outmap.begin()->second;
+
+                const std::vector<float>& v = *pv;
+
+                // 5) Decode: out0 = [1, C, N] with C = 4 + nc (no obj)
+                auto sigmoid = [](float x){ return 1.f / (1.f + std::exp(-x)); };
+
+                const int nc = 2;          // PEDRo export used nc=2
+                const int C  = 4 + nc;     // 6
+                if (v.size() % C != 0) {
+                    ofLogError() << "[YOLO] unexpected output length=" << v.size() << " not divisible by C=" << C;
+                    yolo_dets.clear(); return;
+                }
+                const int N = (int)(v.size() / C);
+                // Flat memory is (C,N) contiguous for [1,C,N]
+                auto at = [&](int c, int i)->float { return v[c * N + i]; };
+
+                const bool coords_normalized = false;  // Ultralytics head → usually pixel coords in model space
+
+                std::vector<Det> dets; dets.reserve(128);
+                for (int i = 0; i < N; ++i) {
+                    float cx = at(0,i), cy = at(1,i), w = at(2,i), h = at(3,i);
+                    if (coords_normalized) { cx *= Wd; cy *= Hd; w *= Wd; h *= Hd; }
+
+                    // best class prob (sigmoid per-class; not softmax)
+                    int   best_cls = -1;
+                    float best_p   = -1.f;
+                    for (int c = 0; c < nc; ++c) {
+                        float p = sigmoid(at(4 + c, i));
+                        if (p > best_p) { best_p = p; best_cls = c; }
+                    }
+                    if (best_p < yolo_conf_thresh) continue;
+
+                    // sanity filters in model space
+                    if (w <= 1.f || h <= 1.f) continue;
+                    float ar = w / std::max(1.f, h);
+                    if (ar < 0.15f || ar > 6.7f) continue;
+
+                    Det d;
+                    d.x1 = cx - 0.5f*w;  d.y1 = cy - 0.5f*h;
+                    d.x2 = cx + 0.5f*w;  d.y2 = cy + 0.5f*h;
+                    d.score = best_p;
+                    d.cls   = best_cls;
+                    dets.push_back(d);
+                }
+
+                // 6) NMS
+                auto kept = nms(std::move(dets), yolo_iou_thresh);
+
+                // ---- define unletterboxAndProject BEFORE using it ----
+                auto unletterboxAndProject = [&](float x1, float y1, float x2, float y2)->ofRectangle {
+                    // invert letterbox: remove padding, then divide by scale
+                    float lx1 = (x1 - lb_padx) / lb_scale;
+                    float ly1 = (y1 - lb_pady) / lb_scale;
+                    float lx2 = (x2 - lb_padx) / lb_scale;
+                    float ly2 = (y2 - lb_pady) / lb_scale;
+
+                    // clamp to sensor
+                    auto clampf = [](float v, float a, float b){ return std::max(a, std::min(b, v)); };
+                    lx1 = clampf(lx1, 0.f, (float)sensorW);
+                    ly1 = clampf(ly1, 0.f, (float)sensorH);
+                    lx2 = clampf(lx2, 0.f, (float)sensorW);
+                    ly2 = clampf(ly2, 0.f, (float)sensorH);
+
+                    // project sensor → screen (full-screen stretch)
+                    float sx = lx1 * (drawW / sensorW);
+                    float sy = ly1 * (drawH / sensorH);
+                    float sw = (lx2 - lx1) * (drawW / sensorW);
+                    float sh = (ly2 - ly1) * (drawH / sensorH);
+                    return ofRectangle(sx, sy, sw, sh);
+                };
+
+                // 7) Un-letterbox to sensor, then project to screen and collect current dets
+                std::vector<YoloDet> cur_screen;
+                cur_screen.reserve(kept.size());
+                for (auto &k : kept) {
+                    auto r = unletterboxAndProject(k.x1, k.y1, k.x2, k.y2);
+                    if (r.getWidth() > 0 && r.getHeight() > 0) {
+                        cur_screen.push_back( YoloDet{ r, k.score, k.cls } );
+                    }
+                }
+
+                // 8) Temporal smoothing over last 3 frames
+                // NOTE: do NOT clear yolo_dets after this!
+                yolo_dets = temporalSmooth3(cur_screen, yolo_hist_,
+                                            /*max_hist*/3,
+                                            /*IoU*/0.5f, /*min_hits*/2,
+                                            /*min_w*/12.f, /*min_h*/12.f);
+
+                // Optional logging
+                for (auto &d : yolo_dets) {
+                    ofLogNotice() << "[YOLO] det cls=" << d.cls << " score=" << d.score
+                                << " rect=" << d.box;
+                }
+
+                // newImageGen = false; // if you want one-shot per generated image
+
+            } catch (const std::exception& e) {
+                ofLogError() << "[YOLO] Inference error: " << e.what();
+                yolo_dets.clear();
+            }
+        } else {
+            yolo_dets.clear();
+        }
+
+
+
+
+
     }
 }
+
+
+
 
 //--------------------------------------------------------------
 float ofxDVS::getImuTemp(){
@@ -1881,13 +2585,22 @@ void ofxDVS::onButtonEvent(ofxDatGuiButtonEvent e)
 		loadFile();
 	}else if(e.target->getLabel() == "Live"){
 		tryLive();
+    }else if ( (e.target->getLabel() == "Enable NN") || (e.target->getLabel() == "Disable NN") ) {
+    nnEnabled = !nnEnabled;
+    e.target->setLabel(nnEnabled ? "Disable NN" : "Enable NN");
+    ofLogNotice() << "NN execution " << (nnEnabled ? "enabled" : "disabled");
     }
 }
 
 
 void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
 {
-    if(e.target->getLabel() == "APS"){
+    if (e.target->is("ENABLE TRACKER")) {
+        auto checked = e.target->getChecked();
+        this->tracker_panel->setVisible(checked);
+        this->enableTracker(checked);
+        ofLog(OF_LOG_NOTICE, "Tracker enabled %d", checked);
+    }else if(e.target->getLabel() == "APS"){
     	changeAps();
     }else if(e.target->getLabel() == "DVS"){
     	changeDvs();
@@ -1906,6 +2619,8 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
     }else if( e.target->getLabel() == "Reset Timestamp"){
     	resetTs();
     	e.target->setChecked(false); // reset to false
+    }else if (e.target->getLabel() == "Draw YOLO") {
+        yolo_draw = e.target->getChecked();
     }
 
 }
@@ -1925,6 +2640,12 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
         cout << "Accumulation value : " << e.value << endl;
         setImageAccumulatorSpikes(e.value);
     }
+    // onToggleEvent
+    else if (e.target->getLabel() == "YOLO Conf") {
+        yolo_conf_thresh = e.value;
+    }
+
+
     myCam.reset(); // no mesh turning when using GUI
 }
 

@@ -16,6 +16,10 @@
 #include "devices/dvxplorer.h"
 #include <atomic>
 
+
+#include "ofxDvsPolarity.hpp"
+#include "RectangularClusterTracker.hpp"
+
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
@@ -41,6 +45,9 @@
 
 #include "ofMain.h"
 #include "ofxDatGui.h"
+
+// in ofxDVS.hpp
+#include "onnx_run.hpp"
 
 struct polarity {
     int info;
@@ -911,7 +918,60 @@ public:
     int numPaused;
     int numPausedRec;
         
+
+    //tracker DVS
+    void    createRectangularClusterTracker();
+    void enableTracker(bool enabled);
+    std::unique_ptr<RectangularClusterTracker> rectangularClusterTracker;
+    bool rectangularClusterTrackerEnabled = false;
+
+    RectangularClusterTracker::Config rectangularClusterTrackerConfig;
+
+    void onTrackerToggleEvent(ofxDatGuiToggleEvent e);
+    void onTrackerSliderEvent(ofxDatGuiSliderEvent e);    
+    void setEnabledDvsSensorGuiControls(bool new_state);
+    void setEnabledDvsSensorConfigGuiControls(bool new_state);
+
+    std::unique_ptr<ofxDatGui>  tracker_panel;
+
+    void mousePressed(int x, int y, int button);
     
+
+    /* visualisation primitives we use
+     */
+
+    ofTexture       next_frame;
+    ofTexture       next_polarities;
+    ofPixels        next_polarities_pixbuf;
+    ofMesh          next_polarities_3d;
+    ofEasyCam       camera;
+    ofRectangle     frame_viewport;
+    ofRectangle     polarities_viewport;
+    ofRectangle     cam_viewport;
+    void updateViewports();
+
+    //
+    std::unique_ptr<OnnxRunner> nn;
+    bool nnEnabled = false;
+    int  nnLastClass = -1;
+
+
+    //yolo
+    // ---- YOLO overlay ----
+    struct YoloDet { ofRectangle box; float score; int cls; };
+    std::vector<YoloDet> yolo_dets;
+    float yolo_conf_thresh = 0.25f;
+    float yolo_iou_thresh  = 0.45f;
+    int   yolo_input_w = 640, yolo_input_h = 640; // filled from model on first run
+    bool  yolo_draw = true;                       // draw overlay when true
+    //int yolo_num_classes = 2;
+
+private:
+    // Build VTEI (5 channels) in CHW order at (W,H)
+    std::vector<float> buildVTEI_(int W, int H);
+    std::deque<std::vector<YoloDet>> yolo_hist_;
+    int yolo_hist_len_ = 2;
+
 };
 
 
