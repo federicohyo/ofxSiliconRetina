@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstring>
 #include <sstream>
+#include <numeric>   // for std::accumulate / std::multiplies
 
 #include <cstring>
 #include <cstdint>
@@ -49,6 +50,60 @@ static inline float f16_bits_to_f32(uint16_t h){
     }
     float f; std::memcpy(&f, &x, sizeof(f)); return f;
 }
+
+std::map<std::string, std::vector<float>>
+OnnxRunner::runRaw(const float* data, const std::vector<int64_t>& shape)
+{
+    using namespace Ort;
+
+    // element count
+    size_t numel = std::accumulate(
+        shape.begin(), shape.end(), (size_t)1, std::multiplies<size_t>());
+
+    // names -> const char* arrays
+    const char* in_name = input_names_.empty() ? "input" : input_names_[0].c_str();
+    std::vector<const char*> in_names{ in_name };
+
+    std::vector<const char*> out_names;
+    out_names.reserve(output_names_.size());
+    for (auto& s : output_names_) out_names.push_back(s.c_str());
+
+    // create input tensor (CPU memory)
+    MemoryInfo meminfo = MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+    Value input = Value::CreateTensor<float>(
+        meminfo,
+        const_cast<float*>(data),     // safe: we don’t modify it
+        numel,
+        shape.data(),
+        (size_t)shape.size()
+    );
+
+    // run
+    RunOptions opts; // default
+    auto outputs = session_->Run(
+        opts,
+        in_names.data(), &input, 1,
+        out_names.data(), out_names.size()
+    );
+
+    // collect outputs -> map<string, vector<float>>
+    std::map<std::string, std::vector<float>> outmap;
+    for (size_t i = 0; i < outputs.size(); ++i) {
+        auto& v = outputs[i];
+        auto info = v.GetTensorTypeAndShapeInfo();
+        size_t n = info.GetElementCount();
+        float* ptr = v.GetTensorMutableData<float>();
+        std::vector<float> buf(ptr, ptr + n);
+
+        // key by your stored output name (e.g., "logits" or "output0")
+        const std::string& key = (i < output_names_.size()) ? output_names_[i] : ("output"+std::to_string(i));
+        outmap[key] = std::move(buf);
+    }
+
+    
+    return outmap;
+}
+
 
 void OnnxRunner::load() {
     if (cfg_.model_path.empty())
@@ -118,6 +173,7 @@ OnnxRunner::OnnxRunner(const Config& cfg)
     if (cfg_.verbose) {
         session_options_.SetLogSeverityLevel(0);
     }
+
 #if defined(ORT_API_VERSION) && ORT_API_VERSION >= 8
     // Leave graph optimization at default; can be set to all if desired:
     session_options_.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);

@@ -18,6 +18,11 @@ static constexpr float VIEW_SCALE = 6.0f / 7;
 
 #include <algorithm>
 #include <tuple>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <cfloat>
+#include <ctime>
 
 /*static const char* COCO80[80] = {
 "person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light",
@@ -32,6 +37,21 @@ static constexpr float VIEW_SCALE = 6.0f / 7;
 
 static constexpr int yolo_num_classes = 1;
 static const char* PEDRO_CLASSES[yolo_num_classes] = { "person"}; 
+
+static const std::vector<std::string> TSDT_LABELS = {
+    "hand_clapping",                // 0 -> label 1
+    "right_hand_wave",              // 1 -> 2
+    "left_hand_wave",               // 2 -> 3
+    "right_hand_clockwise",         // 3 -> 4
+    "right_hand_counter_clockwise", // 4 -> 5
+    "left_hand_clockwise",          // 5 -> 6
+    "left_hand_counter_clockwise",  // 6 -> 7
+    "forearm_roll",                 // 7 -> 8 (forward/back both map here)
+    "drums",                        // 8 -> 9
+    "guitar",                       // 9 -> 10
+    "random_other_gestures"         // 10 -> 11
+};
+
 
 namespace {
 // Nearest-neighbor letterbox for CHW floats: (C,Hs,Ws) -> (C,Hd,Wd)
@@ -163,6 +183,484 @@ temporalSmooth3(const std::vector<ofxDVS::YoloDet>& cur,
     }
     return out;
 }
+
+
+// Build T x 2 x 128 x 128 by accumulating a FIXED NUMBER of events per frame (e.g., 10k).
+// No normalization, just counts (float32).
+static std::vector<float> buildEventCountTensor(
+    const std::deque<ofxDVS::TsEvent>& hist,
+    int T, int Hs, int Ws,   // sensor size
+    int Hd, int Wd,          // network size (128,128)
+    int events_per_frame = 10000)
+{
+    const size_t dstPlane = (size_t)Hd*Wd;
+    std::vector<float> out((size_t)T * 2 * dstPlane, 0.f);
+
+    // Collect the latest T * events_per_frame events
+    std::vector<ofxDVS::TsEvent> buf;
+    buf.reserve((size_t)T * events_per_frame);
+    int need = T * events_per_frame;
+    for (auto it = hist.rbegin(); it != hist.rend() && (int)buf.size() < need; ++it) buf.push_back(*it);
+    std::reverse(buf.begin(), buf.end()); // oldest→newest
+
+    // Slice into T frames
+    float scale; int padx, pady;
+    for (int t=0; t<T; ++t) {
+        // Accumulate counts on sensor grid
+        std::vector<float> sensor(2 * Hs * Ws, 0.f);
+        int start = t * events_per_frame;
+        int end   = std::min((t+1) * events_per_frame, (int)buf.size());
+        for (int i=start; i<end; ++i) {
+            const auto& e = buf[i];
+            if ((unsigned)e.x >= (unsigned)Ws || (unsigned)e.y >= (unsigned)Hs) continue;
+            size_t idx = (size_t)e.y * Ws + e.x;
+            sensor[(e.p ? 1 : 0) * (Hs*Ws) + idx] += 1.0f;
+        }
+
+        // Letterbox to (2, Hd, Wd)
+        auto dst2 = letterboxCHW(sensor, 2, Hs, Ws, Hd, Wd, scale, padx, pady);
+
+        // Copy into output
+        std::copy(dst2.begin(), dst2.end(), out.begin() + (size_t)t * 2 * dstPlane);
+    }
+    return out;  // T x 2 x Hd x Wd (counts)
+}
+
+// Build T×2×Hd×Wd with binary occupancy by COUNTING events, not time.
+// - Takes the LAST (T * events_per_bin) valid events from hist (oldest→newest).
+// - Excludes hot pixels automatically because you only push valid events into hist.
+// - Center-crops sensor to a square (min(Hs, Ws)) then resizes to Hd×Wd (nearest).
+// Channel order matches your Python: ch0=neg, ch1=pos.
+static std::vector<float> buildTSDTEventBins(
+    const std::deque<ofxDVS::TsEvent>& hist,
+    int T, int events_per_bin,
+    int Hs, int Ws,
+    int Hd, int Wd)
+{
+    const size_t need = (size_t)T * (size_t)events_per_bin;
+    if (hist.size() < need) return {};             // not enough events yet
+
+    // square crop (centered)
+    const int side = std::min(Hs, Ws);
+    const int y0   = (Hs - side) / 2;
+    const int x0   = (Ws - side) / 2;
+
+    const size_t plane = (size_t)Hd * (size_t)Wd;
+    std::vector<float> out((size_t)T * 2 * plane, 0.f);
+
+    auto put = [&](int tbin, int ch, int x, int y){
+        // inside crop?
+        if (x < x0 || x >= x0 + side || y < y0 || y >= y0 + side) return;
+        const int cx = x - x0;
+        const int cy = y - y0;
+        // nearest mapping from crop→dest
+        int xx = (int)std::floor((cx + 0.5f) * (float)Wd / (float)side);
+        int yy = (int)std::floor((cy + 0.5f) * (float)Hd / (float)side);
+        xx = std::max(0, std::min(Wd - 1, xx));
+        yy = std::max(0, std::min(Hd - 1, yy));
+        out[(size_t)tbin * 2 * plane + (size_t)ch * plane + (size_t)yy * Wd + (size_t)xx] = 1.f;
+    };
+
+    // oldest index among the last need events
+    size_t idx = hist.size() - need;
+
+    // fill T bins (oldest → newest), each with exactly events_per_bin events
+    for (int tbin = 0; tbin < T; ++tbin) {
+        for (int k = 0; k < events_per_bin; ++k, ++idx) {
+            const auto &e = hist[idx];
+            const int ch = e.p ? 1 : 0;   // pos→1, neg→0 (matches training)
+            put(tbin, ch, e.x, e.y);
+        }
+    }
+
+    return out; // T×2×Hd×Wd
+}
+
+
+// Build T×2×Hd×Wd from event chunks with correct (y,x) row-major indexing.
+// - EventsPerBin: how many events per temporal bin (match training, e.g. 10_000)
+// - flipY: set true if your sensor's y=0 is bottom and training expects top-left origin.
+static std::vector<float> buildTSDT_ByEventChunks_LetterboxFixed(
+    const std::deque<ofxDVS::TsEvent>& hist,  // x,y,p,ts (sensor coords)
+    int T, int Hd, int Wd,
+    int EventsPerBin,
+    int sensorW, int sensorH,
+    bool flipY /*=false*/
+){
+    const size_t plane = (size_t)Hd * Wd;
+    std::vector<float> out((size_t)T * 2 * plane, 0.f);
+
+    // Compute letterbox scale/padding (nearest-neighbor)
+    const float scale = std::min((float)Wd / (float)sensorW,
+                                 (float)Hd / (float)sensorH);
+    const int newW = (int)std::round(sensorW * scale);
+    const int newH = (int)std::round(sensorH * scale);
+    const int padx = (Wd - newW) / 2;
+    const int pady = (Hd - newH) / 2;
+
+    // Iterate oldest→newest; consume exactly T*EventsPerBin
+    size_t need = (size_t)T * (size_t)EventsPerBin;
+    if (hist.size() < need) return out; // not enough events yet
+
+    // We take the oldest 'need' events
+    size_t start = hist.size() - need;
+    size_t idxEv = start;
+
+    for (int t = 0; t < T; ++t) {
+        for (int k = 0; k < EventsPerBin; ++k, ++idxEv) {
+            const auto &e = hist[idxEv];
+            int x = e.x, y = e.y;
+
+            // Optional vertical flip if your sensor origin is opposite to training
+            if (flipY) y = (sensorH - 1) - y;
+
+            // Letterbox map sensor(x,y) → model(dx,dy)
+            int dx = (int)std::round(x * scale) + padx;
+            int dy = (int)std::round(y * scale) + pady;
+
+            if ((unsigned)dx >= (unsigned)Wd || (unsigned)dy >= (unsigned)Hd) continue;
+
+            // Row-major index: (dy,dx) → dy*W + dx
+            size_t hw = (size_t)dy * Wd + dx;
+            // Channels: 0=neg(0), 1=pos(1) — like your Python collate/integrate
+            size_t base = ((size_t)t * 2) * plane;
+            out[base + 0*plane + hw] += (e.p ? 0.f : 1.f);
+            out[base + 1*plane + hw] += (e.p ? 1.f : 0.f);
+        }
+    }
+
+    // (Optional) clamp to {0,1} to make binary maps
+    #if 0
+    for (auto &v : out) { v = (v > 0.f) ? 1.f : 0.f; }
+    #endif
+    
+    return out;
+}
+
+
+// === Build T×2×128×128 by fixed event chunks (like integrate_fixed_10000_events) ===
+static std::vector<float>
+buildTSDT_ByEventChunks(const std::deque<ofxDVS::TsEvent>& hist,
+                        int T,
+                        int Hdst, int Wdst,                  // 128×128
+                        int events_per_bin,                  // 10000 to match training
+                        int sensorW, int sensorH,            // e.g. 640×480
+                        ofRectangle roi                      // region in sensor coords to map into 128×128
+                        )
+{
+    const size_t plane = (size_t)Hdst * (size_t)Wdst;
+    std::vector<float> out((size_t)T * 2 * plane, 0.0f);
+
+    auto inROI = [&](int x, int y)->bool {
+        return x >= (int)roi.getX() && x < (int)(roi.getX()+roi.getWidth()) &&
+               y >= (int)roi.getY() && y < (int)(roi.getY()+roi.getHeight());
+    };
+    const float sx = (float)Wdst / std::max(1.0f, (float)roi.getWidth());
+    const float sy = (float)Hdst / std::max(1.0f, (float)roi.getHeight());
+
+    // Fill newest bin last (t = T-1), walking events from newest to oldest
+    int t = T - 1;
+    int filled = 0;
+
+    for (int i = (int)hist.size() - 1; i >= 0 && t >= 0; --i) {
+        const auto& e = hist[(size_t)i];
+        if (!e.p && !e.p) { /* no-op, just to silence warnings if needed */ }
+        if (!e.p /*dummy to keep structure*/) {}
+
+        // skip invalids (hot-pixel filter marked earlier)
+        // If you stored validity elsewhere, add that check here.
+
+        int x = e.x, y = e.y;
+        if (!inROI(x,y)) {
+            continue; // we only count ROI-in events
+        }
+
+        // Map sensor → 128×128
+        float xr = (x - roi.getX()) * sx;
+        float yr = (y - roi.getY()) * sy;
+        int xd = (int)std::floor(xr);
+        int yd = (int)std::floor(yr);
+        if ((unsigned)xd >= (unsigned)Wdst || (unsigned)yd >= (unsigned)Hdst) continue;
+
+        size_t base = (size_t)t * 2 * plane;
+        size_t idx  = (size_t)yd * Wdst + (size_t)xd;
+        // Channel: 0=neg, 1=pos
+        int ch = e.p ? 1 : 0;
+        out[base + (size_t)ch * plane + idx] += 1.0f;
+
+        ++filled;
+        if (filled >= events_per_bin) {
+            // move to previous bin
+            --t;
+            filled = 0;
+        }
+    }
+
+    // If we ran out of history early, earlier bins (0..t) remain zero → same as Python padding
+    return out; // T×2×Hdst×Wdst, counts (not binary)
+}
+
+
+//spikevision tdst
+// ---- Binary occupancy + (optional) centered square crop → 128×128 ----
+// Build a T×2×Hs×Ws stack from recent events, with binary occupancy (0/1).
+// Then either:
+//   (a) center-crop to a square and resize to Hd×Wd (no padding), or
+//   (b) letterbox to Hd×Wd (keeps aspect, pads with 0s).
+// Returns a contiguous vector laid out as T×2×Hd×Wd (CHW per slice).
+static std::vector<float> buildTSDTTensor(
+    const std::deque<ofxDVS::TsEvent>& hist,
+    long latest_ts,
+    int T, long bin_us,
+    int Hs, int Ws,
+    int Hd, int Wd)
+{
+    const size_t srcPlane = (size_t)Hs * Ws;
+
+    // (0) knobs
+    const bool USE_CENTER_CROP = true;   // <— set false to fall back to letterbox
+    const int  OUT_H = Hd;               // model input height (e.g., 128)
+    const int  OUT_W = Wd;               // model input width  (e.g., 128)
+
+    // (1) build binary occupancy per (bin, polarity)
+    //     bins[k, c, y, x] ∈ {0,1}
+    std::vector<float> bins((size_t)T * 2 * srcPlane, 0.f);
+    const long window_us = (long)T * bin_us;
+
+    // NOTE: we ONLY set 1 when an event lands; we do not count.
+    for (const auto& e : hist) {
+        if ((e.ts + window_us) < latest_ts) continue; // outside window
+        const long dt = latest_ts - e.ts;             // 0 = newest bin
+        const int  k  = (int)(dt / bin_us);
+        if (k < 0 || k >= T) continue;
+
+        // bounds-check
+        if ((unsigned)e.x >= (unsigned)Ws || (unsigned)e.y >= (unsigned)Hs) continue;
+
+        const size_t idx = (size_t)e.y * Ws + e.x;
+        const size_t base = (size_t)k * 2 * srcPlane;
+        // pos → channel 0, neg → channel 1   (stick to whatever you trained with;
+        // swap if needed)
+        const size_t ch   = e.p ? 0 : 1;
+        bins[base + ch * srcPlane + idx] = 1.0f;
+    }
+
+    // (2) helper lambdas
+    auto centerCropAndResizeCHW = [&](const std::vector<float>& srcCHW,
+                                      int C, int Hsrc, int Wsrc,
+                                      int Hdst, int Wdst) -> std::vector<float>
+    {
+        const int side = std::min(Hsrc, Wsrc);
+        const int y0   = (Hsrc - side) / 2;
+        const int x0   = (Wsrc - side) / 2;
+
+        std::vector<float> dst((size_t)C * Hdst * Wdst, 0.f);
+
+        auto atSrc = [&](int c, int y, int x) -> float {
+            return srcCHW[(size_t)c * Hsrc * Wsrc + (size_t)y * Wsrc + x];
+        };
+        auto atDst = [&](int c, int y, int x) -> float& {
+            return dst[(size_t)c * Hdst * Wdst + (size_t)y * Wdst + x];
+        };
+
+        // nearest-neighbor from the square crop region
+        for (int y = 0; y < Hdst; ++y) {
+            int sy = y0 + std::min(side - 1, (int)std::floor((y + 0.5f) * side / (float)Hdst - 0.5f));
+            for (int x = 0; x < Wdst; ++x) {
+                int sx = x0 + std::min(side - 1, (int)std::floor((x + 0.5f) * side / (float)Wdst - 0.5f));
+                for (int c = 0; c < C; ++c) {
+                    atDst(c, y, x) = atSrc(c, sy, sx);
+                }
+            }
+        }
+        return dst;
+    };
+
+    auto letterboxCHW_local = [&](const std::vector<float>& srcCHW,
+                                  int C, int Hsrc, int Wsrc,
+                                  int Hdst, int Wdst) -> std::vector<float>
+    {
+        float scale = std::min((float)Wdst / (float)Wsrc, (float)Hdst / (float)Hsrc);
+        const int newW = (int)std::round(Wsrc * scale);
+        const int newH = (int)std::round(Hsrc * scale);
+        const int padx = (Wdst - newW) / 2;
+        const int pady = (Hdst - newH) / 2;
+
+        std::vector<float> dst((size_t)C * Hdst * Wdst, 0.f);
+
+        auto atSrc = [&](int c, int y, int x) -> float {
+            return srcCHW[(size_t)c * Hsrc * Wsrc + (size_t)y * Wsrc + x];
+        };
+        auto atDst = [&](int c, int y, int x) -> float& {
+            return dst[(size_t)c * Hdst * Wdst + (size_t)y * Wdst + x];
+        };
+
+        for (int y = 0; y < newH; ++y) {
+            int sy = std::min(Hsrc - 1, (int)std::floor(y / scale));
+            for (int x = 0; x < newW; ++x) {
+                int sx = std::min(Wsrc - 1, (int)std::floor(x / scale));
+                for (int c = 0; c < C; ++c) {
+                    atDst(c, y + pady, x + padx) = atSrc(c, sy, sx);
+                }
+            }
+        }
+        return dst;
+    };
+
+    // (3) slice each time-bin’s (2, Hs, Ws) and resize to (2, Hd, Wd)
+    const size_t dstPlane = (size_t)OUT_H * OUT_W;
+    std::vector<float> out((size_t)T * 2 * dstPlane, 0.f);
+
+    for (int t = 0; t < T; ++t) {
+        const float* src2 = bins.data() + (size_t)t * 2 * srcPlane;
+        std::vector<float> slice2(src2, src2 + 2 * srcPlane);
+
+        std::vector<float> resized =
+            USE_CENTER_CROP
+            ? centerCropAndResizeCHW(slice2, 2, Hs, Ws, OUT_H, OUT_W)
+            : letterboxCHW_local   (slice2, 2, Hs, Ws, OUT_H, OUT_W);
+
+        std::copy(resized.begin(), resized.end(),
+                  out.begin() + (size_t)t * 2 * dstPlane);
+    }
+
+    return out; // T×2×OUT_H×OUT_W
+}
+
+// Print per-bin stats for a (T,2,H,W) float tensor
+static void tsdtPrintStats(const float* x,
+                           int T, int C, int H, int W,
+                           int firstN = 5)
+{
+    if (!x || C != 2 || T <= 0 || H <= 0 || W <= 0) {
+        ofLogError() << "[TSDT/STATS] bad shape or null ptr";
+        return;
+    }
+    const size_t plane = (size_t)H * (size_t)W;
+
+    // global stats
+    double gsum = 0.0;
+    float gmin = std::numeric_limits<float>::infinity();
+    float gmax = -std::numeric_limits<float>::infinity();
+    for (int t = 0; t < T; ++t) {
+        const float* base = x + (size_t)t * C * plane;
+        for (int c = 0; c < C; ++c) {
+            const float* p = base + (size_t)c * plane;
+            for (size_t i = 0; i < plane; ++i) {
+                float v = p[i];
+                gsum += v;
+                if (v < gmin) gmin = v;
+                if (v > gmax) gmax = v;
+            }
+        }
+    }
+
+    ofLogNotice() << "[TSDT/STATS] Input shape: T=" << T
+                  << ", C=" << C << ", H=" << H << ", W=" << W;
+    ofLogNotice() << "[TSDT/STATS] Global sum/min/max: "
+                  << std::fixed << std::setprecision(4)
+                  << gsum << " / " << gmin << " / " << gmax;
+
+    // per-bin stats (first few rows)
+    const int rows = std::min(firstN, T);
+    for (int t = 0; t < rows; ++t) {
+        const float* neg = x + (size_t)t * C * plane + 0 * plane; // ch0 = NEG
+        const float* pos = x + (size_t)t * C * plane + 1 * plane; // ch1 = POS
+
+        // white = value > 0 (works for binary or counts)
+        size_t neg_white = 0, pos_white = 0;
+        double sum_neg = 0.0, sum_pos = 0.0;
+
+        for (size_t i = 0; i < plane; ++i) {
+            float vn = neg[i], vp = pos[i];
+            sum_neg += vn; sum_pos += vp;
+            neg_white += (vn > 0.0f);
+            pos_white += (vp > 0.0f);
+        }
+
+        const size_t total_px = plane;
+        size_t neg_black = total_px - neg_white;
+        size_t pos_black = total_px - pos_white;
+        size_t white_total = neg_white + pos_white;
+        size_t black_total = neg_black + pos_black;
+        double sum_total = sum_neg + sum_pos;
+        double density = white_total / (2.0 * (double)total_px);
+
+        std::ostringstream oss;
+        oss.setf(std::ios::fixed); oss << std::setprecision(6);
+        oss << "[TSDT/STATS] bin " << t
+            << "  neg_white=" << neg_white
+            << "  pos_white=" << pos_white
+            << "  neg_black=" << neg_black
+            << "  pos_black=" << pos_black
+            << "  white_total=" << white_total
+            << "  black_total=" << black_total
+            << "  sum_neg=" << sum_neg
+            << "  sum_pos=" << sum_pos
+            << "  sum_total=" << sum_total
+            << "  density=" << density;
+
+        ofLogNotice() << oss.str();
+    }
+}
+
+// Build T×2×Hdst×Wdst by taking fixed event chunks from FULL sensor,
+// mapping via classic letterbox (keep aspect, pad), and COUNTING events.
+static std::vector<float>
+buildTSDT_ByEventChunks_Letterbox(const std::deque<ofxDVS::TsEvent>& hist,
+                                  int T,
+                                  int Hdst, int Wdst,            // 128×128
+                                  int events_per_bin,            // 10000 (match training)
+                                  int sensorW, int sensorH,      // e.g. 640×480
+                                  bool flipY_for_model = false)  // set true if needed
+{
+    const size_t plane = (size_t)Hdst * (size_t)Wdst;
+    std::vector<float> out((size_t)T * 2 * plane, 0.0f);
+
+    // Letterbox params
+    const float sW = (float)Wdst / (float)sensorW;
+    const float sH = (float)Hdst / (float)sensorH;
+    const float scale = std::min(sW, sH);
+    const int newW = (int)std::round(sensorW * scale);
+    const int newH = (int)std::round(sensorH * scale);
+    const int padx = (Wdst - newW) / 2;
+    const int pady = (Hdst - newH) / 2;
+
+    auto mapXY = [&](int x, int y, int& xd, int& yd) {
+        if (flipY_for_model) y = (sensorH - 1 - y);
+        float xf = x * scale + (float)padx;
+        float yf = y * scale + (float)pady;
+        xd = (int)std::floor(xf);
+        yd = (int)std::floor(yf);
+        if ((unsigned)xd >= (unsigned)Wdst) xd = Wdst - 1;
+        if ((unsigned)yd >= (unsigned)Hdst) yd = Hdst - 1;
+    };
+
+    // Fill newest bin last (t = T-1), taking newest events first
+    int t = T - 1;
+    int filled = 0;
+
+    for (int i = (int)hist.size() - 1; i >= 0 && t >= 0; --i) {
+        const auto& e = hist[(size_t)i];
+
+        int xd, yd;
+        mapXY(e.x, e.y, xd, yd);
+
+        size_t base = (size_t)t * 2 * plane;
+        size_t idx  = (size_t)yd * Wdst + (size_t)xd;
+        int ch = e.p ? 1 : 0;          // 0=neg, 1=pos
+        out[base + (size_t)ch * plane + idx] += 1.0f;
+
+        if (++filled >= events_per_bin) {
+            --t;
+            filled = 0;
+        }
+    }
+    // Earlier bins (0..t) remain zero if history was short → same as Python padding.
+    return out;
+}
+
+
 
 } // anonymous namespace
 
@@ -403,6 +901,8 @@ void ofxDVS::setup() {
     f1->addSlider("DVS Integration", 1, 100, fsint);
     f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
     f1->addToggle("ENABLE TRACKER", false);
+    f1->addToggle("ENABLE NEURAL NETS", false);
+
     //myIMU = f1->addValuePlotter("IMU", 0, 1);
     f1->setPosition(x, y);
     f1->expand();
@@ -412,19 +912,45 @@ void ofxDVS::setup() {
     f1->onMatrixEvent(this, &ofxDVS::onMatrixEvent);
     f1->onTextInputEvent(this, &ofxDVS::onTextInputEvent);
     // neural net
-    f1->addButton("Enable NN");  // toggles model execution
-    f1->addToggle("Draw YOLO", true);
-    f1->addSlider("YOLO Conf", 0.0, 1.0, yolo_conf_thresh);
-    f1->addSlider("VTEI Window (ms)", 5, 200, vtei_win_ms);
+    //f1->addButton("Enable NN");  // toggles model execution
+    //f1->addToggle("Draw YOLO", true);
+    //f1->addSlider("YOLO Conf", 0.0, 1.0, yolo_conf_thresh);
+    //f1->addSlider("VTEI Window (ms)", 5, 200, vtei_win_ms);
 
     numPaused = 0;
     numPausedRec = 0;
+
+    //neural network
+    // --- NN / YOLO panel (right side, under tracker) ---
+    nn_panel.reset(new ofxDatGui(ofxDatGuiAnchor::TOP_RIGHT));
+    nn_panel->setVisible(false);
+
+    auto nn_folder = nn_panel->addFolder(">> Neural Net (YOLO)");
+    nn_folder->addToggle("ENABLE NN", nnEnabled);
+    nn_folder->addToggle("DRAW DETECTIONS", yolo_draw);
+    nn_folder->addToggle("SHOW LABELS", yolo_show_labels);
+    nn_folder->addSlider("CONF THRESH", 0.0, 1.0, yolo_conf_thresh);
+    nn_folder->addSlider("IOU THRESH",  0.0, 1.0, yolo_iou_thresh);   // if you already have it
+    nn_folder->addSlider("SMOOTH FRAMES", 1, 5, yolo_smooth_frames);
+    nn_folder->addSlider("VTEI Window (ms)", 5, 200, vtei_win_ms);
+    nn_folder->addButton("CLEAR HISTORY");
+
+    // If you want it under the tracker panel (simple offset):
+    nn_panel->setPosition(
+        270,                // ~panel width
+        0              // tweak this to taste
+    );
+
+    // Hook events
+    nn_panel->onToggleEvent(this, &ofxDVS::onNNToggleEvent);
+    nn_panel->onSliderEvent(this, &ofxDVS::onNNSliderEvent);
+    nn_panel->onButtonEvent(this, &ofxDVS::onNNButtonEvent);
 
     // tracker
     //f1 = new ofxDatGuiFolder("Control", ofColor::fromHex(0xFFD00B));
     this->tracker_panel.reset( new ofxDatGui( ofxDatGuiAnchor::TOP_RIGHT ) );
     auto tracker_folder = this->tracker_panel->addFolder(">> Tracker Controls" );
-    this->tracker_panel->setVisible(true);
+    this->tracker_panel->setVisible(false);
 
     auto& cfg = this->rectangularClusterTrackerConfig;
     tracker_folder->addToggle("FILTER", cfg.filterEnabled);
@@ -516,7 +1042,7 @@ void ofxDVS::setup() {
     // onnx runner
     try {
         OnnxRunner::Config nncfg;
-        nncfg.model_path = ofToDataPath("model.onnx", true); // adjust path
+        nncfg.model_path = ofToDataPath("ReYOLOv8m_PEDRO_352x288.onnx", true); // adjust path
         nncfg.intra_op_num_threads = 1;
         nncfg.normalize_01 = true;
         nncfg.verbose = false;
@@ -527,10 +1053,218 @@ void ofxDVS::setup() {
         ofLogError() << "Failed to load NN: " << e.what();
     }
 
+    // --- SNN / TSDT panel (second model) ---
+    auto tsdt_folder = nn_panel->addFolder(">> Neural Net (TSDT)");
+    tsdt_folder->addToggle("ENABLE TSDT", tsdtEnabled);
+    tsdt_folder->addToggle("SHOW LABEL",  tsdt_show_label);
+    tsdt_folder->addSlider("TIMESTEPS (T)", 1, 16, tsdt_T);
+    tsdt_folder->addSlider("BIN (ms)",      1, 50,  tsdt_bin_ms);
+    tsdt_folder->addSlider("EMA alpha",     0.0, 1.0, tsdt_ema_alpha);
+    tsdt_folder->addButton("SELFTEST (from file)");  // <-- add this
+
+    ofLogNotice() << "TSDT loaded.";
+    if (ofFile::doesFileExist(ofToDataPath("tsdt_input_fp32.bin", true))) {
+        runTsdtDebugFromFile(tsdt.get());   // prints sum/min/max and first few logits
+    }
+
+    // load the model
+    try {
+        OnnxRunner::Config scfg;
+        scfg.model_path = ofToDataPath("spikevision_822128128_fixed.onnx", true);
+        scfg.intra_op_num_threads = 1;
+        scfg.normalize_01 = false;     // we’ll feed already-normalized [0,1]
+        scfg.verbose = false;
+        tsdt = std::make_unique<OnnxRunner>(scfg);
+        tsdt->load();
+        ofLogNotice() << "TSDT loaded.";
+        tsdtSelfTest(); // <--- run immediately with synthetic input
+    } catch (const std::exception& e) {
+        ofLogError() << "Failed to load TSDT: " << e.what();
+    }
+
     // hot pixels
     last_ts_map_.assign(this->sizeX * this->sizeY, 0);
 
 }
+
+// Debug: run ONNX on a saved tensor to compare with Python
+void ofxDVS::runTsdtDebugFromFile(OnnxRunner* tsdt) {
+    if (!tsdt || !tsdt->isLoaded()) {
+        ofLogError() << "[TSDT/DEBUG] model not loaded";
+        return;
+    }
+
+    // The saved input is shaped (1, 8, 2, 128, 128) in N,T,C,H,W order.
+    const std::vector<int64_t> shape = {1, 8, 2, 128, 128};
+    const size_t numel = static_cast<size_t>(shape[0] * shape[1] * shape[2] * shape[3] * shape[4]);
+
+    const std::string binPath = ofToDataPath("tsdt_input_fp32.bin", true);
+    std::ifstream f(binPath, std::ios::binary);
+    if (!f) {
+        ofLogError() << "[TSDT/DEBUG] cannot open " << binPath;
+        return;
+    }
+
+    std::vector<float> x(numel, 0.f);
+    f.read(reinterpret_cast<char*>(x.data()), static_cast<std::streamsize>(numel * sizeof(float)));
+    if (f.gcount() != static_cast<std::streamsize>(numel * sizeof(float))) {
+        ofLogError() << "[TSDT/DEBUG] short read: expected " << (numel * sizeof(float))
+                     << " bytes, got " << f.gcount();
+        return;
+    }
+
+    // Quick stats on the input we are feeding
+    {
+        float s = 0.f, mn = FLT_MAX, mx = -FLT_MAX;
+        for (float v : x) { s += v; mn = std::min(mn, v); mx = std::max(mx, v); }
+        ofLogNotice() << "[TSDT/DEBUG] input numel=" << numel << " sum=" << s
+                      << " min=" << mn << " max=" << mx;
+    }
+
+    try {
+        // IMPORTANT: run with N,T,C,H,W
+        auto out = tsdt->runRaw(x.data(), shape);
+        if (out.empty()) {
+            ofLogError() << "[TSDT/DEBUG] empty outputs";
+            return;
+        }
+
+        // Prefer the 'logits' output; fall back to the first one if not found
+        auto it = out.find("logits");
+        if (it == out.end()) it = out.begin();
+        const auto& y = it->second;
+
+        // Full stats + argmax
+        float sum = 0.f, minv = FLT_MAX, maxv = -FLT_MAX;
+        int argmax = -1; float best = -FLT_MAX;
+        for (int i = 0; i < static_cast<int>(y.size()); ++i) {
+            float v = y[i];
+            sum += v;
+            minv = std::min(minv, v);
+            maxv = std::max(maxv, v);
+            if (v > best) { best = v; argmax = i; }
+        }
+
+        std::ostringstream oss;
+        oss.setf(std::ios::fixed);
+        oss.precision(4);
+        for (int i = 0; i < static_cast<int>(y.size()); ++i) {
+            if (i) oss << ", ";
+            oss << y[i];
+        }
+
+        ofLogNotice() << "[TSDT/DEBUG] out=" << it->first
+                      << " size=" << y.size()
+                      << " sum=" << sum << " min=" << minv << " max=" << maxv;
+        ofLogNotice() << "[TSDT/DEBUG] logits: " << oss.str();
+        ofLogNotice() << "[TSDT/DEBUG] argmax=" << argmax << " val=" << best;
+
+    } catch (const std::exception& e) {
+        ofLogError() << "[TSDT/DEBUG] inference error: " << e.what();
+    }
+}
+
+
+void ofxDVS::tsdtSelfTest() {
+    if (!(tsdt && tsdt->isLoaded())) {
+        ofLogError() << "[TSDT/SELFTEST] model not loaded";
+        return;
+    }
+    const int T = tsdt_T > 0 ? tsdt_T : 8;
+    const int H = tsdt_inH > 0 ? tsdt_inH : 128;
+    const int W = tsdt_inW > 0 ? tsdt_inW : 128;
+
+    // Fill with a deterministic, non-zero pattern (no NaNs / no denormals)
+    std::vector<float> x((size_t)T * 2 * H * W);
+    for (size_t i = 0; i < x.size(); ++i)
+        x[i] = float((i % 97) + 1) / 97.f;   // 0.0103..1.0
+
+    // IMPORTANT: use the model’s expected order. Your earlier error proves it’s [1, T, 2, H, W].
+    std::vector<int64_t> shape = {1, (int64_t)T, 2, H, W};
+
+    try {
+        auto out = tsdt->runRaw(x.data(), shape);
+
+        for (auto &kv : out) {
+            const auto &name = kv.first;
+            const auto &v    = kv.second;
+            double sum = 0, mn = std::numeric_limits<double>::infinity(), mx = -mn;
+            for (float f : v) { sum += f; mn = std::min(mn, (double)f); mx = std::max(mx, (double)f); }
+            ofLogNotice() << "[TSDT/SELFTEST] out=" << name
+                          << " size=" << v.size()
+                          << " sum=" << sum << " min=" << mn << " max=" << mx;
+            if (!v.empty()) {
+                std::ostringstream os;
+                os.setf(std::ios::fixed); os << std::setprecision(4);
+                int n = std::min<int>(v.size(), 8);
+                for (int i = 0; i < n; ++i) { if (i) os << ", "; os << v[i]; }
+                ofLogNotice() << "[TSDT/SELFTEST] head: " << os.str();
+            }
+        }
+    } catch (const std::exception &e) {
+        ofLogError() << "[TSDT/SELFTEST] runRaw failed: " << e.what();
+    }
+}
+
+void ofxDVS::onNNToggleEvent(ofxDatGuiToggleEvent e)
+{
+    static std::map<std::string, bool*> vars = {
+        { "ENABLE NN",        &nnEnabled },
+        { "DRAW DETECTIONS",  &yolo_draw },
+        { "SHOW LABELS",      &yolo_show_labels },
+    };
+    auto it = vars.find(e.target->getName());
+    if (it != vars.end()) {
+        *(it->second) = e.target->getChecked();
+        if (e.target->getName() == "ENABLE NN") {
+            ofLogNotice() << "NN execution " << (nnEnabled ? "enabled" : "disabled");
+        }
+    }
+    if (e.target->getName() == "ENABLE TSDT") {
+        tsdtEnabled = e.target->getChecked();
+        if (!tsdtEnabled) { tsdt_last_idx = -1; tsdt_ema_logits.clear(); }
+        ofLogNotice() << "TSDT execution " << (tsdtEnabled ? "enabled" : "disabled");
+    } else if (e.target->getName() == "SHOW LABEL") {
+        tsdt_show_label = e.target->getChecked();
+    }
+}
+
+void ofxDVS::onNNSliderEvent(ofxDatGuiSliderEvent e)
+{
+    const std::string& n = e.target->getName();
+    // yolo
+    if (n == "CONF THRESH") {
+        yolo_conf_thresh = e.value;
+    } else if (n == "IOU THRESH") {
+        yolo_iou_thresh = e.value;
+    } else if (n == "SMOOTH FRAMES") {
+        yolo_smooth_frames = std::max(1, (int)std::round(e.value));
+    } else if (n == "VTEI Window (ms)") {
+        vtei_win_ms = e.value;
+        vtei_win_us = (long)std::round(vtei_win_ms * 1000.0f);
+        ofLogNotice() << "VTEI window: " << vtei_win_ms << " ms";
+    }
+    // spikevision tdst
+    if (e.target->getName() == "TIMESTEPS (T)") {
+        tsdt_T = std::max(1, (int)std::round(e.value));
+    } else if (e.target->getName() == "BIN (ms)") {
+        tsdt_bin_ms = std::max(1, (int)std::round(e.value));
+        tsdt_bin_us = (long)tsdt_bin_ms * 1000L;
+    } else if (e.target->getName() == "EMA alpha") {
+        tsdt_ema_alpha = ofClamp((float)e.value, 0.f, 1.f);
+    }
+}
+
+void ofxDVS::onNNButtonEvent(ofxDatGuiButtonEvent e)
+{
+    if (e.target->getName() == "CLEAR HISTORY") {
+        yolo_hist_.clear();
+        ofLogNotice() << "YOLO temporal history cleared.";
+    }else if (e.target->getName() == "SELFTEST (from file)") {
+        runTsdtDebugFromFile(tsdt.get());
+    }
+}
+
 
 void ofxDVS::updateViewports()
 {
@@ -1252,6 +1986,96 @@ void ofxDVS::update() {
         rectangularClusterTracker->updateClusterList(latest_ts); // <-- DO THIS
     }
 
+    
+    // ---- TSDT: keep rolling history of VALID events (chip coordinates) ----
+    if (!packetsPolarity.empty()) {
+        // 1) Append only valid events from this packet
+        for (const auto& p : packetsPolarity) {
+            if (!p.valid) continue;
+            int x = (int)p.pos.x, y = (int)p.pos.y;
+            if ((unsigned)x >= (unsigned)sizeX || (unsigned)y >= (unsigned)sizeY) continue;
+            tsdt_hist.push_back({x, y, (bool)p.pol, p.timestamp});
+        }
+
+        // 2) Cap history size by event count (NOT time). Keep ~2× what we need + slack.
+        //    Make sure you have a member/const: int tsdt_ev_per_bin = 10000; // matches training
+        const size_t need = (size_t)tsdt_T * (size_t)tsdt_ev_per_bin;   // e.g. 8 * 10000
+        const size_t cap  = need * 2 + 2000;                            // small slack
+        if (tsdt_hist.size() > cap) {
+            tsdt_hist.erase(tsdt_hist.begin(), tsdt_hist.begin() + (tsdt_hist.size() - cap));
+        }
+
+        // ---- run model when we have enough events ----
+        if (tsdtEnabled && tsdt && tsdt->isLoaded() && tsdt_hist.size() >= need) {
+            try {
+                /*const int EVENTS_PER_BIN = 10000;   // match your Python training
+                ofRectangle roi;
+                {
+                    int side = std::min(sizeX, sizeY);
+                    roi.set((sizeX - side)/2.0f, (sizeY - side)/2.0f, side, side);
+                }
+                auto tensor_T2HW = buildTSDT_ByEventChunks(
+                    tsdt_hist, tsdt_T, tsdt_inH, tsdt_inW,
+                    EVENTS_PER_BIN, sizeX, sizeY, roi
+                );*/
+                const int EVENTS_PER_BIN = tsdt_ev_per_bin;           // match training
+                auto tensor_T2HW = buildTSDT_ByEventChunks_LetterboxFixed(
+                    tsdt_hist, tsdt_T, tsdt_inH, tsdt_inW,
+                    EVENTS_PER_BIN, sizeX, sizeY, /*flipY_for_model=*/false
+                );
+
+
+                if (!tensor_T2HW.empty()) {
+                        // Print stats like the Python helper (first 5 bins)
+                    tsdtPrintStats(tensor_T2HW.data(), tsdt_T, /*C=*/2, tsdt_inH, tsdt_inW, /*firstN=*/5);
+
+                    // Inference (N,T,C,H,W)
+                    std::vector<int64_t> shape = {1, (int64_t)tsdt_T, 2, tsdt_inH, tsdt_inW};
+                    auto outmap = tsdt->runRaw(tensor_T2HW.data(), shape);
+
+                    // Pick logits
+                    const std::vector<float>* pv = nullptr;
+                    auto it = outmap.find("logits");
+                    pv = (it != outmap.end()) ? &it->second : &outmap.begin()->second;
+                    const auto& logits = *pv;
+
+                    // (EMA optional)
+                    if (tsdt_ema_logits.size() != logits.size())
+                        tsdt_ema_logits.assign(logits.size(), 0.f);
+                    for (size_t i=0;i<logits.size();++i)
+                        tsdt_ema_logits[i] = tsdt_ema_alpha*logits[i] + (1.f-tsdt_ema_alpha)*tsdt_ema_logits[i];
+
+                    // Softmax
+                    float maxv = *std::max_element(tsdt_ema_logits.begin(), tsdt_ema_logits.end());
+                    std::vector<float> exps(tsdt_ema_logits.size());
+                    float sum = 0.f;
+                    for (size_t i=0;i<exps.size();++i){ exps[i] = std::exp(tsdt_ema_logits[i]-maxv); sum += exps[i]; }
+                    float bestp = 0.f; int besti = -1;
+                    for (size_t i=0;i<exps.size();++i){
+                        float p = exps[i]/sum; if (p>bestp) { bestp=p; besti=(int)i; }
+                    }
+                    tsdt_last_idx  = besti;
+                    tsdt_last_conf = bestp;
+
+                    // Verbose logits (helpful while tuning)
+                    {
+                        float lsum=0.f, lmin=1e9f, lmax=-1e9f;
+                        for (float v : logits) { lsum += v; lmin = std::min(lmin,v); lmax = std::max(lmax,v); }
+                        std::ostringstream oss; oss.setf(std::ios::fixed); oss.precision(4);
+                        for (size_t i=0;i<logits.size();++i){ if (i) oss<<", "; oss<<logits[i]; }
+                        ofLogNotice() << "[TSDT/DEBUG] logits: " << oss.str();
+                        ofLogNotice() << "[TSDT/DEBUG] argmax=" << tsdt_last_idx << " val=" << lmax;
+                    }
+
+                    // 4) Consume exactly the events we used so next cycle builds fresh T×bins
+                    tsdt_hist.erase(tsdt_hist.begin(), tsdt_hist.begin() + (std::ptrdiff_t)need);
+
+                }
+            } catch (const std::exception& e) {
+                ofLogError() << "[TSDT] inference error: " << e.what();
+            }
+        }
+    }
 
 
     //GUI
@@ -1262,8 +2086,75 @@ void ofxDVS::update() {
     //myIMU->setValue(val);
     myTempReader->setText(to_string((int)(imuTemp)));
     
-    
 }
+
+void ofxDVS::drawTsdtLabelBottomCenter() {
+    if (!(tsdt_show_label && tsdtEnabled && tsdt_last_idx >= 0)) return;
+
+    // 1) Text
+    std::string name = (tsdt_last_idx < (int)TSDT_LABELS.size())
+        ? TSDT_LABELS[tsdt_last_idx]
+        : ("class" + std::to_string(tsdt_last_idx));
+    char buf[128];
+    std::snprintf(buf, sizeof(buf), "%s (%.2f)", name.c_str(), tsdt_last_conf);
+
+    // 2) Font (cached)
+    const int fontPx = 36; // << tweak size here
+    static ofTrueTypeFont font;
+    static int loadedSize = 0;
+    static bool fontOk = false;
+
+    auto ensureFont = [&](int px){
+        if (fontOk && loadedSize == px) return;
+        fontOk = false;
+        std::string path = ofToDataPath("fonts/Label.ttf", true);
+        if (!ofFile::doesFileExist(path)) path = ofToDataPath("verdana.ttf", true);
+        ofTrueTypeFontSettings s(path, px);
+        s.antialiased = true;
+        s.dpi = 96;
+        s.addRanges(ofAlphabet::Latin);
+        fontOk = font.load(s);
+        loadedSize = px;
+    };
+    ensureFont(fontPx);
+
+    // 3) Bottom-center placement
+    const float cx = ofGetWidth() * 0.5f;
+    const float marginBottom = 650.0f;              // distance from bottom edge
+    const float yBottom = ofGetHeight() - marginBottom;
+
+    ofPushStyle();
+    if (fontOk) {
+        ofRectangle bb = font.getStringBoundingBox(buf, 0, 0);
+        const float pad = 12.0f;
+
+        // Center horizontally; align the box bottom to yBottom
+        float drawX = cx - bb.width * 0.5f;
+        float drawY = yBottom - bb.y - bb.height;
+
+        // Background
+        ofSetColor(0, 0, 0, 160);
+        ofDrawRectRounded(drawX + bb.x - pad, drawY + bb.y - pad,
+                          bb.width + 2*pad, bb.height + 2*pad, 8);
+
+        // Text
+        ofSetColor(255, 215, 0);
+        font.drawString(buf, drawX, drawY-22);
+    } else {
+        // Fallback to bitmap font (scaled)
+        const float s = 2.0f;
+        ofPushMatrix();
+        ofTranslate(cx, yBottom);
+        ofScale(s, s);
+        ofSetColor(255, 215, 0);
+        ofDrawBitmapStringHighlight(buf, - (float)buf[0], -8.0f, ofColor(0,0,0,180), ofColor(255,215,0));
+        ofPopMatrix();
+    }
+    ofPopStyle();
+}
+
+
+
 
 //--------------------------------------------------------------
 void ofxDVS::loopColor() {
@@ -1438,11 +2329,13 @@ void ofxDVS::drawYoloDetections()
         char buf[128];
         std::snprintf(buf, sizeof(buf), "%s %.2f", name.c_str(), d.score);
 
-        ofPushMatrix();
-        ofTranslate(d.box.getX() + 2, d.box.getY() + d.box.getHeight() - 4);
-        ofScale(1.0f, -1.0f);
-        ofDrawBitmapStringHighlight(buf, 0, 0, ofColor(0,0,0,180), ofColor(255,215,0));
-        ofPopMatrix();
+        if (yolo_show_labels) {
+            ofPushMatrix();
+            ofTranslate(d.box.getX() + 2, d.box.getY() + d.box.getHeight() - 4);
+            ofScale(1.0f, -1.0f);
+            ofDrawBitmapStringHighlight(buf, 0, 0, ofColor(0,0,0,180), ofColor(255,215,0));
+            ofPopMatrix();
+        }
     }
 
     ofPopMatrix();
@@ -1462,6 +2355,20 @@ void ofxDVS::draw() {
 
     drawRectangularClusterTracker();
     drawYoloDetections();
+
+    // spike vision
+    if (tsdt_show_label && tsdtEnabled && tsdt_last_idx >= 0) {
+        std::string name = (tsdt_last_idx < (int)tsdt_labels.size())
+                           ? tsdt_labels[tsdt_last_idx]
+                           : ("class"+std::to_string(tsdt_last_idx));
+        char buf[256];
+        std::snprintf(buf, sizeof(buf), "TSDT: %s  (%.2f)", name.c_str(), tsdt_last_conf);
+        ofPushStyle();
+        ofSetColor(255,215,0);
+        ofDrawBitmapStringHighlight(buf, 100, ofGetHeight()-20, ofColor(0,0,0,180), ofColor(255,215,0));
+        ofPopStyle();
+    }
+    drawTsdtLabelBottomCenter();
 
     myCam.end();
     
@@ -2622,7 +3529,7 @@ void ofxDVS::updateImageGenerator(){
                 // 8) Temporal smoothing over last 3 frames
                 // NOTE: do NOT clear yolo_dets after this!
                 yolo_dets = temporalSmooth3(cur_sensor, yolo_hist_,
-                                            /*max_hist*/3,
+                                            /*max_hist*/ yolo_smooth_frames,
                                             /*IoU*/0.5f, /*min_hits*/2,
                                             /*min_w*/12.f, /*min_h*/12.f);
 
@@ -2784,6 +3691,18 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
     	e.target->setChecked(false); // reset to false
     }else if (e.target->getLabel() == "Draw YOLO") {
         yolo_draw = e.target->getChecked();
+    }else if (e.target->is("ENABLE NEURAL NETS")) {
+        bool checked = e.target->getChecked();
+        // show/hide panel
+        if (this->nn_panel) this->nn_panel->setVisible(checked);
+        // actually enable/disable inference
+        nnEnabled = checked;
+        // make sure nothing keeps drawing when disabled
+        if (!checked) {
+            yolo_dets.clear();
+            yolo_hist_.clear();
+        }
+        ofLog(OF_LOG_NOTICE, "Neural nets %s", checked ? "enabled" : "disabled");
     }
 
 }

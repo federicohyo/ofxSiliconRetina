@@ -39,6 +39,8 @@
 #include <cerrno>
 #include <ctime>   // nanosleep() on POSIX
 
+#include <limits>
+#include <iomanip>
 
 /// PLEASE SELECT SENSOR DAVIS or DVS128
 #define DAVIS  0
@@ -969,7 +971,43 @@ public:
     float yolo_iou_thresh  = 0.45f;
     int   yolo_input_w = 640, yolo_input_h = 640; // filled from model on first run
     bool  yolo_draw = true;                       // draw overlay when true
-    //int yolo_num_classes = 2;
+    // optional extra knobs (if not already defined)
+    bool  yolo_show_labels = true;
+    int   yolo_smooth_frames = 2;   // history length for temporal smoothing (1..5)   
+
+    // spikevision
+    std::unique_ptr<OnnxRunner> tsdt;   // a second runner, independent of YOLO
+    bool tsdtEnabled = false;           // panel toggle
+    bool tsdt_show_label = true;        // draw overlay text
+    // model I/O
+    int  tsdt_T = 8;                     // timesteps (your export used 8)
+    int  tsdt_inH = 128, tsdt_inW = 128; // DVS128
+    int  tsdt_bin_ms = 10;               // per-timestep bin width (8 * 6ms ~= 48ms window)
+    long tsdt_bin_us = (long)tsdt_bin_ms * 1000L;
+    int tsdt_ev_per_bin = 10000;
+    // event history (last T bins)
+    struct TsEvent { int x, y; bool p; long ts; };
+    std::deque<TsEvent> tsdt_hist;      // pruned each frame to last T*bin_us window
+    // last prediction
+    std::vector<std::string> tsdt_labels = {
+        "hand_clapping","right_hand_wave","left_hand_wave","right_hand_clockwise","right_hand_counter_clockwise",
+        "left_hand_clockwise","left_hand_counter_clockwise","forearm_roll_forward/backward","guitar","random_other_gestures"
+    };
+    int   tsdt_last_idx  = -1;
+    float tsdt_last_conf = 0.f;
+    // small EMA smoothing so label doesn’t flicker
+    float tsdt_ema_alpha = 1.0f;
+    std::vector<float> tsdt_ema_logits; // same length as labels
+    void drawTsdtLabelBottomCenter();
+    void tsdtSelfTest();
+    void runTsdtDebugFromFile(OnnxRunner* tsdt);
+
+    // --- NN / YOLO panel ---
+    std::unique_ptr<ofxDatGui> nn_panel;
+
+    void onNNToggleEvent(ofxDatGuiToggleEvent e);
+    void onNNSliderEvent(ofxDatGuiSliderEvent e);
+    void onNNButtonEvent(ofxDatGuiButtonEvent e);
 
     // VTEI window (GUI-controlled)
     float vtei_win_ms = 50.0f;   // default 50 ms

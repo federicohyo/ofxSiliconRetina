@@ -11,6 +11,7 @@
 // ONNX Runtime C++ API
 #include <onnxruntime_cxx_api.h>
 
+
 /**
  * Minimal, header-only API for running an ONNX model from openFrameworks.
  * - Loads an ONNX model once.
@@ -56,6 +57,11 @@ public:
     std::unordered_map<std::string, std::vector<float>> run(const ofImage& img);
 
     std::pair<int,int> getInputHW() const;
+
+    //spikevision
+    std::map<std::string, std::vector<float>>
+    runRaw(const float* data, const std::vector<int64_t>& shape);
+
 
 private:
     // Helpers
