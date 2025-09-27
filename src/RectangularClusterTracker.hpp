@@ -44,6 +44,8 @@ public:
     // this "prior" on initial cluster velocityPPT
     static constexpr float AVERAGE_VELOCITY_MIXING_FACTOR = 0.001f;
 
+
+
     using PolarityEvent = ofxDvsPolarity;
     using PolaritiesQueue = std::deque<PolarityEvent>;
 

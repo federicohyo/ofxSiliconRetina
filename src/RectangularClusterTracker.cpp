@@ -202,52 +202,67 @@ static float drawBitmapString(const std::string& text, float x, float y) {
 
 // ---------------------------------------------------------------------------
 void RectangularClusterTracker::Cluster::draw() {
-    const float BOX_LINE_WIDTH = 2.0f;
-    const float PATH_POINT_SIZE = 4.0f;
+    const int OUTLINE_PX = 3;   // visual thickness via multi-stroke
+    const int ELL_N = 64;       // ellipse smoothness
 
     ofPushMatrix();
-    // We translate here once, so that everything else is centered and has origin = 0
     ofTranslate(location.x, location.y);
 
-    if (isWasEverVisible()) {
-        ofSetColor(color);
-        ofSetLineWidth(BOX_LINE_WIDTH);
+    ofPushStyle();
+    ofNoFill();
+    ofSetColor(255, 215, 0);    // always yellow (gold)
+
+    if (cfg.useEllipticalClusters) {
+        // rotated ellipse: draw multiple loops to simulate thick stroke
+        for (int k = 0; k < OUTLINE_PX; ++k) {
+            drawEllipse(0, 0, radiusX + k, radiusY + k, angle, ELL_N);
+        }
     } else {
-        ofSetColor(140,140,140);
-        ofSetLineWidth(1);
+        // rotated rectangle: draw multiple rectangles to simulate thick stroke
+        ofPushMatrix();
+        if (angle != 0) ofRotateRad(angle);
+        for (int k = 0; k < OUTLINE_PX; ++k) {
+            float w = (radiusX + k) * 2.0f;
+            float h = (radiusY + k) * 2.0f;
+            ofDrawRectangle(-w * 0.5f, -h * 0.5f, w, h);
+        }
+        ofPopMatrix();
     }
 
-    // draw cluster rectangle
-    if (cfg.useEllipticalClusters) {
-        ofDrawEllipse(0, 0, radiusX, radiusY, angle);
-    } else {
-        drawBox(0, 0, (int) radiusX * 2, (int) radiusY * 2, angle); // Radius*2 because we need width and height
-    }
+    // Optional axis line (same yellow)
     if ((angle != 0) || cfg.dynamicAngleEnabled) {
         drawLine(0, 0, radiusX, 0, 1);
     }
 
-    // plots a single motion vector which is the number of pixels per second times scaling
+    // Optional: velocity vector in yellow too
     if (cfg.showClusterVelocityVector) {
-        drawVector(0, 0, velocityPPS.x, velocityPPS.y, 2, cfg.velocityVectorScaling);
-    }
-    if (cfg.showClusterRadius) {
-        drawCircle(0, 0, averageEventDistance, 32);
+        drawVector(0, 0, velocityPPS.x, velocityPPS.y, 3, cfg.velocityVectorScaling);
     }
 
+    // Optional: radius circle (draw multi to look thick)
+    if (cfg.showClusterRadius) {
+        for (int k = 0; k < OUTLINE_PX; ++k) {
+            drawCircle(0, 0, averageEventDistance + k, 64);
+        }
+    }
+
+    ofPopStyle();
     ofPopMatrix();
 
     if (cfg.showPaths) {
-        glPointSize(PATH_POINT_SIZE);
+        ofPushStyle();
+        ofSetColor(255, 215, 0);
+        glPointSize(3);
         glBegin(GL_POINTS);
-        for (auto& p : path) {
-            glVertex2f(p.x, p.y);
-        }
+        for (auto &p : path) glVertex2f(p.x, p.y);
         glEnd();
+        ofPopStyle();
     }
 
     // text annotations on clusters, setup
     if (cfg.showClusterMass || cfg.showClusterEps || cfg.showClusterNumber || cfg.showClusterVelocity) {
+        ofSetColor(isWasEverVisible() ? ofColor(255) : ofColor(140));
+
         if (isWasEverVisible()) {
             ofSetColor(255,255,255);
         } else {

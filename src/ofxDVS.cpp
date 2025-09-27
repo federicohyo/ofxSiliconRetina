@@ -19,7 +19,7 @@ static constexpr float VIEW_SCALE = 6.0f / 7;
 #include <algorithm>
 #include <tuple>
 
-static const char* COCO80[80] = {
+/*static const char* COCO80[80] = {
 "person","bicycle","car","motorcycle","airplane","bus","train","truck","boat","traffic light",
 "fire hydrant","stop sign","parking meter","bench","bird","cat","dog","horse","sheep","cow",
 "elephant","bear","zebra","giraffe","backpack","umbrella","handbag","tie","suitcase","frisbee",
@@ -28,11 +28,10 @@ static const char* COCO80[80] = {
 "broccoli","carrot","hot dog","pizza","donut","cake","chair","couch","potted plant","bed",
 "dining table","toilet","tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven",
 "toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear","hair drier","toothbrush"
-};
+};*/
 
-static constexpr int yolo_num_classes = 2;
-static const char* PEDRO_CLASSES[yolo_num_classes] = { "person", "class1" }; // replace with actual names if you have them
-
+static constexpr int yolo_num_classes = 1;
+static const char* PEDRO_CLASSES[yolo_num_classes] = { "person"}; 
 
 namespace {
 // Nearest-neighbor letterbox for CHW floats: (C,Hs,Ws) -> (C,Hd,Wd)
@@ -270,8 +269,46 @@ void ofxDVS::setup() {
     // allocate fbo , mesh and imagePol
     fbo.allocate(sizeX, sizeY, GL_RGBA32F);
     tex = &fbo.getTexture();
-    mesh.setMode(OF_PRIMITIVE_POINTS);
-    glEnable(GL_POINT_SMOOTH); // use circular points instead of square points
+    mesh.setMode(OF_PRIMITIVE_POINTS); //GL_POINT_SMOOTH
+    //glEnable(GL_POINT_SMOOTH); // use circular points instead of square points
+
+
+    // shader for points
+    if (ofIsGLProgrammableRenderer()) {
+        glEnable(GL_PROGRAM_POINT_SIZE);     // allow shader to set gl_PointSize
+        // --- Vertex shader (GL3) ---
+        const char* vsrc = R"(
+            #version 150
+            uniform mat4 modelViewProjectionMatrix;
+            uniform float uPointSize;
+            in vec4 position;
+            in vec4 color;
+            out vec4 vColor;
+            void main() {
+                vColor = color;
+                gl_Position = modelViewProjectionMatrix * position;
+                gl_PointSize = uPointSize;   // pixels
+            }
+        )";
+        // --- Fragment shader (GL3) ---
+        const char* fsrc = R"(
+            #version 150
+            in vec4 vColor;
+            out vec4 outputColor;
+            void main() {
+                outputColor = vColor;        // square point (no smoothing)
+            }
+        )";
+        pointShader.setupShaderFromSource(GL_VERTEX_SHADER,   vsrc);
+        pointShader.setupShaderFromSource(GL_FRAGMENT_SHADER, fsrc);
+        pointShader.bindDefaults();
+        pointShader.linkProgram();
+    } else {
+        // Legacy pipeline
+        glDisable(GL_POINT_SMOOTH);          // keep points square
+        glPointSize(pointSizePx);            // will be overridden if a shader is active
+    }
+
 
     // imagePol
     imagePolarity.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
@@ -361,6 +398,7 @@ void ofxDVS::setup() {
     f1->addToggle("Pointer", false);
     f1->addToggle("Raw Spikes", true);
     f1->addToggle("DVS Image Gen", false);
+    f1->addSlider("Refractory (us)", 0, 5000, hot_refrac_us);
     f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
     f1->addSlider("DVS Integration", 1, 100, fsint);
     f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
@@ -488,6 +526,9 @@ void ofxDVS::setup() {
     } catch (const std::exception& e) {
         ofLogError() << "Failed to load NN: " << e.what();
     }
+
+    // hot pixels
+    last_ts_map_.assign(this->sizeX * this->sizeY, 0);
 
 }
 
@@ -626,7 +667,7 @@ void ofxDVS::tryLive(){
         header_skipped  = false;
         thread.fileInput = false;
         thread.header_skipped = header_skipped;
-        for(int i=0; i<thread.container.size(); i++){
+        for(size_t i=0; i<thread.container.size(); i++){
             packetContainer = thread.container.back();
             thread.container.pop_back();
             caerEventPacketContainerFree(packetContainer);
@@ -662,7 +703,7 @@ void ofxDVS::changePath(){
     thread.header_skipped  = false;
     thread.fileInput = true;
     thread.header_skipped = header_skipped;
-    for(int i=0; i<thread.container.size(); i++){
+    for(size_t i=0; i<thread.container.size(); i++){
         packetContainer = thread.container.back();
         thread.container.pop_back();
         caerEventPacketContainerFree(packetContainer);
@@ -1058,7 +1099,28 @@ void ofxDVS::update() {
     if(paused == false){
         // Copy data from usbThread
         thread.lock();
-        for(int i=0; i<thread.container.size(); i++){
+
+        // Detect resolution changes (live , file, or different file)
+        if ((thread.deviceReady || thread.fileInputReady) &&
+            (thread.sizeX != sizeX || thread.sizeY != sizeY)) {
+
+            sizeX = thread.sizeX;
+            sizeY = thread.sizeY;
+
+            // Recreate the tracker at the new resolution
+            if (rectangularClusterTrackerEnabled) {
+                createRectangularClusterTracker();
+            }
+
+            // (Optional but recommended) keep your viewports in sync
+            updateViewports();
+
+            // (Optional) if you rely on buffers sized to sizeX/sizeY
+            // reallocate imagePolarity, visualizerMap, etc., here.
+        }
+
+
+        for(size_t i=0; i<thread.container.size(); i++){
             packetContainer = thread.container[i];
 
             long firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
@@ -1151,7 +1213,7 @@ void ofxDVS::update() {
         // we are paused..
         thread.lock();
         // in live mode .. just trow away
-        for(int i=0; i<thread.container.size(); i++){
+        for(size_t i=0; i<thread.container.size(); i++){
             packetContainer = thread.container.back(); // this is a pointer
             thread.container.pop_back();
             // free all packet containers here
@@ -1163,7 +1225,34 @@ void ofxDVS::update() {
     
 
     updateBAFilter();
+    applyRefractory_();
     updateImageGenerator();
+
+    // --- FEED RECTANGULAR CLUSTER TRACKER ---
+    if (rectangularClusterTrackerEnabled && rectangularClusterTracker) {
+        RectangularClusterTracker::PolaritiesQueue inq, outq; // both std::deque
+        inq.clear(); outq.clear();
+
+        // Fill input queue from current polarity packet
+        int64_t latest_ts = 0;
+        for (const auto &p : packetsPolarity) {
+            if (!p.valid) continue;
+
+            ofxDvsPolarity ev;
+            ev.x         = static_cast<int>(p.pos.x);
+            ev.y         = static_cast<int>(p.pos.y);
+            ev.timestamp = p.timestamp;
+            ev.polarity  = p.pol;
+            inq.push_back(ev);
+            if (ev.timestamp > latest_ts) latest_ts = ev.timestamp;
+        }
+
+        // Run tracker on this packet
+        rectangularClusterTracker->filter(inq, outq);
+        rectangularClusterTracker->updateClusterList(latest_ts); // <-- DO THIS
+    }
+
+
 
     //GUI
     f1->update();
@@ -1296,6 +1385,71 @@ void ofxDVS::drawFixed() {
     }
 }
 
+void ofxDVS::drawRectangularClusterTracker()
+{
+    if (!(rectangularClusterTrackerEnabled && rectangularClusterTracker)) return;
+
+    ofPushStyle();
+    ofDisableDepthTest();
+    ofNoFill();
+    ofSetColor(255, 215, 0);   // gold
+    ofSetLineWidth(3.0f);
+
+    ofPushMatrix();
+    // chip -> full screen (same mapping as drawSpikes)
+    ofScale(ofGetWidth() / (float)sizeX, ofGetHeight() / (float)sizeY);
+    // flip Y so (0,0) is top-left like the sensor
+    ofScale(1.0f, -1.0f);
+    ofTranslate(0.0f, -(float)sizeY);
+
+    // neutral stage (no extra transform inside)
+    rectangularClusterTracker->draw(ofRectangle(0, 0, sizeX, sizeY));
+
+    ofPopMatrix();
+    ofPopStyle();
+}
+
+void ofxDVS::drawYoloDetections()
+{
+    if (!yolo_draw || yolo_dets.empty()) return;
+
+    // ASSUMPTION: d.box is in CHIP PIXELS (x,y,w,h in [0..sizeX/sizeY]).
+    // If your boxes are still in screen coords, convert them to chip coords first.
+
+    ofPushStyle();
+    ofDisableDepthTest();
+    ofNoFill();
+    ofSetColor(255, 215, 0);   // gold
+    ofSetLineWidth(3.0f);
+
+    ofPushMatrix();
+    // chip -> full screen
+    ofScale(ofGetWidth() / (float)sizeX, ofGetHeight() / (float)sizeY);
+    ofScale(1.0f, -1.0f);
+    ofTranslate(0.0f, -(float)sizeY);
+
+    for (auto &d : yolo_dets) {
+        ofDrawRectangle(d.box);
+
+        // Label: flip just the text back so it’s readable
+        std::string name = (d.cls>=0 && d.cls<yolo_num_classes)
+                           ? PEDRO_CLASSES[d.cls]
+                           : ("id:"+ofToString(d.cls));
+        char buf[128];
+        std::snprintf(buf, sizeof(buf), "%s %.2f", name.c_str(), d.score);
+
+        ofPushMatrix();
+        ofTranslate(d.box.getX() + 2, d.box.getY() + d.box.getHeight() - 4);
+        ofScale(1.0f, -1.0f);
+        ofDrawBitmapStringHighlight(buf, 0, 0, ofColor(0,0,0,180), ofColor(255,215,0));
+        ofPopMatrix();
+    }
+
+    ofPopMatrix();
+    ofPopStyle();
+}
+
+
 //--------------------------------------------------------------
 void ofxDVS::draw() {
     
@@ -1305,57 +1459,22 @@ void ofxDVS::draw() {
     drawImageGenerator(); // if dvs.drawImageGen
     drawSpikes();         // if dvs.doDrawSpikes
     drawImu6();
+
+    drawRectangularClusterTracker();
+    drawYoloDetections();
+
     myCam.end();
     
-    //if rotation and tranlation quaternions
-  //  ofMatrix4x4 matrix = 0;
-    //myCam.reset();
-    //myCam.rotate(rotationCam);
-    //myCam.setOrientation(rotationCam);
-//    }
-    //ofDrawBox(cameraPos.x*10, cameraPos.y*10, cameraPos.z*10, 20, 20, 20);
-    //myCam.setTarget(cameraPos*120);
-    //cout << "DVS class" << rotationCam << endl;
+     // Pointer + GUI
     drawMouseDistanceToSpikes();
-    
     //GUI
     if(drawGui){
         f1->draw();
     }
 
-
-    //yolo draw bounding boxes
-    if (yolo_draw && !yolo_dets.empty()) {
-        ofPushStyle();
-        ofNoFill();
-        for (auto &d : yolo_dets) {
-            // box
-            ofSetColor(0, 255, 0);
-            ofDrawRectangle(d.box);
-
-            // label
-            //std::string name = (d.cls>=0 && d.cls<80) ? COCO80[d.cls] : ("id:"+ofToString(d.cls));
-            std::string name = (d.cls>=0 && d.cls<yolo_num_classes) ? PEDRO_CLASSES[d.cls]
-                                                        : ("id:"+ofToString(d.cls));
-
-            char buf[128];
-            std::snprintf(buf, sizeof(buf), "%s %.2f", name.c_str(), d.score);
-            ofDrawBitmapStringHighlight(buf, d.box.getX()+2, d.box.getY()+12);
-        }
-        ofPopStyle();
-    }
-
-
-    //tracker
-
-    // polarity events
-    //this->next_polarities.draw(polarities_viewport.getX(), polarities_viewport.getY(), polarities_viewport.getWidth(), polarities_viewport.getHeight());
-
-    //if (this->rectangularClusterTracker) {
-    //    this->rectangularClusterTracker->draw(polarities_viewport);
-    // }
-
 }
+
+
 
 /**
  * Event handler when clicking the mouse
@@ -1549,7 +1668,12 @@ void ofxDVS::updateMeshSpikes(){
             }else{
                 timeus = tdiff>>m;
             }
-            mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,sizeX,0,ofGetWidth()),ofMap(packets[i].pos.y,sizeY,0,0,ofGetHeight()), timeus));
+            //mesh.addVertex(ofVec3f(ofMap(packets[i].pos.x,0,sizeX,0,ofGetWidth()),ofMap(packets[i].pos.y,sizeY,0,0,ofGetHeight()), timeus));
+            mesh.addVertex(ofVec3f(
+                ofMap(packets[i].pos.x, 0, sizeX, 0, ofGetWidth()),
+                ofMap(packets[i].pos.y, 0, sizeY, 0, ofGetHeight()),   // <-- no flip
+                timeus));
+
             mesh.addTexCoord(ofVec2f(packets[i].pos.x,packets[i].pos.y));
             //int alphaus = (int)ceil(((float)tdiff/(float)nus)*256);
             ofColor colSO = ofColor(spkOnR[paletteSpike],spkOnG[paletteSpike],spkOnB[paletteSpike],alpha);
@@ -1661,7 +1785,19 @@ void ofxDVS::drawSpikes() {
         imagePolarity.update();
         mesh.setMode(OF_PRIMITIVE_POINTS);
         ofPushMatrix();
-        mesh.draw();
+        //mesh.draw();
+        // use shader
+        if (ofIsGLProgrammableRenderer()) {
+            pointShader.begin();
+            pointShader.setUniform1f("uPointSize", 4); // e.g. 8–12 px
+            mesh.draw();   // OF_PRIMITIVE_POINTS
+            pointShader.end();
+        } else {
+            glDisable(GL_POINT_SMOOTH);     // square
+            glPointSize(4);       // make sure it’s set right before draw
+            mesh.draw();
+        }
+
         ofPopMatrix();
 
     }
@@ -2428,7 +2564,7 @@ void ofxDVS::updateImageGenerator(){
                 auto kept = nms(std::move(dets), yolo_iou_thresh);
 
                 // ---- define unletterboxAndProject BEFORE using it ----
-                auto unletterboxAndProject = [&](float x1, float y1, float x2, float y2)->ofRectangle {
+                /*auto unletterboxAndProject = [&](float x1, float y1, float x2, float y2)->ofRectangle {
                     // invert letterbox: remove padding, then divide by scale
                     float lx1 = (x1 - lb_padx) / lb_scale;
                     float ly1 = (y1 - lb_pady) / lb_scale;
@@ -2448,21 +2584,44 @@ void ofxDVS::updateImageGenerator(){
                     float sw = (lx2 - lx1) * (drawW / sensorW);
                     float sh = (ly2 - ly1) * (drawH / sensorH);
                     return ofRectangle(sx, sy, sw, sh);
+                };*/
+                auto toSensor = [&](float x1, float y1, float x2, float y2)->ofRectangle {
+                    float sx1 = (x1 - lb_padx) / lb_scale;
+                    float sy1 = (y1 - lb_pady) / lb_scale;
+                    float sx2 = (x2 - lb_padx) / lb_scale;
+                    float sy2 = (y2 - lb_pady) / lb_scale;
+
+                    sx1 = std::max(0.f, std::min((float)sensorW, sx1));
+                    sy1 = std::max(0.f, std::min((float)sensorH, sy1));
+                    sx2 = std::max(0.f, std::min((float)sensorW, sx2));
+                    sy2 = std::max(0.f, std::min((float)sensorH, sy2));
+
+                    return ofRectangle(sx1, sy1, sx2 - sx1, sy2 - sy1);
                 };
 
+
                 // 7) Un-letterbox to sensor, then project to screen and collect current dets
-                std::vector<YoloDet> cur_screen;
+                /*std::vector<YoloDet> cur_screen;
                 cur_screen.reserve(kept.size());
                 for (auto &k : kept) {
                     auto r = unletterboxAndProject(k.x1, k.y1, k.x2, k.y2);
                     if (r.getWidth() > 0 && r.getHeight() > 0) {
                         cur_screen.push_back( YoloDet{ r, k.score, k.cls } );
                     }
+                }*/
+                // 7) Un-letterbox to sensor,
+                std::vector<YoloDet> cur_sensor;
+                cur_sensor.reserve(kept.size());
+                for (auto &k : kept) {
+                    auto r = toSensor(k.x1, k.y1, k.x2, k.y2);
+                    if (r.getWidth() > 0 && r.getHeight() > 0) {
+                        cur_sensor.push_back( YoloDet{ r, k.score, k.cls } );
+                    }
                 }
 
                 // 8) Temporal smoothing over last 3 frames
                 // NOTE: do NOT clear yolo_dets after this!
-                yolo_dets = temporalSmooth3(cur_screen, yolo_hist_,
+                yolo_dets = temporalSmooth3(cur_sensor, yolo_hist_,
                                             /*max_hist*/3,
                                             /*IoU*/0.5f, /*min_hits*/2,
                                             /*min_w*/12.f, /*min_h*/12.f);
@@ -2599,6 +2758,10 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
         auto checked = e.target->getChecked();
         this->tracker_panel->setVisible(checked);
         this->enableTracker(checked);
+        //hot pixels annoying
+        this->rectangularClusterTrackerConfig.useVelocity = true;                 // already true
+        this->rectangularClusterTrackerConfig.thresholdVelocityForVisibleCluster = 30.f; // px/s (tune 10..100)
+
         ofLog(OF_LOG_NOTICE, "Tracker enabled %d", checked);
     }else if(e.target->getLabel() == "APS"){
     	changeAps();
@@ -2648,11 +2811,28 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
         vtei_win_ms = e.value;
         vtei_win_us = (long)std::round(vtei_win_ms * 1000.0f); // ms -> us
         ofLogNotice() << "VTEI window set to " << vtei_win_ms << " ms (" << vtei_win_us << " us)";
+    }else if (e.target->getLabel() == "Refractory (us)") {
+        hot_refrac_us = (int)e.value;
     }
 
-
-
     myCam.reset(); // no mesh turning when using GUI
+}
+
+// hot pixels
+void ofxDVS::applyRefractory_() {
+    const int W = sizeX, H = sizeY;
+    for (auto &e : packetsPolarity) {
+        if (!e.valid) continue;
+        int x = (int)e.pos.x, y = (int)e.pos.y;
+        if ((unsigned)x >= (unsigned)W || (unsigned)y >= (unsigned)H) { e.valid = false; continue; }
+        int idx = y * W + x;
+        int64_t last = last_ts_map_[idx];
+        if (last != 0 && (e.timestamp - last) < hot_refrac_us) {
+            e.valid = false;              // too soon → likely hot pixel burst
+        } else {
+            last_ts_map_[idx] = e.timestamp;
+        }
+    }
 }
 
 void ofxDVS::onTextInputEvent(ofxDatGuiTextInputEvent e)

@@ -32,8 +32,13 @@
 #include <dirent.h>
 #include <string.h>
 #include <cstdio>
-
 #include <string>
+
+#include <vector>
+#include <fstream>
+#include <cerrno>
+#include <ctime>   // nanosleep() on POSIX
+
 
 /// PLEASE SELECT SENSOR DAVIS or DVS128
 #define DAVIS  0
@@ -970,12 +975,31 @@ public:
     float vtei_win_ms = 50.0f;   // default 50 ms
     long  vtei_win_us = 50000;   // = vtei_win_ms * 1000
 
+    void setVteiWindowMs(float ms) {
+        vtei_win_ms = std::max(1.0f, ms);                    // clamp to >=1 ms
+        vtei_win_us = static_cast<long>(vtei_win_ms * 1000); // keep µs in sync
+    }
+
+    // --- overlays ---
+    void drawRectangularClusterTracker();
+    void drawYoloDetections();
+
 
 private:
     // Build VTEI (5 channels) in CHW order at (W,H)
     std::vector<float> buildVTEI_(int W, int H);
     std::deque<std::vector<YoloDet>> yolo_hist_;
     int yolo_hist_len_ = 2;
+
+    // --- Hot pixel suppression ---
+    int hot_refrac_us = 200;                  // ignore events from same pixel if dt < this
+    std::vector<int64_t> last_ts_map_;        // sizeX*sizeY
+    void applyRefractory_();
+
+    //point shader
+    ofShader pointShader;
+    float pointSizePx = 8.0f;   // tweak at runtime if you like
+
 
 };
 
