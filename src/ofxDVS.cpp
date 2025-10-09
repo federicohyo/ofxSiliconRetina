@@ -1071,6 +1071,8 @@ void ofxDVS::setup() {
     try {
         OnnxRunner::Config scfg;
         scfg.model_path = ofToDataPath("spikevision_822128128_fixed.onnx", true);
+            //tsdt_fixed_finetuned.onnx");
+            //spikevision_822128128_fixed.onnx", true);
         scfg.intra_op_num_threads = 1;
         scfg.normalize_01 = false;     // we’ll feed already-normalized [0,1]
         scfg.verbose = false;
@@ -1832,131 +1834,83 @@ void ofxDVS::update() {
     
     if(paused == false){
         // Copy data from usbThread
+        // 1) take ownership quickly
+        std::vector<caerEventPacketContainer> local;
         thread.lock();
 
-        // Detect resolution changes (live , file, or different file)
         if ((thread.deviceReady || thread.fileInputReady) &&
             (thread.sizeX != sizeX || thread.sizeY != sizeY)) {
-
             sizeX = thread.sizeX;
             sizeY = thread.sizeY;
-
-            // Recreate the tracker at the new resolution
-            if (rectangularClusterTrackerEnabled) {
-                createRectangularClusterTracker();
-            }
-
-            // (Optional but recommended) keep your viewports in sync
+            if (rectangularClusterTrackerEnabled) createRectangularClusterTracker();
             updateViewports();
-
-            // (Optional) if you rely on buffers sized to sizeX/sizeY
-            // reallocate imagePolarity, visualizerMap, etc., here.
+            // (realloc any size-dependent buffers here)
         }
 
-
-        for(size_t i=0; i<thread.container.size(); i++){
-            packetContainer = thread.container[i];
-
-            long firstTs = caerEventPacketContainerGetLowestEventTimestamp(packetContainer);
-            long highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
-            long current_file_dt = highestTs-firstTs;
-            long current_ofx_dt = ofGetElapsedTimeMicros() - ofxLastTs; // application started - last update
-            //ofLog(OF_LOG_NOTICE, "current_ofx_dt %04lu", current_ofx_dt*100);
-            bool delpc = false;
-            if(targetSpeed <= 0){
-            	targetSpeed = 0.0000001;
-            }
-            //is live of file faster?
-            //ofLog(OF_LOG_NOTICE, "file dt %04lu", current_file_dt);
-
-            if( current_file_dt <  (float)current_ofx_dt/targetSpeed){
-                //cout << "highestTs " << highestTs << " FirstTS " << firstTs << " ofxLastTs " << ofxLastTs << endl;
-                //cout << " current_file_dt " <<  current_file_dt << " current_ofx_dt " << current_ofx_dt << endl;
-                delpc = organizeData(packetContainer);
-                //nanosleep((const struct timespec[]){{0, 5000000L}}, NULL);
-                
-                // update time information
-                long ts = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
-                //ofLog(OF_LOG_NOTICE, "timestamp %04lu", ts);
-                // just start
-                if(ts != -1){
-                    if(isStarted == false){
-                        started = ts;
-                       // timestampcurrentelapsedfile = 0;
-                       // timestampcurrentelapsedlive_buf = 0;
-                       // timestampcurrentelapsedfile_buf = 0;
-                        isStarted = true;
-                    }
-                    // we restart
-                    if(ts < started){
-                        started = ts;
-                       // timestampcurrentelapsedfile = 0;
-                       // timestampcurrentelapsedlive_buf = 0;
-                       // timestampcurrentelapsedfile_buf = 0;
-                    }
-                    unsigned long current =  ts - started;
-                    microseconds = current - (minutes*60)*1e6 - seconds*1e6;
-                    minutes = (current / 60e6);
-                    seconds = ( ((int)current % (int)60e6) / 1e6);
-                    hours =  ((((int)current % (int)60e6) / 1e6) / 1e6);
-                    //cout << hours << ":" << minutes << ":" << seconds << ":" << microseconds << endl;
-                    sprintf(timeString, " %02lu:%02lu:%02lu:%04lu", hours, minutes, seconds, microseconds);
-                }else{
-                    unsigned long zero = 0;
-                    sprintf(timeString, "%02lu", zero);
-                }
-            }else{
-                // no deal
-                if(i>0){
-                    i = i-1;
-                }
-            }// target speed
-            // recording status
-            if(isRecording){
-                // order packet containers in time - file format aedat 3.1 standard -
-                size_t currPacketContainerSize = (size_t) caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-                qsort(packetContainer->eventPackets, currPacketContainerSize, sizeof(caerEventPacketHeader),
-                      &packetsFirstTimestampThenTypeCmp);
-                // save to files
-                int32_t packetNum = caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-                for (int32_t i = 0; i < packetNum; i++) {
-                    caerEventPacketHeader packetHeader = caerEventPacketContainerGetEventPacket(packetContainer, i);
-                    if(packetHeader == NULL){
-                        continue;
-                    }
-                    caerEventPacketHeaderSetEventCapacity(packetHeader, caerEventPacketHeaderGetEventNumber(packetHeader));
-                    size_t sizePacket = caerEventPacketGetSize(packetHeader);
-                    caerEventPacketHeaderSetEventSource(packetHeader, caerEventPacketHeaderGetEventSource(packetHeader));
-                    myFile.write((char*)packetHeader, sizePacket);
-                }
-            }
-            // free all packet containers here
-            if(delpc){
-            	caerEventPacketContainerFree(packetContainer);
-            	thread.container.erase( thread.container.begin()+i );
-            }
-            thread.doLoad = delpc;
-        }
-        //thread.container.clear();
-        //thread.container.shrink_to_fit();
-        // done with the resource
+        local.swap(thread.container);   // O(1) swap, clears producer queue
         thread.unlock();
-        
-        // check how fast we are going, if we are too slow, drop some data    
-    }else{
-        // we are paused..
-        thread.lock();
-        // in live mode .. just trow away
-        for(size_t i=0; i<thread.container.size(); i++){
-            packetContainer = thread.container.back(); // this is a pointer
-            thread.container.pop_back();
-            // free all packet containers here
-            caerEventPacketContainerFree(packetContainer);
+
+        // 2) process WITHOUT holding the lock
+        for (auto &packetContainer : local) {
+            bool delpc = false;
+
+            long firstTs   = caerEventPacketContainerGetLowestEventTimestamp (packetContainer);
+            long highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+            long current_file_dt = highestTs - firstTs;
+            long current_ofx_dt  = ofGetElapsedTimeMicros() - ofxLastTs;
+
+            if (targetSpeed <= 0) targetSpeed = 1e-7f;
+
+            if (current_file_dt < (float)current_ofx_dt / targetSpeed) {
+                delpc = organizeData(packetContainer);
+
+                long ts = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
+                if (ts != -1) {
+                    if (!isStarted || ts < started) { started = ts; isStarted = true; }
+                    unsigned long cur = ts - started;
+                    microseconds = cur - (minutes * 60) * 1e6 - seconds * 1e6;
+                    minutes      = (cur / 60e6);
+                    seconds      = (((int)cur % (int)60e6) / 1e6);
+                    hours        = 0; // (your hours math looked off; adjust if you need hours)
+                    sprintf(timeString, " %02lu:%02lu:%02lu:%04lu", hours, minutes, seconds, microseconds);
+                } else {
+                    sprintf(timeString, "%02u", 0u);
+                }
+
+                if (isRecording) {
+                    size_t n = (size_t)caerEventPacketContainerGetEventPacketsNumber(packetContainer);
+                    qsort(packetContainer->eventPackets, n, sizeof(caerEventPacketHeader),
+                        &packetsFirstTimestampThenTypeCmp);
+                    for (int32_t i = 0; i < (int32_t)n; i++) {
+                        auto ph = caerEventPacketContainerGetEventPacket(packetContainer, i);
+                        if (!ph) continue;
+                        caerEventPacketHeaderSetEventCapacity(ph, caerEventPacketHeaderGetEventNumber(ph));
+                        size_t sizePacket = caerEventPacketGetSize(ph);
+                        caerEventPacketHeaderSetEventSource(ph, caerEventPacketHeaderGetEventSource(ph));
+                        myFile.write((char*)ph, sizePacket);
+                    }
+                }
+            } else {
+                // too fast; defer this packet to the next GUI frame
+                if (backlog_.size() >= backlog_max_) {
+                    // drop oldest to keep latency bounded
+                    caerEventPacketContainerFree(backlog_.front());
+                    backlog_.pop_front();
+                }
+                backlog_.push_back(packetContainer);
+            }
+
+            //if (delpc) caerEventPacketContainerFree(packetContainer);
+            // If not ‘delpc’, still free to avoid leaking:
+            //if (!delpc) caerEventPacketContainerFree(packetContainer);
         }
-        // done with the resource
+    } else {
+        // paused: just drop producer data
+        thread.lock();
+        for (auto &pc : thread.container) caerEventPacketContainerFree(pc);
+        thread.container.clear();
         thread.unlock();
     }
-    
 
     updateBAFilter();
     applyRefractory_();
@@ -2028,6 +1982,41 @@ void ofxDVS::update() {
                 if (!tensor_T2HW.empty()) {
                         // Print stats like the Python helper (first 5 bins)
                     tsdtPrintStats(tensor_T2HW.data(), tsdt_T, /*C=*/2, tsdt_inH, tsdt_inW, /*firstN=*/5);
+
+
+                    // --- STREAM ALL TSDT INPUTS TO ONE BIN FILE (for Python) ---
+                    /*{
+                        static std::ofstream s_bin;
+                        static bool s_opened = false;
+
+                        if (!s_opened) {
+                            // One file per run, with dims header once
+                            std::string fname = "tsdt_stream_" + ofGetTimestampString("%Y%m%d_%H%M%S") + ".bin";
+                            s_bin.open(ofToDataPath(fname, true), std::ios::binary);
+                            if (!s_bin) {
+                                ofLogError() << "[TSDT/DUMP] cannot open stream file";
+                            } else {
+                                // Header: magic + dims (T,C,H,W)
+                                const uint32_t magic = 0x54445354; // 'TDST'
+                                const int32_t dims[4] = { tsdt_T, 2, tsdt_inH, tsdt_inW };
+                                s_bin.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
+                                s_bin.write(reinterpret_cast<const char*>(dims),  sizeof(dims));
+                                ofLogNotice() << "[TSDT/DUMP] streaming to " << fname
+                                            << " dims T=" << dims[0] << " C=" << dims[1]
+                                            << " H=" << dims[2] << " W=" << dims[3];
+                            }
+                            s_opened = true;
+                        }
+
+                        // Append this sample (size = T*C*H*W floats)
+                        if (s_bin) {
+                            s_bin.write(reinterpret_cast<const char*>(tensor_T2HW.data()),
+                                        static_cast<std::streamsize>(tensor_T2HW.size() * sizeof(float)));
+                            // keep unflushed for speed; OS will flush/close on process exit
+                        }
+                    }*/
+                    // --- END STREAM BLOCK ---
+
 
                     // Inference (N,T,C,H,W)
                     std::vector<int64_t> shape = {1, (int64_t)tsdt_T, 2, tsdt_inH, tsdt_inW};

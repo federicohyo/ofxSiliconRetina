@@ -14,6 +14,9 @@
 #include "devices/davis.h"
 #include "devices/dvs128.h"
 #include "devices/dvxplorer.h"
+#include "libcaer/devices/device_discover.h"
+#include <dv-processing/io/camera/discovery.hpp>
+
 #include <atomic>
 
 
@@ -64,6 +67,27 @@ struct polarity {
     bool valid;
 };
 
+// --- new helpers at the top of ofxDVS.hpp or in a small .cpp ---
+
+// Convert dv-processing events into your 'polarity' struct
+static inline void appendPolarityBatch(
+    const dv::EventStore &events,
+    std::vector<polarity> &out)
+{
+    out.reserve(out.size() + events.size());
+    for (const auto &e : events) {
+        polarity p{};
+        p.info      = 0;
+        p.pos.x     = static_cast<float>(e.x());
+        p.pos.y     = static_cast<float>(e.y());
+        p.timestamp = static_cast<int>(e.timestamp()); // you can keep it as 32-bit for now
+        p.pol       = e.polarity();
+        p.valid     = true;
+        out.push_back(p);
+    }
+}
+
+
 struct frame {
     /// Event information (ROI region, color channels, color filter). First because of valid mark.
     int info;
@@ -103,6 +127,8 @@ struct imu6 {
     bool valid;
     float temperature;
 };
+
+
 
 
 /*class alphaThread: public ofThread
@@ -417,138 +443,124 @@ public:
 
         unlock();
     STARTFILEMODE:
-        if( fileInput == false ){
+        // ---------- Prefer LIVE CAMERA ----------
+        if (fileInput == false) {
+            try {
+                // EITHER open the first available DV camera:
+                auto cam = dv::io::camera::open();
 
-            if(camera_handle == NULL){
-                // start the camera
-        #if DAVIS == 1
-                // Open a DAVIS, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-                camera_handle = caerDeviceOpen(1, CAER_DEVICE_DAVIS, 0, 0, NULL);
-        #endif
-        #if DVS128 == 1
-                // Open a DVS128, give it a device ID of 1, and don't care about USB bus or SN restrictions.
-                camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVS128, 0, 0, NULL);
-        #endif
-		#if DVXPLORER == 1
-			camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
-			//auto handle = libcaer::devices::dvXplorer(1);
-			//handle.sendDefaultConfig();
-		#endif
-            }
-            if (camera_handle == NULL) {
-                ofLog(OF_LOG_ERROR,"error opening the device\n");
-                if(tryFile()){
-                    goto STARTFILEMODE;
-                }
-                if(forceFileMode()){
-                    goto STARTFILEMODE;
-                }
-                //sleep(1);
-                goto STARTDEVICEORFILE;
-            }else{
-                ofLog(OF_LOG_NOTICE,"Succesfully open a Dynamic Vision Sensor\n");
-            }
-            nanosleep((const struct timespec[]){{0, 500000L}}, NULL);
-            
-            // Send the default configuration before using the device.
-            // No configuration is sent automatically!
-            caerDeviceSendDefaultConfig(camera_handle);
-            
-            // Turn on Autoexposure if device has APS
-    #if DAVIS == 1
-            caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_AUTOEXPOSURE, true);
-    #endif
-            
-            // get device size
-    #if DAVIS == 1
-            caer_davis_info infocam = caerDavisInfoGet(camera_handle);
-    #endif
-    #if DVS128 == 1
-            caer_dvs128_info infocam = caerDVS128InfoGet(camera_handle);
-    #endif
-	#if DVXPLORER == 1
-            caer_dvx_info infocam = caerDVXplorerInfoGet(camera_handle);
-			//camera_handle = caerDeviceOpen(1, CAER_DEVICE_DVXPLORER, 0, 0, NULL);
-	#endif
-				
-            sizeX = infocam.dvsSizeX;
-            sizeY = infocam.dvsSizeY;
-            chipId = infocam.chipID;
-
-            // Now let's get start getting some data from the device. We just loop, no notification needed.
-            caerDeviceDataStart(camera_handle, NULL, NULL, NULL, NULL, NULL);
-
-            // Let's turn on blocking data-get mode to avoid wasting resources.
-            caerDeviceConfigSet(camera_handle, CAER_HOST_CONFIG_DATAEXCHANGE, CAER_HOST_CONFIG_DATAEXCHANGE_BLOCKING, true);
-            
-            deviceReady = true;
-            
-            // reset timestamp at start
-            //caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RESET, true);
-
-            while(isThreadRunning())
-            {
-                
-                lock();
-                packetContainerT = NULL;
-                packetContainerT = caerDeviceDataGet(camera_handle);
-                if (packetContainerT != NULL){
-                    container.push_back(packetContainerT);
-                }
-                unlock();
-
-                nanosleep((const struct timespec[]){{0, 500L}}, NULL);
-
-                //check aps status
-                if( apsStatus != apsStatusLocal){
-                    apsStatusLocal = apsStatus;
-                    //enable disable frames
-    #if DAVIS == 1
-                    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_APS, DAVIS_CONFIG_APS_RUN, apsStatusLocal);
-    #endif
-                }
-                //check dvs status
-                if( dvsStatus != dvsStatusLocal){
-                    dvsStatusLocal = dvsStatus;
-                    //enable disable frames
-    #if DAVIS == 1
-                    caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_DVS, DAVIS_CONFIG_DVS_RUN, dvsStatusLocal);
-    #elif DVS128 == 1
-                    caerDeviceConfigSet(camera_handle, DVS128_CONFIG_DVS, DVS128_CONFIG_DVS_RUN, dvsStatusLocal);
-    #endif
-                }
-                //check imu status
-                if( imuStatus != imuStatusLocal){
-                    imuStatusLocal = imuStatus;
-                    //enable disable frames
-    #if DAVIS == 1
-                //caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_IMU, DAVIS_CONFIG_IMU_RUN, imuStatusLocal);
-    #endif
-                }
-                
-                if(resetTsStatus == true ){
-                	caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_MUX, DAVIS_CONFIG_MUX_TIMESTAMP_RESET, true);
-                	resetTsStatus = false;
+                std::cout << "Opened: " << cam->getCameraName() << "\n";
+                if (cam->isEventStreamAvailable()) {
+                    auto res = cam->getEventResolution().value();
+                    std::cout << "Event resolution: " << res << "\n";
                 }
 
-                if( extInputStatus != extInputStatusLocal){
-                	extInputStatusLocal = extInputStatus;
-                	caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_RUN_DETECTOR, extInputStatusLocal);
-                	caerDeviceConfigSet(camera_handle, DAVIS_CONFIG_EXTINPUT, DAVIS_CONFIG_EXTINPUT_DETECT_RISING_EDGES, extInputStatusLocal);
-                }
+                // OR, since you have a DVXplorer Mini, open it explicitly:
+                //auto cam = std::make_unique<dv::io::camera::DVXplorerM>();
 
-
-                if(fileInput){
-                    goto STARTFILEMODE;
-                }
-                
-                if(liveInput){
-                    ofLog(OF_LOG_NOTICE, "trying live input \n");
+                if (!cam || !cam->isRunning()) {
+                    ofLogError() << "No DV camera found or failed to start.";
+                    // fall back to file mode if you want
+                    if (tryFile()) goto STARTDEVICEORFILE;
                     goto STARTDEVICEORFILE;
                 }
 
+                // Set device size for your drawing code
+                if (cam->isEventStreamAvailable()) {
+                    auto res = cam->getEventResolution().value();
+                    sizeX = res.width;
+                    sizeY = res.height;
+                } else {
+                    // sane defaults
+                    sizeX = 640; sizeY = 480;
+                }
+
+                deviceReady = true;
+
+                // Main loop: pull event batches and push to your containers
+                while (isThreadRunning() && cam->isRunning()) {
+                    // Toggle requests you had (local flags) can be handled here:
+                    // (dv-processing doesn’t have “run DVS on/off” for DVXplorer,
+                    //  but you can just ignore incoming events if dvsStatusLocal == false)
+
+                    if (auto events = cam->getNextEventBatch(); events.has_value()) {
+
+                        // You used to push 'packetContainerT' – now push directly what you want to draw
+                        // For minimal changes, fill a temporary vector of polarity and store it where your UI expects it.
+                        // Example: push into a per-iteration buffer 'packetsPolarity' (make sure it's cleared somewhere).
+                        //if (auto events = cam->getNextEventBatch(); events.has_value()) {
+
+                        // 1) Allocate a libcaer polarity packet with capacity = number of events
+                        const int32_t capacity = static_cast<int32_t>(events->size());
+                        // tsOverflow=0 (fine for short runs); source=1 (pick what you prefer)
+                        caerPolarityEventPacket polPkt = caerPolarityEventPacketAllocate(capacity, /*tsOverflow*/0, /*source*/1);
+                        if (polPkt != nullptr) {
+                            // 2) Fill the packet
+                            int32_t idx = 0;
+                            for (const auto &ev : *events) {
+                                caerPolarityEvent e = caerPolarityEventPacketGetEvent(polPkt, idx);
+
+                                // NOTE: libcaer timestamps are 32-bit; dv-processing uses 64-bit.
+                                // For short sessions we can safely truncate. If you want robust handling,
+                                // compute and set overflow in the header (see note below).
+                                const int32_t ts32 = static_cast<int32_t>(ev.timestamp() & 0x7fffffff);
+
+                                caerPolarityEventSetTimestamp(e, ts32);
+                                caerPolarityEventSetX(e, static_cast<uint16_t>(ev.x()));
+                                caerPolarityEventSetY(e, static_cast<uint16_t>(ev.y()));
+                                caerPolarityEventSetPolarity(e, ev.polarity());
+                                caerPolarityEventValidate(e, polPkt);
+                                ++idx;
+                                //ofLogError() << "some packets.";
+                            }
+
+                            // 3) Finalize header: number of events = valid = idx
+                            caerEventPacketHeaderSetEventNumber(&polPkt->packetHeader, idx);
+                            caerEventPacketHeaderSetEventValid(&polPkt->packetHeader, idx);
+
+                            // 4) Wrap into a libcaer container (exactly as your code expects)
+                            caerEventPacketContainer cont = caerEventPacketContainerAllocate(1);
+                            caerEventPacketContainerSetEventPacket(cont, 0, (caerEventPacketHeader)polPkt);
+
+                            // 5) Push to your existing queue (you already free it later in your pipeline)
+                            // Now lock briefly just to push.
+                            lock();
+                            // Optional: cap the queue to avoid UI backlog.
+                            constexpr size_t MAX_QUEUE = 15;
+                            if (container.size() >= MAX_QUEUE) {
+                                // drop oldest
+                                caerEventPacketContainerFree(container.front());
+                                container.erase(container.begin());
+                            }
+                            container.push_back(cont);
+                            unlock();
+                        }       
+                        nanosleep((const struct timespec[]){{0, 500L}}, NULL);
+                            
+                    } else {
+                        // nothing arrived; small sleep avoids busy spin
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        //std::cout << "Nanosleep: "  << "\n";
+                    }
+
+                    // Handle your own mode switches
+                    if (fileInput) {         // you flipped to file mode elsewhere
+                        cam.reset();
+                        goto STARTDEVICEORFILE;
+                    }
+                    if (liveInput) {         // request to re-open live
+                        cam.reset();
+                        goto STARTDEVICEORFILE;
+                    }
+                }
+
+                cam.reset();
             }
-        
+            catch (const std::exception &e) {
+                ofLogError() << "Camera exception: " << e.what();
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                goto STARTDEVICEORFILE;
+            }
         }else{
             
             // file input mode
@@ -1038,6 +1050,9 @@ private:
     ofShader pointShader;
     float pointSizePx = 8.0f;   // tweak at runtime if you like
 
+    // packet queue managment
+    std::deque<caerEventPacketContainer> backlog_;
+    size_t backlog_max_ = 15; // small, to bound latency
 
 };
 
