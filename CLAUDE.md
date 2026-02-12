@@ -85,6 +85,27 @@ Uses openFrameworks 0.12.0 build system (`compile.project.mk`). Compiler: g++-13
 - **Branch**: `main`
 - **Commit style**: imperative, short summary (e.g. "Fix VTEI intensity channel...")
 
+## Known Issues
+
+### Runtime crash: "terminate called without an active exception"
+- **Symptom**: App aborts ~3 seconds after startup (around hot-pixel calibration time) with `std::terminate()`
+- **Not a shutdown crash** — the `[ofxDVS] exit` log messages never appear, so `exit()` isn't reached
+- **Partial mitigations already in place**:
+  - `InferenceWorker::loop_()` now has try/catch around `job()` (commit c59fe87)
+  - `ofxDVS::exit()` stops both workers, detaches USB thread as fallback
+  - `ofApp::exit()` calls `dvs.exit()` during OF lifecycle
+- **Investigation leads**:
+  - The crash signature (`std::terminate` without active exception) means a joinable `std::thread` is being destroyed, OR something calls `std::terminate()` directly
+  - Could be ONNX Runtime internal thread management (not our `std::thread` objects)
+  - Could be `dv::io::camera` / dv-processing library spawning internal threads that crash
+  - The `usbThread::threadedFunction()` uses `goto`-based state machine with `lock()`/`unlock()` on `ofThread`'s mutex — potential for deadlock or exception during locked state
+  - `ofThread::run()` calls `thread.detach()` after `threadedFunction()` returns — if the thread crashes before that, the `std::thread` is still joinable
+- **Next steps to try**:
+  - Run with `gdb` or `valgrind` to get a stack trace at the point of `std::terminate()`
+  - Add `std::set_terminate()` handler to print a backtrace before aborting
+  - Check if the crash happens without the camera connected (file-only mode)
+  - Check if disabling NN pipelines (don't call `yolo_worker.start()`) avoids the crash
+
 ## Common Tasks
 
 - **Add a GUI control**: Add widget in `setup()` after line ~197, add handler in `onSliderEvent()`/`onButtonEvent()`/`onToggleEvent()`
