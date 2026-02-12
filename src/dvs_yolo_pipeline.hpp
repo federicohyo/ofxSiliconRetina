@@ -32,6 +32,7 @@ struct YoloConfig {
     bool  show_labels   = true;
     float vtei_win_ms   = 50.0f;  ///< VTEI accumulation window in milliseconds
     int   num_classes   = 1;
+    bool  normalized_coords = false; ///< Model outputs coords in [0,1] (scale by model dims)
     std::vector<std::string> class_names = {"person"};
 };
 

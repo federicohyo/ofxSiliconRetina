@@ -255,8 +255,19 @@ void ofxDVS::setup() {
         ofLogError() << "Failed to load TSDT: " << e.what();
     }
 
-    // Start async YOLO inference worker
+    // --- Load TP Detector model via pipeline ---
+    try {
+        tpdet_pipeline.cfg.num_classes = 0;
+        tpdet_pipeline.cfg.normalized_coords = true;
+        tpdet_pipeline.cfg.conf_thresh = 0.5f;
+        tpdet_pipeline.loadModel(ofToDataPath("tp_det_pedro_352x288.onnx", true));
+    } catch (const std::exception& e) {
+        ofLogError() << "Failed to load TP Det: " << e.what();
+    }
+
+    // Start async inference workers
     yolo_worker.start();
+    tpdet_worker.start();
 
     // hot pixels
     const size_t npix = this->sizeX * this->sizeY;
@@ -994,6 +1005,12 @@ void ofxDVS::draw() {
     }
     yolo_pipeline.drawDetections(sizeX, sizeY);
 
+    // TP Det detections from async worker
+    if (tpdetEnabled && tpdet_worker.hasResult()) {
+        tpdet_pipeline.detections() = tpdet_worker.lastResult();
+    }
+    if (tpdetEnabled) tpdet_pipeline.drawDetections(sizeX, sizeY);
+
     // TSDT label
     if (tsdtEnabled) {
         tsdt_pipeline.drawLabel();
@@ -1469,6 +1486,7 @@ void ofxDVS::exit() {
 
     // stop inference workers first (they may hold ONNX sessions)
     yolo_worker.stop();
+    tpdet_worker.stop();
     tsdt_worker.stop();
 
     ofLogNotice() << "[ofxDVS] exit: stopping USB thread...";
@@ -1849,19 +1867,32 @@ void ofxDVS::updateImageGenerator(){
 
         newImageGen = true;
 
-        // --- YOLO inference via async worker ---
-        if (nnEnabled && yolo_pipeline.isLoaded() && newImageGen) {
+        // --- VTEI-based inference via async workers ---
+        bool needVTEI = (nnEnabled && yolo_pipeline.isLoaded()) ||
+                        (tpdetEnabled && tpdet_pipeline.isLoaded());
+        if (needVTEI && newImageGen) {
             // Build VTEI tensor on main thread (fast, uses pipeline pre-allocated buffers)
             auto vtei = yolo_pipeline.buildVTEI(
                 packetsPolarity, surfaceMapLastTs,
                 imageGenerator.getPixels(), sizeX, sizeY);
 
-            // Submit inference to worker thread (non-blocking; dropped if worker is busy)
             int sw = sizeX, sh = sizeY;
-            yolo_worker.submit([this, vtei = std::move(vtei), sw, sh]() -> std::vector<dvs::YoloDet> {
-                yolo_pipeline.infer(vtei, sw, sh);
-                return yolo_pipeline.detections();
-            });
+
+            // Submit YOLO inference (non-blocking; dropped if worker is busy)
+            if (nnEnabled && yolo_pipeline.isLoaded()) {
+                yolo_worker.submit([this, vtei, sw, sh]() -> std::vector<dvs::YoloDet> {
+                    yolo_pipeline.infer(vtei, sw, sh);
+                    return yolo_pipeline.detections();
+                });
+            }
+
+            // Submit TP Det inference (non-blocking; dropped if worker is busy)
+            if (tpdetEnabled && tpdet_pipeline.isLoaded()) {
+                tpdet_worker.submit([this, vtei, sw, sh]() -> std::vector<dvs::YoloDet> {
+                    tpdet_pipeline.infer(vtei, sw, sh);
+                    return tpdet_pipeline.detections();
+                });
+            }
         }
     }
 }

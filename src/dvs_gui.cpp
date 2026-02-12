@@ -28,6 +28,15 @@ std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs) {
     tsdt_folder->addSlider("EMA alpha",     0.0, 1.0, dvs->tsdt_pipeline.cfg.ema_alpha);
     tsdt_folder->addButton("SELFTEST (from file)");
 
+    // TP Detector folder
+    auto tpdet_folder = panel->addFolder(">> TP Detector");
+    tpdet_folder->addToggle("ENABLE TPDET", false);
+    tpdet_folder->addToggle("DRAW TPDET", dvs->tpdet_pipeline.cfg.draw);
+    tpdet_folder->addSlider("TPDET CONF", 0.0, 1.0, dvs->tpdet_pipeline.cfg.conf_thresh);
+    tpdet_folder->addSlider("TPDET IOU",  0.0, 1.0, dvs->tpdet_pipeline.cfg.iou_thresh);
+    tpdet_folder->addSlider("TPDET SMOOTH", 1, 5, dvs->tpdet_pipeline.cfg.smooth_frames);
+    tpdet_folder->addButton("TPDET CLEAR HISTORY");
+
     panel->setPosition(270, 0);
 
     // Bind events using lambdas that capture `dvs`
@@ -120,6 +129,12 @@ void onNNToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs) {
         ofLogNotice() << "TSDT execution " << (checked ? "enabled" : "disabled");
     } else if (name == "SHOW LABEL") {
         dvs->tsdt_pipeline.cfg.show_label = checked;
+    } else if (name == "ENABLE TPDET") {
+        dvs->tpdetEnabled = checked;
+        if (!checked) dvs->tpdet_pipeline.clearHistory();
+        ofLogNotice() << "TP Detector " << (checked ? "enabled" : "disabled");
+    } else if (name == "DRAW TPDET") {
+        dvs->tpdet_pipeline.cfg.draw = checked;
     }
 }
 
@@ -141,6 +156,12 @@ void onNNSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
         dvs->tsdt_pipeline.cfg.bin_ms = std::max(1, (int)std::round(e.value));
     } else if (n == "EMA alpha") {
         dvs->tsdt_pipeline.cfg.ema_alpha = ofClamp((float)e.value, 0.f, 1.f);
+    } else if (n == "TPDET CONF") {
+        dvs->tpdet_pipeline.cfg.conf_thresh = e.value;
+    } else if (n == "TPDET IOU") {
+        dvs->tpdet_pipeline.cfg.iou_thresh = e.value;
+    } else if (n == "TPDET SMOOTH") {
+        dvs->tpdet_pipeline.cfg.smooth_frames = std::max(1, (int)std::round(e.value));
     }
 }
 
@@ -150,6 +171,9 @@ void onNNButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs) {
         ofLogNotice() << "YOLO temporal history cleared.";
     } else if (e.target->getName() == "SELFTEST (from file)") {
         dvs->tsdt_pipeline.debugFromFile(ofToDataPath("tsdt_input_fp32.bin", true));
+    } else if (e.target->getName() == "TPDET CLEAR HISTORY") {
+        dvs->tpdet_pipeline.clearHistory();
+        ofLogNotice() << "TP Det temporal history cleared.";
     }
 }
 

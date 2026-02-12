@@ -193,6 +193,11 @@ void YoloPipeline::infer(const std::vector<float>& vtei_sensor_chw,
     for (int i = 0; i < N; ++i) {
         float cx = at(0,i), cy = at(1,i), w = at(2,i), h = at(3,i);
 
+        if (cfg.normalized_coords) {
+            cx *= model_W_;  cy *= model_H_;
+            w  *= model_W_;  h  *= model_H_;
+        }
+
         int   best_cls = -1;
         float best_p   = -1.f;
         for (int c = 0; c < nc; ++c) {

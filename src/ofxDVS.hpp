@@ -719,13 +719,16 @@ public:
     // --- Neural network pipelines ---
     bool nnEnabled = false;
     bool tsdtEnabled = false;
+    bool tpdetEnabled = false;
 
     dvs::YoloPipeline  yolo_pipeline;
     dvs::TsdtPipeline  tsdt_pipeline;
+    dvs::YoloPipeline  tpdet_pipeline;
 
     // Async inference workers
     dvs::InferenceWorker<std::vector<dvs::YoloDet>> yolo_worker;
     dvs::InferenceWorker<std::pair<int,float>>      tsdt_worker;
+    dvs::InferenceWorker<std::vector<dvs::YoloDet>> tpdet_worker;
 
     // NN / YOLO panel
     std::unique_ptr<ofxDatGui> nn_panel;
