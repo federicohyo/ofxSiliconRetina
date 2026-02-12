@@ -1,0 +1,21 @@
+# IDE
+.vscode/
+
+# Build artifacts
+obj/
+*/obj/
+*/bin/example_*
+*/bin/*.so
+
+# ONNX models (large binaries)
+*.onnx
+
+# Binary data files
+*.bin
+
+# Project files
+*.code-workspace
+*.qbs
+
+# Example laser (local only)
+example_dvs_laser/
