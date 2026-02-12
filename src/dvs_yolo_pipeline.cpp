@@ -89,11 +89,32 @@ std::vector<float> YoloPipeline::buildVTEI(
         }
     }
 
-    // Edge magnitude (Sobel) from intensity pixels
+    // Convert intensity to grayscale (matches original which called setImageType(OF_IMAGE_GRAYSCALE))
     E_buf_.assign(plane, 0.f);
-    const ofPixels& Ip = intensity;
-    if (Ip.isAllocated() && (int)Ip.getWidth() == sW && (int)Ip.getHeight() == sH) {
-        auto P = [&](int yy, int xx) -> unsigned char { return Ip[yy * sW + xx]; };
+    ofPixels grayPx;
+    bool haveGray = false;
+    if (intensity.isAllocated() && (int)intensity.getWidth() == sW && (int)intensity.getHeight() == sH) {
+        if (intensity.getNumChannels() == 1) {
+            grayPx = intensity;
+        } else {
+            grayPx.allocate(sW, sH, OF_IMAGE_GRAYSCALE);
+            const int nc = intensity.getNumChannels();
+            for (int y = 0; y < sH; ++y) {
+                for (int x = 0; x < sW; ++x) {
+                    size_t src = ((size_t)y * sW + x) * nc;
+                    unsigned char r = intensity[src + 0];
+                    unsigned char g = intensity[src + 1];
+                    unsigned char b = intensity[src + 2];
+                    grayPx[y * sW + x] = (unsigned char)(0.299f*r + 0.587f*g + 0.114f*b);
+                }
+            }
+        }
+        haveGray = true;
+    }
+
+    // Edge magnitude (Sobel) from grayscale intensity
+    if (haveGray) {
+        auto P = [&](int yy, int xx) -> unsigned char { return grayPx[yy * sW + xx]; };
         for (int y = 1; y < sH - 1; ++y) {
             for (int x = 1; x < sW - 1; ++x) {
                 float gx = float(P(y-1,x+1) + 2*P(y,x+1) + P(y+1,x+1)
@@ -113,7 +134,7 @@ std::vector<float> YoloPipeline::buildVTEI(
     for (int y = 0; y < sH; ++y) {
         for (int x = 0; x < sW; ++x) {
             size_t hw = (size_t)y * sW + x;
-            float i01 = (Ip.isAllocated() ? Ip[hw] / 255.f : 0.f);
+            float i01 = (haveGray ? grayPx[hw] / 255.f : 0.f);
             chw5_sensor_[0 * plane + hw] = pos_buf_[hw];
             chw5_sensor_[1 * plane + hw] = neg_buf_[hw];
             chw5_sensor_[2 * plane + hw] = T_buf_[hw];
