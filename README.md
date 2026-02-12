@@ -1,63 +1,94 @@
-ofxDVS
-=====================================
+# ofxDVS
 
+An [openFrameworks](https://openframeworks.cc/) addon for interfacing Dynamic Vision Sensor (DVS / event) cameras with built-in neural-network inference pipelines for real-time object detection and gesture recognition.
 
+## Features
 
-Introduction
-------------
-This addon let you interface any Dynamic Vision Sensor to openframeworks.
-The Dynamic Vision Sensors are frame-free vision sensors invented, produced and developped by inilabs.com.
+- **Camera I/O** via [dv-processing](https://gitlab.com/inivation/dv/dv-processing) (auto-detects connected camera)
+- **YOLO object detection** on a 5-channel VTEI (Visual-Temporal Event Image) representation, with asynchronous inference on a worker thread
+- **TSDT gesture recognition** using temporal-spatial binary event tensors with EMA-smoothed logits
+- **Rectangular Cluster Tracker** for event-driven multi-object tracking
+- **ONNX Runtime** inference backend with multi-threaded execution and float16 support
+- 2D and 3D event visualization, APS frame display, IMU overlay
+- AEDAT 3.1 file recording and playback
+- Hot-pixel suppression via configurable refractory period filter
+- Full GUI controls via [ofxDatGui](https://github.com/braitsch/ofxDatGui)
 
-License
--------
-ofxSiliconRetina is distributed under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), and you might consider using this for your repository. By default, `license.md` contains a copy of the MIT license to which you can add your name and the year.
+## Supported Cameras
 
-Installation
-------------
-Copy this addon inside the folder `openFrameworks/addons/`. 
+| Family | Models | Resolution |
+|--------|--------|------------|
+| DVS128 | DVS128 | 128 x 128 |
+| DAVIS | DAVIS128, DAVIS208, DAVIS240A/B/C, DAVIS346A/B/Cbsi, DAVIS640, DAVISHet640 | varies |
+| DVXplorer | DVXplorer | 640 x 480 |
 
-This addons depends only on ofxStats, available here: https://github.com/tado/ofxStats 
+Select the camera family by setting the `#define` flags in `src/ofxDVS.hpp` (`DAVIS`, `DVS128`, or `DVXPLORER`).
 
-Dependencies - included in this package -
-------------
-This addons includes libcaer and libusb, if missing the one from your architecture. 
-Please compile and copy them into the libs folder.
+## Dependencies
 
-libcaer can be obained here: https://github.com/inilabs/libcaer
-libusb can be obtained here: https://github.com/libusb/libusb
+### Bundled (in `libs/`)
 
-HotKeys
------------
+- **libcaer** &mdash; C driver library for iniVation cameras
+- **onnxruntime** &mdash; ONNX Runtime C++ inference engine
 
-s: enable/disable stats
+### External (system / OF addons)
 
-d: enable/disable dvs
+| Dependency | Type | Notes |
+|-----------|------|-------|
+| [openFrameworks 0.12.0](https://openframeworks.cc/) | Framework | Linux 64-bit tested |
+| [dv-processing](https://gitlab.com/inivation/dv/dv-processing) | System library | Camera I/O (`dv::io::camera`) |
+| [ofxDatGui](https://github.com/braitsch/ofxDatGui) | OF addon | GUI panels |
+| ofxGui | OF addon (core) | Additional GUI elements |
+| ofxPoco | OF addon (core) | Networking utilities |
+| ofxNetwork | OF addon (core) | Network I/O |
 
-a: enable/disable aps
+## Installation
 
-i: enable/disable imu
+1. Clone or copy this addon into `openFrameworks/addons/ofxDVS/`.
+2. Install [dv-processing](https://gitlab.com/inivation/dv/dv-processing) system-wide (follow their build instructions).
+3. Install [ofxDatGui](https://github.com/braitsch/ofxDatGui) into `openFrameworks/addons/`.
+4. The bundled `libcaer` and `onnxruntime` libraries are in `libs/`. If they don't match your architecture, rebuild and copy them there.
 
-s: start/stop recording files* 
+## Building the Example
 
-n: load recording file
+```bash
+cd example_dvs
+make
+make run
+```
 
-+: faster playback
+Or use the openFrameworks Project Generator to create an IDE project that includes `ofxDVS` and `ofxDatGui`.
 
--: slower playback
+## Architecture
 
-* aedat3.1 file format: https://inilabs.com/support/software/fileformat/ 
+```
+src/
+  ofxDVS.hpp / .cpp              Core addon class (camera I/O, event processing, draw, GUI)
+  dvs_yolo_pipeline.hpp / .cpp   YOLO detection pipeline (VTEI build, inference, NMS, drawing)
+  dvs_tsdt_pipeline.hpp / .cpp   TSDT gesture pipeline (event history, tensor build, inference)
+  dvs_nn_utils.hpp               Shared NN utilities (sigmoid, NMS, letterbox transforms)
+  dvs_gui.hpp / .cpp             NN and tracker GUI panel creation + event handlers
+  dvs_inference_worker.hpp       Thread-safe async inference worker (template)
+  onnx_run.hpp / .cpp            ONNX Runtime wrapper (load, run, FP16 support)
+  RectangularClusterTracker.hpp / .cpp   Event-driven cluster tracker
+  ofxDvsPolarity.hpp             Polarity event data structures
+```
 
+## Hotkeys
 
-Compatibility
-------------
-Tested on OF release 0.9.x 
+| Key | Action |
+|-----|--------|
+| `c` | Toggle GUI visibility |
 
-Known issues
-------------
+GUI toggles and sliders control all other functionality (DVS, APS, IMU, tracker, NN, recording, etc.) via the panel interface.
 
-Please select the correct device by changing the definition line in ofxSiliconRetina/src/ofxDVS.hpp
+## ONNX Models
 
-PLEASE SELECT SENSOR FAMILY  DVS128 / DAVIS (FX2/FX3)
-#define DAVIS
+Place model files in `example_dvs/bin/data/`. The code loads:
 
+- **YOLO**: `ReYOLOv8m_PEDRO_352x288.onnx` (object detection)
+- **TSDT**: `spikevision_822128128_fixed.onnx` (gesture recognition)
 
+## License
+
+[MIT License](license.md) &mdash; Copyright (c) 2017 Federico Corradi

@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <memory>
 #include <stdexcept>
-#include <sstream>          // <-- add this
+#include <sstream>
+#include <thread>
 
 #include "ofMain.h"
 
@@ -13,17 +14,21 @@
 
 
 /**
- * Minimal, header-only API for running an ONNX model from openFrameworks.
+ * Minimal API for running an ONNX model from openFrameworks.
  * - Loads an ONNX model once.
- * - Accepts an ofImage and does CHW float32 normalization [0,1].
- * - Handles RGB (3ch) or Gray (1ch) inputs.
+ * - Accepts an ofImage or pre-built CHW float data.
+ * - Handles RGB (3ch) or Gray (1ch) inputs, float32 and float16 models.
  * - Returns all model outputs (float) by output name.
  */
 class OnnxRunner {
 public:
-    // new helper: run with already-prepared CHW float data
+    /// Run with already-prepared CHW float data (allocates result map).
     std::unordered_map<std::string, std::vector<float>>
     runCHW(const std::vector<float>& chw, int C, int H, int W);
+
+    /// Run with CHW float data, reusing the output map to avoid per-call allocation.
+    void runCHW_into(const std::vector<float>& chw, int C, int H, int W,
+                     std::unordered_map<std::string, std::vector<float>>& results);
 
     struct IOInfo {
         std::string name;
@@ -33,12 +38,11 @@ public:
 
     struct Config {
         std::string model_path;
-        int intra_op_num_threads = 1;
+        int intra_op_num_threads = std::max(1u, std::thread::hardware_concurrency() / 2);
         bool use_cuda = false;        // requires CUDA build of onnxruntime
         bool verbose = false;
         // Preproc
         bool normalize_01 = true;     // scale to [0,1]
-        // If your model expects mean/std, you can extend with vectors here.
     };
 
     explicit OnnxRunner(const Config& cfg);
@@ -53,39 +57,47 @@ public:
     const std::vector<IOInfo>& outputs() const { return outputs_; }
 
     // Run inference on an ofImage. If the model size differs, the image is resized.
-    // Returns a map: output_name -> flat float buffer (NCHW flattened, usually N=1).
     std::unordered_map<std::string, std::vector<float>> run(const ofImage& img);
 
     std::pair<int,int> getInputHW() const;
 
-    //spikevision
+    // Run with raw float data and arbitrary shape (e.g. for TSDT [1,T,2,H,W]).
     std::map<std::string, std::vector<float>>
     runRaw(const float* data, const std::vector<int64_t>& shape);
 
 
 private:
-    // Helpers
     void queryModelIO_();
+    void buildNameCaches_();
+    void dumpModelIO_() const;
 
-    void dumpModelIO_() const;   // <-- declare helper
-
-    std::vector<float> ofImageToCHWFloat_(const ofImage& src, int64_t C, int64_t H, int64_t W) const;
+    std::vector<float> pixelsToCHWFloat_(const ofPixels& px, int64_t C, int64_t H, int64_t W) const;
     static std::string dataTypeName_(ONNXTensorElementDataType t);
+
+    /// Shared implementation for runCHW / runCHW_into.
+    void runCHW_impl_(const std::vector<float>& chw, int C, int H, int W,
+                      std::unordered_map<std::string, std::vector<float>>& results);
 
     Config cfg_;
     bool loaded_ = false;
 
-    // ORT objects (ordered per ORT best practices)
+    // ORT objects
     Ort::Env env_;
     Ort::SessionOptions session_options_;
     std::unique_ptr<Ort::Session> session_;
-    Ort::AllocatorWithDefaultOptions allocator_; // used for names and metadata
+    Ort::AllocatorWithDefaultOptions allocator_;
+    Ort::MemoryInfo mem_info_;  // cached, created once in constructor
 
     // Cached IO info
     std::vector<IOInfo> inputs_;
     std::vector<IOInfo> outputs_;
 
-    // Cached input/output names (char* owned by allocator_ → convert to std::string)
+    // Cached names (std::string ownership + const char* views)
     std::vector<std::string> input_names_;
     std::vector<std::string> output_names_;
+    std::vector<const char*> in_names_c_;
+    std::vector<const char*> out_names_c_;
+
+    // Pre-allocated FP16 conversion buffer (reused across calls)
+    mutable std::vector<uint16_t> chw_f16_buf_;
 };
