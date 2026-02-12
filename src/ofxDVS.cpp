@@ -1457,18 +1457,44 @@ ofTexture* ofxDVS::getTextureRef() {
 }
 
 //--------------------------------------------------------------
+ofxDVS::~ofxDVS() {
+    exit();
+}
+
 void ofxDVS::exit() {
+    if (exited_) return;
+    exited_ = true;
 
-    // stop inference workers
+    ofLogNotice() << "[ofxDVS] exit: stopping workers...";
+
+    // stop inference workers first (they may hold ONNX sessions)
     yolo_worker.stop();
+    tsdt_worker.stop();
 
-    // stop the thread
+    ofLogNotice() << "[ofxDVS] exit: stopping USB thread...";
+
+    // signal the USB thread to stop
     thread.stopThread();
-    if(isRecording){
-        // close file
+
+    // give the thread time to notice the flag and finish
+    for (int i = 0; i < 50; ++i) {
+        if (!thread.isThreadRunning()) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    // detach to prevent std::terminate if thread is still alive
+    try {
+        auto& t = thread.getNativeThread();
+        if (t.joinable()) {
+            t.detach();
+        }
+    } catch (...) {}
+
+    if (isRecording) {
         myFile.close();
     }
 
+    ofLogNotice() << "[ofxDVS] exit: done";
 }
 
 const char * ofxDVS::chipIDToName(int16_t chipID, bool withEndSlash) {

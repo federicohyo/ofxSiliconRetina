@@ -510,6 +510,7 @@ public:
 class ofxDVS {
 public:
     ofxDVS();
+    ~ofxDVS();
 
     // Methods
     void setup();
@@ -754,6 +755,9 @@ private:
 
     void applyHotPixelFilter_();
     void finalizeCalibration_();
+
+    // Shutdown guard
+    bool exited_ = false;
 
     // Point shader
     ofShader pointShader;

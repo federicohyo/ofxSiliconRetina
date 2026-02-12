@@ -12,6 +12,7 @@
 #include <condition_variable>
 #include <functional>
 #include <atomic>
+#include <iostream>
 
 namespace dvs {
 
@@ -84,7 +85,18 @@ private:
                 busy_ = true;
             }
 
-            ResultT r = job();
+            ResultT r;
+            try {
+                r = job();
+            } catch (const std::exception& ex) {
+                std::cerr << "[InferenceWorker] job exception: " << ex.what() << std::endl;
+                busy_ = false;
+                continue;
+            } catch (...) {
+                std::cerr << "[InferenceWorker] unknown job exception" << std::endl;
+                busy_ = false;
+                continue;
+            }
 
             {
                 std::lock_guard<std::mutex> lk(result_mu_);
