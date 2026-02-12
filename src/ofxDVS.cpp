@@ -10,6 +10,7 @@
 #include "ofxDVS.hpp"
 #include "dvs_gui.hpp"
 
+#include <cmath>
 #include <deque>
 
 using namespace std::placeholders;
@@ -195,6 +196,9 @@ void ofxDVS::setup() {
     f1->addToggle("Raw Spikes", true);
     f1->addToggle("DVS Image Gen", false);
     f1->addSlider("Refractory (us)", 0, 5000, hot_refrac_us);
+    f1->addSlider("Hot Rate Window (ms)", 10, 1000, hot_rate_window_us / 1000);
+    f1->addSlider("Hot Rate Threshold", 10, 5000, hot_rate_threshold);
+    f1->addButton("Recalibrate Hot Pixels");
     f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
     f1->addSlider("DVS Integration", 1, 100, fsint);
     f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
@@ -255,7 +259,13 @@ void ofxDVS::setup() {
     yolo_worker.start();
 
     // hot pixels
-    last_ts_map_.assign(this->sizeX * this->sizeY, 0);
+    const size_t npix = this->sizeX * this->sizeY;
+    last_ts_map_.assign(npix, 0);
+    hot_rate_count_.assign(npix, 0);
+    hot_calib_count_.assign(npix, 0);
+    hot_pixel_mask_.assign(npix, false);
+    hot_calib_done_ = false;
+    hot_calib_started_ = false;
 }
 
 
@@ -810,7 +820,7 @@ void ofxDVS::update() {
     }
 
     updateBAFilter();
-    applyRefractory_();
+    applyHotPixelFilter_();
     updateImageGenerator();
 
     // --- FEED RECTANGULAR CLUSTER TRACKER ---
@@ -1929,6 +1939,14 @@ void ofxDVS::onButtonEvent(ofxDatGuiButtonEvent e)
         nnEnabled = !nnEnabled;
         e.target->setLabel(nnEnabled ? "Disable NN" : "Enable NN");
         ofLogNotice() << "NN execution " << (nnEnabled ? "enabled" : "disabled");
+    }else if (e.target->getLabel() == "Recalibrate Hot Pixels") {
+        const size_t npix = sizeX * sizeY;
+        hot_calib_done_ = false;
+        hot_calib_started_ = false;
+        hot_calib_start_ts_ = 0;
+        std::fill(hot_calib_count_.begin(), hot_calib_count_.end(), 0);
+        std::fill(hot_pixel_mask_.begin(), hot_pixel_mask_.end(), false);
+        ofLogNotice() << "[HotPixel] Calibration restarted";
     }
 }
 
@@ -2002,24 +2020,97 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
         ofLogNotice() << "VTEI window set to " << e.value << " ms";
     }else if (e.target->getLabel() == "Refractory (us)") {
         hot_refrac_us = (int)e.value;
+    }else if (e.target->getLabel() == "Hot Rate Window (ms)") {
+        hot_rate_window_us = (int)e.value * 1000;
+        ofLogNotice() << "[HotPixel] Rate window set to " << hot_rate_window_us << " us";
+    }else if (e.target->getLabel() == "Hot Rate Threshold") {
+        hot_rate_threshold = (int)e.value;
+        ofLogNotice() << "[HotPixel] Rate threshold set to " << hot_rate_threshold;
     }
 
     myCam.reset(); // no mesh turning when using GUI
 }
 
-// hot pixels
-void ofxDVS::applyRefractory_() {
+// hot pixel calibration finalization
+void ofxDVS::finalizeCalibration_() {
+    const size_t npix = sizeX * sizeY;
+    // compute mean and stddev of per-pixel event counts
+    double sum = 0.0, sum2 = 0.0;
+    for (size_t i = 0; i < npix; ++i) {
+        double c = hot_calib_count_[i];
+        sum  += c;
+        sum2 += c * c;
+    }
+    double mean = sum / npix;
+    double var  = (sum2 / npix) - (mean * mean);
+    double sd   = (var > 0.0) ? std::sqrt(var) : 0.0;
+    double thresh = mean + hot_calib_sigma * sd;
+
+    int nHot = 0;
+    for (size_t i = 0; i < npix; ++i) {
+        if (hot_calib_count_[i] > thresh) {
+            hot_pixel_mask_[i] = true;
+            ++nHot;
+        }
+    }
+    hot_calib_done_ = true;
+    ofLogNotice() << "[HotPixel] Calibration: found " << nHot
+                  << " hot pixels (mean=" << mean << " sd=" << sd
+                  << " thresh=" << thresh << ")";
+}
+
+// hot pixel filter: calibration + refractory + rate-based
+void ofxDVS::applyHotPixelFilter_() {
     const int W = sizeX, H = sizeY;
+
     for (auto &e : packetsPolarity) {
         if (!e.valid) continue;
         int x = (int)e.pos.x, y = (int)e.pos.y;
-        if ((unsigned)x >= (unsigned)W || (unsigned)y >= (unsigned)H) { e.valid = false; continue; }
+        if ((unsigned)x >= (unsigned)W || (unsigned)y >= (unsigned)H) {
+            e.valid = false;
+            continue;
+        }
         int idx = y * W + x;
+
+        // --- calibration phase ---
+        if (!hot_calib_done_) {
+            if (!hot_calib_started_) {
+                hot_calib_started_ = true;
+                hot_calib_start_ts_ = e.timestamp;
+            }
+            hot_calib_count_[idx]++;
+            int64_t elapsed = e.timestamp - hot_calib_start_ts_;
+            if (elapsed >= (int64_t)(hot_calib_duration_s * 1e6f)) {
+                finalizeCalibration_();
+            }
+        }
+
+        // --- calibration mask ---
+        if (hot_calib_done_ && hot_pixel_mask_[idx]) {
+            e.valid = false;
+            continue;
+        }
+
+        // --- refractory check ---
         int64_t last = last_ts_map_[idx];
         if (last != 0 && (e.timestamp - last) < hot_refrac_us) {
-            e.valid = false;              // too soon -> likely hot pixel burst
-        } else {
-            last_ts_map_[idx] = e.timestamp;
+            e.valid = false;
+            continue;
+        }
+        last_ts_map_[idx] = e.timestamp;
+
+        // --- rate-based check ---
+        // reset window if rolled over
+        if (hot_rate_window_start_ == 0) {
+            hot_rate_window_start_ = e.timestamp;
+        }
+        if (e.timestamp - hot_rate_window_start_ >= hot_rate_window_us) {
+            std::fill(hot_rate_count_.begin(), hot_rate_count_.end(), 0);
+            hot_rate_window_start_ = e.timestamp;
+        }
+        hot_rate_count_[idx]++;
+        if (hot_rate_count_[idx] > hot_rate_threshold) {
+            e.valid = false;
         }
     }
 }

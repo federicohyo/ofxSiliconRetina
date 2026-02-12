@@ -733,10 +733,27 @@ public:
     void drawRectangularClusterTracker();
 
 private:
-    // Hot pixel suppression
+    // Hot pixel suppression — refractory
     int hot_refrac_us = 200;
     std::vector<int64_t> last_ts_map_;
-    void applyRefractory_();
+
+    // Hot pixel suppression — rate-based filter
+    std::vector<uint16_t> hot_rate_count_;
+    int64_t hot_rate_window_start_ = 0;
+    int hot_rate_window_us = 100000;   // 100 ms
+    int hot_rate_threshold = 500;
+
+    // Hot pixel suppression — startup calibration
+    std::vector<uint32_t> hot_calib_count_;
+    std::vector<bool> hot_pixel_mask_;
+    float hot_calib_duration_s = 3.0f;
+    float hot_calib_sigma = 5.0f;
+    bool hot_calib_done_ = false;
+    int64_t hot_calib_start_ts_ = 0;
+    bool hot_calib_started_ = false;
+
+    void applyHotPixelFilter_();
+    void finalizeCalibration_();
 
     // Point shader
     ofShader pointShader;
