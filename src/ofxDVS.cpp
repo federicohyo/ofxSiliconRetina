@@ -119,6 +119,12 @@ void ofxDVS::setup() {
     reconMap_.assign(sizeX * sizeY, 0.0f);
     reconImage_.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
 
+    // --- Event-based optical flow (SAE + local plane fitting) ---
+    saeTimestamp_.assign(sizeX * sizeY, 0);
+    flowX_.assign(sizeX * sizeY, 0.0f);
+    flowY_.assign(sizeX * sizeY, 0.0f);
+    flowImage_.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+
     // imagePol
     imagePolarity.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
     newImagePol = false;
@@ -210,6 +216,7 @@ void ofxDVS::setup() {
     f1->addSlider("Recon Decay", 0.90, 1.0, reconDecay);
     f1->addSlider("Recon Contrib", 0.01, 0.5, reconContrib);
     f1->addSlider("Recon Spread", 1, 8, reconSpread);
+    f1->addToggle("ENABLE OPTICAL FLOW", false);
     f1->addToggle("ENABLE TRACKER", false);
     f1->addToggle("ENABLE NEURAL NETS", false);
 
@@ -226,6 +233,9 @@ void ofxDVS::setup() {
 
     // --- NN / YOLO + TSDT panel (created by dvs::gui helpers) ---
     nn_panel = dvs::gui::createNNPanel(this);
+
+    // --- Optical Flow panel ---
+    optflow_panel = dvs::gui::createOptFlowPanel(this);
 
     // --- Tracker panel ---
     tracker_panel = dvs::gui::createTrackerPanel(this);
@@ -885,6 +895,137 @@ void ofxDVS::update() {
         reconImage_.update();
     }
 
+    // --- Event-based optical flow (SAE + local plane fitting) ---
+    {
+        const int W = sizeX, H = sizeY;
+        const int R = optFlowRadius;
+        const int64_t dtThresh = (int64_t)optFlowDt_us;
+
+        // Always update SAE with valid events (keeps the map warm)
+        for (const auto &e : packetsPolarity) {
+            if (!e.valid) continue;
+            int ex = (int)e.pos.x, ey = (int)e.pos.y;
+            if (ex >= 0 && ex < W && ey >= 0 && ey < H)
+                saeTimestamp_[ey * W + ex] = e.timestamp;
+        }
+
+        if (drawOptFlow) {
+            // Decay existing flow vectors
+            for (int i = 0, n = W * H; i < n; i++) {
+                flowX_[i] *= optFlowDecay;
+                flowY_[i] *= optFlowDecay;
+            }
+
+            // Compute flow per valid event via local plane fitting
+            for (const auto &e : packetsPolarity) {
+                if (!e.valid) continue;
+                int ex = (int)e.pos.x, ey = (int)e.pos.y;
+                if (ex < R || ex >= W - R || ey < R || ey >= H - R) continue;
+
+                int64_t t0 = e.timestamp;
+
+                // Accumulate normal equations for t = a*dx + b*dy + c
+                // Using Cramer's rule on the 3x3 system:
+                //   [sum(dx^2)  sum(dx*dy) sum(dx) ] [a]   [sum(dx*t)]
+                //   [sum(dx*dy) sum(dy^2)  sum(dy) ] [b] = [sum(dy*t)]
+                //   [sum(dx)    sum(dy)    N       ] [c]   [sum(t)   ]
+                double Sxx = 0, Syy = 0, Sxy = 0, Sx = 0, Sy = 0;
+                double Sxt = 0, Syt = 0, St = 0;
+                int N = 0;
+
+                for (int dy = -R; dy <= R; dy++) {
+                    for (int dx = -R; dx <= R; dx++) {
+                        int64_t ts = saeTimestamp_[(ey + dy) * W + (ex + dx)];
+                        if (ts == 0) continue;
+                        int64_t age = t0 - ts;
+                        if (age < 0 || age > dtThresh) continue;
+                        double dt = (double)(ts - t0); // relative timestamp (negative or zero)
+                        Sxx += dx * dx;
+                        Syy += dy * dy;
+                        Sxy += dx * dy;
+                        Sx  += dx;
+                        Sy  += dy;
+                        Sxt += dx * dt;
+                        Syt += dy * dt;
+                        St  += dt;
+                        N++;
+                    }
+                }
+
+                if (N < 6) continue; // need enough neighbors for robust fit
+
+                // Solve 3x3 system via Cramer's rule
+                // M = [[Sxx, Sxy, Sx], [Sxy, Syy, Sy], [Sx, Sy, N]]
+                double det = Sxx * (Syy * N - Sy * Sy)
+                           - Sxy * (Sxy * N - Sy * Sx)
+                           + Sx  * (Sxy * Sy - Syy * Sx);
+
+                if (std::abs(det) < 1e-6) continue; // near-singular
+
+                double detA = Sxt * (Syy * N - Sy * Sy)
+                            - Sxy * (Syt * N - Sy * St)
+                            + Sx  * (Syt * Sy - Syy * St);
+
+                double detB = Sxx * (Syt * N - Sy * St)
+                            - Sxt * (Sxy * N - Sy * Sx)
+                            + Sx  * (Sxy * St - Syt * Sx);
+
+                double a = detA / det; // dt/dx in microseconds/pixel
+                double b = detB / det; // dt/dy in microseconds/pixel
+
+                // Flow velocity: vx = -1/a, vy = -1/b (pixels/us) → convert to px/s
+                if (std::abs(a) < 1e-10 && std::abs(b) < 1e-10) continue;
+
+                float vx = 0, vy = 0;
+                // Use the gradient vector directly: v = -(a,b) / (a^2+b^2) * 1e6
+                double denom = a * a + b * b;
+                if (denom < 1e-20) continue;
+                vx = (float)(-a / denom * 1e6);
+                vy = (float)(-b / denom * 1e6);
+
+                float mag = std::sqrt(vx * vx + vy * vy);
+                if (mag > optFlowMaxSpeed * 5.0f) continue; // reject outliers
+
+                int idx = ey * W + ex;
+                flowX_[idx] = vx;
+                flowY_[idx] = vy;
+            }
+
+            // Render flow as HSV color wheel
+            unsigned char *raw = flowImage_.getPixels().getData();
+            for (int i = 0; i < W * H; i++) {
+                float vx = flowX_[i], vy = flowY_[i];
+                float mag = std::sqrt(vx * vx + vy * vy);
+                int idx3 = i * 3;
+                if (mag < 0.5f) {
+                    raw[idx3] = raw[idx3 + 1] = raw[idx3 + 2] = 0;
+                    continue;
+                }
+
+                // Hue from angle [0, 360)
+                float hue = std::atan2(vy, vx) * (180.0f / M_PI) + 180.0f;
+                float sat = 1.0f;
+                float val = std::min(mag / optFlowMaxSpeed, 1.0f);
+
+                // HSV to RGB
+                float c = val * sat;
+                float x = c * (1.0f - std::abs(std::fmod(hue / 60.0f, 2.0f) - 1.0f));
+                float m = val - c;
+                float r, g, b;
+                if      (hue < 60)  { r = c; g = x; b = 0; }
+                else if (hue < 120) { r = x; g = c; b = 0; }
+                else if (hue < 180) { r = 0; g = c; b = x; }
+                else if (hue < 240) { r = 0; g = x; b = c; }
+                else if (hue < 300) { r = x; g = 0; b = c; }
+                else                { r = c; g = 0; b = x; }
+                raw[idx3]     = (unsigned char)((r + m) * 255);
+                raw[idx3 + 1] = (unsigned char)((g + m) * 255);
+                raw[idx3 + 2] = (unsigned char)((b + m) * 255);
+            }
+            flowImage_.update();
+        }
+    }
+
     updateImageGenerator();
 
     // --- FEED RECTANGULAR CLUSTER TRACKER ---
@@ -1061,6 +1202,9 @@ void ofxDVS::draw() {
     // Event-driven reconstruction image
     if (drawRecon) {
         reconImage_.draw(0, 0, ofGetWidth(), ofGetHeight());
+    }
+    if (drawOptFlow) {
+        flowImage_.draw(0, 0, ofGetWidth(), ofGetHeight());
     }
     drawSpikes();         // if dvs.doDrawSpikes
     drawImu6();
@@ -2100,6 +2244,10 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
     	changeImu();
     }else if (e.target->getLabel() == "Recon Image") {
         drawRecon = e.target->getChecked();
+    }else if (e.target->is("ENABLE OPTICAL FLOW")) {
+        bool checked = e.target->getChecked();
+        if (this->optflow_panel) this->optflow_panel->setVisible(checked);
+        ofLog(OF_LOG_NOTICE, "Optical Flow panel %s", checked ? "shown" : "hidden");
     }else if (e.target->getLabel() == "DVS Image Gen"){
         setDrawImageGen(e.target->getChecked());
     }else if(e.target->getLabel() == "Raw Spikes"){

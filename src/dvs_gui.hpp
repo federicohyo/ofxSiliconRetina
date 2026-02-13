@@ -21,10 +21,17 @@ std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs);
 /// Returns the panel; ownership is transferred to the caller.
 std::unique_ptr<ofxDatGui> createTrackerPanel(ofxDVS* dvs);
 
+/// Create the Optical Flow panel and attach event handlers.
+/// Returns the panel; ownership is transferred to the caller.
+std::unique_ptr<ofxDatGui> createOptFlowPanel(ofxDVS* dvs);
+
 // Event handler callbacks (bound to the panels)
 void onNNToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs);
 void onNNSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);
 void onNNButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs);
+
+void onOptFlowToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs);
+void onOptFlowSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);
 
 void onTrackerToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs);
 void onTrackerSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);

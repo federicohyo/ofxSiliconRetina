@@ -733,6 +733,16 @@ public:
     // NN / YOLO panel
     std::unique_ptr<ofxDatGui> nn_panel;
 
+    // Optical Flow panel
+    std::unique_ptr<ofxDatGui> optflow_panel;
+
+    // Event-based optical flow (local plane fitting on SAE)
+    bool  drawOptFlow     = false;
+    float optFlowDecay    = 0.95f;
+    int   optFlowRadius   = 3;          // neighborhood half-size (7x7)
+    int   optFlowDt_us    = 50000;      // 50 ms temporal window
+    float optFlowMaxSpeed = 200.0f;     // display clamp (px/s)
+
     // Overlays
     void drawRectangularClusterTracker();
 
@@ -773,6 +783,11 @@ private:
     float reconDecay = 0.97f;
     float reconContrib = 0.15f;
     int reconSpread = 2;
+
+    // Event-based optical flow (SAE + flow maps, private storage)
+    std::vector<int64_t> saeTimestamp_;
+    std::vector<float>   flowX_, flowY_;
+    ofImage              flowImage_;
 
     // Packet queue management
     std::deque<caerEventPacketContainer> backlog_;

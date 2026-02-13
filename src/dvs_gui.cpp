@@ -177,6 +177,45 @@ void onNNButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs) {
     }
 }
 
+// ---- Optical Flow Panel ----
+std::unique_ptr<ofxDatGui> createOptFlowPanel(ofxDVS* dvs) {
+    auto panel = std::make_unique<ofxDatGui>(ofxDatGuiAnchor::TOP_RIGHT);
+    panel->setVisible(false);
+
+    auto f = panel->addFolder(">> Optical Flow");
+    f->addToggle("DRAW FLOW", dvs->drawOptFlow);
+    f->addSlider("FLOW DECAY",     0.80, 1.0,  dvs->optFlowDecay);
+    f->addSlider("FLOW RADIUS",    1,    5,    dvs->optFlowRadius);
+    f->addSlider("FLOW DT (ms)",   5,    200,  dvs->optFlowDt_us / 1000);
+    f->addSlider("FLOW MAX SPEED", 10,   2000, dvs->optFlowMaxSpeed);
+
+    panel->setPosition(540, 0);
+
+    panel->onToggleEvent([dvs](ofxDatGuiToggleEvent e) { onOptFlowToggleEvent(e, dvs); });
+    panel->onSliderEvent([dvs](ofxDatGuiSliderEvent e) { onOptFlowSliderEvent(e, dvs); });
+
+    return panel;
+}
+
+void onOptFlowToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs) {
+    if (e.target->getName() == "DRAW FLOW") {
+        dvs->drawOptFlow = e.target->getChecked();
+    }
+}
+
+void onOptFlowSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
+    const std::string& n = e.target->getName();
+    if (n == "FLOW DECAY") {
+        dvs->optFlowDecay = e.value;
+    } else if (n == "FLOW RADIUS") {
+        dvs->optFlowRadius = (int)e.value;
+    } else if (n == "FLOW DT (ms)") {
+        dvs->optFlowDt_us = (int)e.value * 1000;
+    } else if (n == "FLOW MAX SPEED") {
+        dvs->optFlowMaxSpeed = e.value;
+    }
+}
+
 // ---- Tracker event handlers ----
 void onTrackerSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
     auto& cfg = dvs->rectangularClusterTrackerConfig;
