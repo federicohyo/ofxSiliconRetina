@@ -115,6 +115,10 @@ void ofxDVS::setup() {
         glPointSize(pointSizePx);
     }
 
+    // --- Event reconstruction (CPU per-pixel decay) ---
+    reconMap_.assign(sizeX * sizeY, 0.0f);
+    reconImage_.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+
     // imagePol
     imagePolarity.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
     newImagePol = false;
@@ -202,6 +206,10 @@ void ofxDVS::setup() {
     f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
     f1->addSlider("DVS Integration", 1, 100, fsint);
     f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
+    f1->addToggle("Recon Image", false);
+    f1->addSlider("Recon Decay", 0.90, 1.0, reconDecay);
+    f1->addSlider("Recon Contrib", 0.01, 0.5, reconContrib);
+    f1->addSlider("Recon Spread", 1, 8, reconSpread);
     f1->addToggle("ENABLE TRACKER", false);
     f1->addToggle("ENABLE NEURAL NETS", false);
 
@@ -832,6 +840,51 @@ void ofxDVS::update() {
 
     updateBAFilter();
     applyHotPixelFilter_();
+
+    // --- Event-driven image reconstruction (CPU per-pixel decay) ---
+    if (drawRecon) {
+        const int W = sizeX, H = sizeY;
+
+        // 1) Decay all pixels towards zero every frame
+        for (auto &v : reconMap_) v *= reconDecay;
+
+        // 2) Apply events with spatial spread
+        for (const auto &e : packetsPolarity) {
+            if (!e.valid) continue;
+            int cx = (int)e.pos.x, cy = (int)e.pos.y;
+            float val = e.pol ? reconContrib : -reconContrib;
+            for (int dy = -reconSpread; dy <= reconSpread; dy++) {
+                for (int dx = -reconSpread; dx <= reconSpread; dx++) {
+                    int px = cx + dx, py = cy + dy;
+                    if (px < 0 || px >= W || py < 0 || py >= H) continue;
+                    float dist = std::sqrt((float)(dx*dx + dy*dy));
+                    if (dist > reconSpread) continue;
+                    float w = 1.0f - dist / (reconSpread + 1.0f);
+                    float &pix = reconMap_[py * W + px];
+                    pix = std::clamp(pix + val * w, -1.0f, 1.0f);
+                }
+            }
+        }
+
+        // 3) Map to yellow (ON) / blue (OFF) colors
+        unsigned char *raw = reconImage_.getPixels().getData();
+        for (int i = 0; i < W * H; i++) {
+            float v = reconMap_[i];
+            int idx = i * 3;
+            if (v > 0) {
+                raw[idx]     = (unsigned char)(v * 255);
+                raw[idx + 1] = (unsigned char)(v * 200);
+                raw[idx + 2] = 0;
+            } else {
+                float a = -v;
+                raw[idx]     = 0;
+                raw[idx + 1] = (unsigned char)(a * 100);
+                raw[idx + 2] = (unsigned char)(a * 255);
+            }
+        }
+        reconImage_.update();
+    }
+
     updateImageGenerator();
 
     // --- FEED RECTANGULAR CLUSTER TRACKER ---
@@ -1005,6 +1058,10 @@ void ofxDVS::draw() {
     ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
     drawFrames();
     drawImageGenerator(); // if dvs.drawImageGen
+    // Event-driven reconstruction image
+    if (drawRecon) {
+        reconImage_.draw(0, 0, ofGetWidth(), ofGetHeight());
+    }
     drawSpikes();         // if dvs.doDrawSpikes
     drawImu6();
 
@@ -2041,6 +2098,8 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
     	changeDvs();
     }else if(e.target->getLabel() == "IMU"){
     	changeImu();
+    }else if (e.target->getLabel() == "Recon Image") {
+        drawRecon = e.target->getChecked();
     }else if (e.target->getLabel() == "DVS Image Gen"){
         setDrawImageGen(e.target->getChecked());
     }else if(e.target->getLabel() == "Raw Spikes"){
@@ -2085,6 +2144,15 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
     }else if( e.target->getLabel() == "DVS Image Gen"){
         cout << "Accumulation value : " << e.value << endl;
         setImageAccumulatorSpikes(e.value);
+    }
+    else if (e.target->getLabel() == "Recon Decay") {
+        reconDecay = e.value;
+    }
+    else if (e.target->getLabel() == "Recon Contrib") {
+        reconContrib = e.value;
+    }
+    else if (e.target->getLabel() == "Recon Spread") {
+        reconSpread = (int)e.value;
     }
     else if (e.target->getLabel() == "YOLO Conf") {
         yolo_pipeline.cfg.conf_thresh = e.value;

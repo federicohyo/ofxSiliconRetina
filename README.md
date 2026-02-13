@@ -9,6 +9,7 @@ An [openFrameworks](https://openframeworks.cc/) addon for interfacing Dynamic Vi
 - **TSDT gesture recognition** using temporal-spatial binary event tensors with EMA-smoothed logits
 - **Rectangular Cluster Tracker** for event-driven multi-object tracking
 - **ONNX Runtime** inference backend with multi-threaded execution and float16 support
+- **Event reconstruction** with per-pixel exponential decay, spatial spread, and ON/OFF color coding (yellow/blue)
 - 2D and 3D event visualization, APS frame display, IMU overlay
 - AEDAT 3.1 file recording and playback
 - Hot-pixel suppression via configurable refractory period filter
@@ -73,6 +74,26 @@ src/
   RectangularClusterTracker.hpp / .cpp   Event-driven cluster tracker
   ofxDvsPolarity.hpp             Polarity event data structures
 ```
+
+## Event Reconstruction
+
+The addon includes real-time event-driven image reconstruction. Since DVS cameras only output per-pixel brightness *changes* (not absolute intensity), this feature integrates events over time to reconstruct a continuous image of the scene.
+
+**How it works:**
+- Each pixel maintains a signed intensity value (-1.0 to +1.0)
+- Every frame, all pixels decay towards zero (exponential decay)
+- Incoming ON events add intensity; OFF events subtract it
+- Events spread to neighboring pixels within a configurable radius, weighted by distance
+- Positive values render as **yellow** (ON activity), negative as **blue** (OFF activity), fading to black
+
+**GUI controls:**
+| Slider | Range | Description |
+|--------|-------|-------------|
+| Recon Decay | 0.90 &ndash; 1.0 | Per-frame decay factor. Lower = faster fade, higher = longer trails |
+| Recon Contrib | 0.01 &ndash; 0.5 | Intensity added per event. Higher = brighter pops |
+| Recon Spread | 1 &ndash; 8 | Spatial spread radius in pixels. Higher = softer bleed |
+
+Toggle **Recon Image** in the GUI to enable/disable.
 
 ## Hotkeys
 

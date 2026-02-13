@@ -766,6 +766,14 @@ private:
     ofShader pointShader;
     float pointSizePx = 8.0f;
 
+    // Event-driven reconstruction (CPU per-pixel decay)
+    std::vector<float> reconMap_;   // per-pixel intensity, -1.0 to +1.0
+    ofImage reconImage_;            // color output (OF_IMAGE_COLOR)
+    bool drawRecon = false;
+    float reconDecay = 0.97f;
+    float reconContrib = 0.15f;
+    int reconSpread = 2;
+
     // Packet queue management
     std::deque<caerEventPacketContainer> backlog_;
     size_t backlog_max_ = 15;
