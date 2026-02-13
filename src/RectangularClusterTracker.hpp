@@ -375,6 +375,7 @@ public:
     void setVanishingPoint(float x, float y) { vanishingPoint = Point2D<float>(x, y); }
     void resetVanishingPoint() { vanishingPoint.reset(); }
     void draw(const ofRectangle& stage);
+    size_t getNumClusters() const { return clusters.size(); }
 
 private:
     Cluster * findClusterNear(const PolarityEvent& ev);

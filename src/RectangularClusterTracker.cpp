@@ -106,12 +106,9 @@ void RectangularClusterTracker::Cluster::addEvent(const PolarityEvent& ev) {
     if (cfg.useOnePolarityOnlyEnabled) {
         if (ev.polarity == true) {
             return;
-        } 
-    } else {
-        if (ev.polarity == false) {
-            return;
         }
     }
+    // When useOnePolarityOnly is off, accept both polarities
 
     updateMass(ev.timestamp);
     const float m = cfg.mixingFactor;
@@ -943,12 +940,13 @@ void RectangularClusterTracker::filter(const PolaritiesQueue & input, Polarities
         if ((ev.x < 0) || (ev.x >= sx) || (ev.y < 0) || (ev.y >= sy)) {
             continue; // out of bounds from e.g. steadicom transform
         }
-        Cluster * closest = fastClusterFinder.findClusterNear(ev);
+        Cluster * closest = findClusterNear(ev);
 
         if (closest != nullptr) {
             closest->addEvent(ev, output);
         } else if (clusters.size() < cfg.maxNumClusters) { // start a new cluster
             clusters.push_back(std::make_shared<Cluster>(*this, ev, output));
+            fastClusterFinder.update(clusters.back().get());
         }
     }
 }

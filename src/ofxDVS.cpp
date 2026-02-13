@@ -246,7 +246,7 @@ void ofxDVS::setup() {
 
     // --- Load TSDT model via pipeline ---
     try {
-        tsdt_pipeline.loadModel(ofToDataPath("spikevision_822128128_fixed.onnx", true));
+        tsdt_pipeline.loadModel(ofToDataPath("tp_gesture_128x128.onnx", true)); //spikevision_822128128_fixed.onnx", true));
         tsdt_pipeline.selfTest();
         if (ofFile::doesFileExist(ofToDataPath("tsdt_input_fp32.bin", true))) {
             tsdt_pipeline.debugFromFile(ofToDataPath("tsdt_input_fp32.bin", true));
@@ -854,6 +854,14 @@ void ofxDVS::update() {
 
         rectangularClusterTracker->filter(inq, outq);
         rectangularClusterTracker->updateClusterList(latest_ts);
+
+        // Debug: log tracker state every ~60 frames
+        static int dbg_ctr = 0;
+        if (++dbg_ctr % 60 == 0) {
+            ofLogNotice() << "[Tracker] valid_events=" << inq.size()
+                          << " clusters=" << rectangularClusterTracker->getNumClusters()
+                          << " latest_ts=" << latest_ts;
+        }
     }
 
     // ---- TSDT: push events and run inference (synchronous) ----
@@ -967,6 +975,8 @@ void ofxDVS::drawRectangularClusterTracker()
 {
     if (!(rectangularClusterTrackerEnabled && rectangularClusterTracker)) return;
 
+    size_t nClusters = rectangularClusterTracker->getNumClusters();
+
     ofPushStyle();
     ofDisableDepthTest();
     ofNoFill();
@@ -984,6 +994,7 @@ void ofxDVS::drawRectangularClusterTracker()
 
     ofPopMatrix();
     ofPopStyle();
+
 }
 
 
@@ -1017,6 +1028,15 @@ void ofxDVS::draw() {
     }
 
     myCam.end();
+
+    // Debug: draw cluster count outside camera transform (reliable 2D text)
+    if (rectangularClusterTrackerEnabled && rectangularClusterTracker) {
+        size_t n = rectangularClusterTracker->getNumClusters();
+        char buf[64];
+        snprintf(buf, sizeof(buf), "Clusters: %zu", n);
+        ofDrawBitmapStringHighlight(buf, 20, ofGetHeight() - 30,
+                                    ofColor(0,0,0,180), ofColor(255,215,0));
+    }
 
     // Pointer + GUI
     drawMouseDistanceToSpikes();
@@ -2014,9 +2034,6 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
         auto checked = e.target->getChecked();
         this->tracker_panel->setVisible(checked);
         this->enableTracker(checked);
-        this->rectangularClusterTrackerConfig.useVelocity = true;
-        this->rectangularClusterTrackerConfig.thresholdVelocityForVisibleCluster = 30.f;
-
         ofLog(OF_LOG_NOTICE, "Tracker enabled %d", checked);
     }else if(e.target->getLabel() == "APS"){
     	changeAps();

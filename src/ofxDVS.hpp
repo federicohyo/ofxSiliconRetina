@@ -65,7 +65,7 @@
 struct polarity {
     int info;
     ofPoint pos;
-    int timestamp;
+    int64_t timestamp;
     bool pol;
     bool valid;
 };
