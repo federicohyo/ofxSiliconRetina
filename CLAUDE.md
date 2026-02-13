@@ -65,8 +65,9 @@ Uses openFrameworks 0.12.0 build system (`compile.project.mk`). Compiler: g++-13
 - GUI: sliders for refractory, rate window, rate threshold + "Recalibrate Hot Pixels" button
 
 ### GUI
-- `f1` — main panel (ofxDatGui): toggles, sliders, buttons for DVS/APS/IMU, recording, filters
-- `nn_panel` — NN controls: YOLO config, TSDT config
+- `f1` — main panel (ofxDatGui): toggles, sliders, buttons for DVS/APS/IMU, recording, filters, playback speed
+- `nn_panel` — NN controls: YOLO config, TSDT config, TP Detector
+- `optflow_panel` — optical flow + event reconstruction controls
 - `tracker_panel` — 50+ cluster tracker parameters
 - Event handlers: `onButtonEvent()`, `onToggleEvent()`, `onSliderEvent()`, `onMatrixEvent()`
 
@@ -77,7 +78,10 @@ Uses openFrameworks 0.12.0 build system (`compile.project.mk`). Compiler: g++-13
 - **Valid flag**: All filters set `e.valid = false`; all consumers skip invalid events
 - **Async NN**: Submit lambda job → worker executes → main reads `lastResult()` next frame
 - **VTEI tensor**: 5-channel (pos count, neg count, time-surface, edge, intensity) for YOLO
-- **File format**: AEDAT 3.1 for recording/playback
+- **File format**: AEDAT4 (dv-processing) for recording; AEDAT 3.1 and AEDAT4 for playback
+- **Recording**: `dv::io::MonoCameraWriter` writes `.aedat4` files with event-only config
+- **Playback timing**: file-time-to-wall-time mapping via `fileTimeOrigin_`/`wallTimeOrigin_`/`playbackSpeed_`; backpressure on reader thread prevents packet loss at slow speeds
+- **Speed control**: log-scale slider (-1..+2 → 0.1x..100x); continuity on speed change and pause/resume
 
 ## Git
 

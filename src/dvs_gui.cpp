@@ -189,6 +189,12 @@ std::unique_ptr<ofxDatGui> createOptFlowPanel(ofxDVS* dvs) {
     f->addSlider("FLOW DT (ms)",   5,    200,  dvs->optFlowDt_us / 1000);
     f->addSlider("FLOW MAX SPEED", 10,   2000, dvs->optFlowMaxSpeed);
 
+    auto r = panel->addFolder(">> Reconstruction");
+    r->addToggle("RECON IMAGE", dvs->drawRecon);
+    r->addSlider("RECON DECAY",   0.90, 1.0,  dvs->reconDecay);
+    r->addSlider("RECON CONTRIB", 0.01, 0.5,  dvs->reconContrib);
+    r->addSlider("RECON SPREAD",  1,    8,    dvs->reconSpread);
+
     panel->setPosition(540, 0);
 
     panel->onToggleEvent([dvs](ofxDatGuiToggleEvent e) { onOptFlowToggleEvent(e, dvs); });
@@ -200,6 +206,8 @@ std::unique_ptr<ofxDatGui> createOptFlowPanel(ofxDVS* dvs) {
 void onOptFlowToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs) {
     if (e.target->getName() == "DRAW FLOW") {
         dvs->drawOptFlow = e.target->getChecked();
+    } else if (e.target->getName() == "RECON IMAGE") {
+        dvs->drawRecon = e.target->getChecked();
     }
 }
 
@@ -213,6 +221,12 @@ void onOptFlowSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
         dvs->optFlowDt_us = (int)e.value * 1000;
     } else if (n == "FLOW MAX SPEED") {
         dvs->optFlowMaxSpeed = e.value;
+    } else if (n == "RECON DECAY") {
+        dvs->reconDecay = e.value;
+    } else if (n == "RECON CONTRIB") {
+        dvs->reconContrib = e.value;
+    } else if (n == "RECON SPREAD") {
+        dvs->reconSpread = (int)e.value;
     }
 }
 

@@ -16,8 +16,12 @@
 #include "devices/dvxplorer.h"
 #include "libcaer/devices/device_discover.h"
 #include <dv-processing/io/camera/discovery.hpp>
+#include <dv-processing/io/mono_camera_writer.hpp>
+#include <dv-processing/io/mono_camera_recording.hpp>
 
 #include <atomic>
+
+enum class AedatFormat { UNKNOWN, AEDAT31, AEDAT4 };
 
 
 #include "ofxDvsPolarity.hpp"
@@ -231,7 +235,21 @@ public:
         aedat_version = -1;
 
         for (unsigned int i = 0;i < files.size();i++) {
-            if(files[i].substr(files[i].find_last_of(".") + 1) == "aedat") {
+            std::string ext = files[i].substr(files[i].find_last_of(".") + 1);
+
+            // AEDAT4 files — no header parsing needed
+            if (ext == "aedat4") {
+                string string_path = path + "/" + files[i];
+                files_id = i;
+                fileInput = true;
+                fileFormat = AedatFormat::AEDAT4;
+                path = string_path;
+                ofLog(OF_LOG_NOTICE, "Found AEDAT4 file: %s", string_path.c_str());
+                return fileInput;
+            }
+
+            // AEDAT 3.1 files — parse header for version check
+            if(ext == "aedat") {
                 string string_path = path + "/" + files[i];
                 fstream file(files[i], ios::in | ios::out | ios::binary);
                 files_id = i;
@@ -268,6 +286,7 @@ public:
 
                     if(aedat_version != -1){
                         fileInput = true;
+                        fileFormat = AedatFormat::AEDAT31;
                         path = string_path;
                     }
 
@@ -288,7 +307,8 @@ public:
     STARTDEVICEORFILE:
         lock();
     	deviceReady = false;
-        fileInput = false;
+        // NOTE: fileInput is NOT reset here — it is a mode flag set
+        // externally by changePath()/tryFile()/tryLive().
         liveInput = false;
         fileInputLocal = false;
         fileInputReady = false;
@@ -382,6 +402,126 @@ public:
             doLoad = true;
             doChangePath = false;
             filename_to_open = path;
+
+            // Detect format by extension
+            {
+                std::string ext;
+                auto dotPos = filename_to_open.rfind('.');
+                if (dotPos != std::string::npos)
+                    ext = filename_to_open.substr(dotPos);
+                if (ext == ".aedat4")
+                    fileFormat = AedatFormat::AEDAT4;
+                else
+                    fileFormat = AedatFormat::AEDAT31;
+            }
+
+        SELECTFORMAT:
+
+            // =============== AEDAT4 reading path ===============
+            if (fileFormat == AedatFormat::AEDAT4) {
+                try {
+                    aedat4Reader = std::make_unique<dv::io::MonoCameraRecording>(filename_to_open);
+                    if (aedat4Reader->isEventStreamAvailable()) {
+                        auto res = aedat4Reader->getEventResolution().value();
+                        sizeX = res.width;
+                        sizeY = res.height;
+                    }
+                    fileInputReady = true;
+                    ofLog(OF_LOG_NOTICE, "Opened AEDAT4 file: %s (%dx%d)",
+                          filename_to_open.c_str(), sizeX, sizeY);
+                } catch (const std::exception &ex) {
+                    ofLog(OF_LOG_ERROR, "Failed to open AEDAT4: %s", ex.what());
+                    goto STARTDEVICEORFILE;
+                }
+
+                while (isThreadRunning()) {
+                    if (paused) {
+                        nanosleep((const struct timespec[]){{0, 50000L}}, NULL);
+                        continue;
+                    }
+                    if (liveInput) {
+                        aedat4Reader.reset();
+                        goto STARTDEVICEORFILE;
+                    }
+                    if (doChangePath) {
+                        aedat4Reader.reset();
+                        filename_to_open = path;
+                        // Detect new format
+                        std::string ext2;
+                        auto dp2 = filename_to_open.rfind('.');
+                        if (dp2 != std::string::npos) ext2 = filename_to_open.substr(dp2);
+                        if (ext2 != ".aedat4") {
+                            fileFormat = AedatFormat::AEDAT31;
+                            doChangePath = false;
+                            goto SELECTFORMAT;
+                        }
+                        try {
+                            aedat4Reader = std::make_unique<dv::io::MonoCameraRecording>(filename_to_open);
+                            if (aedat4Reader->isEventStreamAvailable()) {
+                                auto res = aedat4Reader->getEventResolution().value();
+                                sizeX = res.width;
+                                sizeY = res.height;
+                            }
+                            fileInputReady = true;
+                            resetTimingFlag.store(true);
+                            doChangePath = false;
+                        } catch (const std::exception &ex) {
+                            ofLog(OF_LOG_ERROR, "Failed to reopen AEDAT4: %s", ex.what());
+                            doChangePath = false;
+                        }
+                        continue;
+                    }
+
+                    auto events = aedat4Reader->getNextEventBatch();
+                    if (!events.has_value()) {
+                        // EOF — loop the file
+                        ofLog(OF_LOG_NOTICE, "AEDAT4: Reached end of file. Restarting...");
+                        aedat4Reader.reset();
+                        aedat4Reader = std::make_unique<dv::io::MonoCameraRecording>(filename_to_open);
+                        resetTimingFlag.store(true);
+                        continue;
+                    }
+
+                    // Convert dv::EventStore to caerPolarityEventPacket
+                    const int32_t capacity = static_cast<int32_t>(events->size());
+                    if (capacity == 0) continue;
+                    caerPolarityEventPacket polPkt = caerPolarityEventPacketAllocate(capacity, 0, 1);
+                    if (polPkt == nullptr) continue;
+
+                    int32_t idx = 0;
+                    for (const auto &ev : *events) {
+                        caerPolarityEvent e = caerPolarityEventPacketGetEvent(polPkt, idx);
+                        const int32_t ts32 = static_cast<int32_t>(ev.timestamp() & 0x7fffffff);
+                        caerPolarityEventSetTimestamp(e, ts32);
+                        caerPolarityEventSetX(e, static_cast<uint16_t>(ev.x()));
+                        caerPolarityEventSetY(e, static_cast<uint16_t>(ev.y()));
+                        caerPolarityEventSetPolarity(e, ev.polarity());
+                        caerPolarityEventValidate(e, polPkt);
+                        ++idx;
+                    }
+                    caerEventPacketHeaderSetEventNumber(&polPkt->packetHeader, idx);
+                    caerEventPacketHeaderSetEventValid(&polPkt->packetHeader, idx);
+
+                    caerEventPacketContainer cont = caerEventPacketContainerAllocate(1);
+                    caerEventPacketContainerSetEventPacket(cont, 0, (caerEventPacketHeader)polPkt);
+
+                    // Backpressure: wait when queue is full (don't drop packets)
+                    lock();
+                    constexpr size_t MAX_QUEUE = 64;
+                    while (container.size() >= MAX_QUEUE &&
+                           isThreadRunning() && !liveInput && !doChangePath && !paused) {
+                        unlock();
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        lock();
+                    }
+                    container.push_back(cont);
+                    unlock();
+
+                    nanosleep((const struct timespec[]){{0, 500L}}, NULL);
+                }
+            }
+            // =============== AEDAT 3.1 reading path (backward compatible) ===============
+            else {
             istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
             istreamf.seekg(0,istreamf.beg);
             if (!istreamf.is_open()){
@@ -441,6 +581,7 @@ public:
                         istreamf.close();
                         istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
                         header_skipped = false;
+                        resetTimingFlag.store(true);
                         goto HEADERPARSE;
                     }
                     if (istreamf.fail()){
@@ -462,15 +603,28 @@ public:
                 if(doChangePath){
                     filename_to_open = path;
                     ofLog(OF_LOG_NOTICE, "Filename "+filename_to_open);
+                    // Check if new file is AEDAT4
+                    std::string ext3;
+                    auto dp3 = filename_to_open.rfind('.');
+                    if (dp3 != std::string::npos) ext3 = filename_to_open.substr(dp3);
+                    if (ext3 == ".aedat4") {
+                        istreamf.close();
+                        fileFormat = AedatFormat::AEDAT4;
+                        doChangePath = false;
+                        fileInputReady = false;
+                        goto SELECTFORMAT;
+                    }
                     istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
                     header_skipped = false;
                     doChangePath = false;
                     fileIndexReady = false;
+                    resetTimingFlag.store(true);
                     goto HEADERPARSE;
                 }
                 unlock();
                 nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
             }
+            } // end AEDAT3.1 else
         }
     }
 
@@ -505,6 +659,11 @@ public:
 
     string line;
     string filename_to_open;
+
+    // AEDAT4 file reading
+    std::unique_ptr<dv::io::MonoCameraRecording> aedat4Reader;
+    AedatFormat fileFormat = AedatFormat::UNKNOWN;
+    std::atomic<bool> resetTimingFlag{false};
 };
 
 class ofxDVS {
@@ -531,7 +690,6 @@ public:
     void changeStats();
     void drawImageGenerator();
     const char * chipIDToName(int16_t chipID, bool withEndSlash);
-    void writeHeaderFile();
     static int packetsFirstTimestampThenTypeCmp(const void *a, const void *b);
     void changeRecordingStatus();
     void changeRecordingStatusDb();
@@ -584,9 +742,9 @@ public:
     void initVisualizerMap();
     long **baFilterMap;
     void changePath();
-    void changeTargetSpeed(float val);
-    float getTargetSpeed();
-    void setTargetSpeed(float value);
+    void setPlaybackSpeed(float sliderPos);
+    float getPlaybackSpeed();
+    void resetPlaybackTiming();
     void changePause();
     void clearDraw();
     float **visualizerMap;
@@ -648,11 +806,8 @@ public:
     bool header_skipped;
     bool paused;
 
-    // file output aedat 3.0
-    ofstream myFile;
-    vector<long> ofxTime;
-    long ofxLastTs;
-    float targetSpeed;
+    // Playback speed
+    float playbackSpeed_ = 1.0f;
 
     // timing information
     long current, started;
@@ -743,6 +898,12 @@ public:
     int   optFlowDt_us    = 50000;      // 50 ms temporal window
     float optFlowMaxSpeed = 200.0f;     // display clamp (px/s)
 
+    // Event-driven reconstruction — GUI-accessible config
+    bool  drawRecon   = false;
+    float reconDecay  = 0.97f;
+    float reconContrib = 0.15f;
+    int   reconSpread = 2;
+
     // Overlays
     void drawRectangularClusterTracker();
 
@@ -776,13 +937,22 @@ private:
     ofShader pointShader;
     float pointSizePx = 8.0f;
 
-    // Event-driven reconstruction (CPU per-pixel decay)
+    // Event-driven reconstruction (CPU per-pixel decay) — internal storage
     std::vector<float> reconMap_;   // per-pixel intensity, -1.0 to +1.0
     ofImage reconImage_;            // color output (OF_IMAGE_COLOR)
-    bool drawRecon = false;
-    float reconDecay = 0.97f;
-    float reconContrib = 0.15f;
-    int reconSpread = 2;
+
+    // AEDAT4 recording
+    std::unique_ptr<dv::io::MonoCameraWriter> aedat4Writer_;
+
+    // Playback timing
+    int64_t fileTimeOrigin_    = 0;
+    int64_t wallTimeOrigin_    = 0;
+    int64_t fileTimePaused_    = 0;
+    bool    timingInitialized_ = false;
+    float   speedSliderPos_    = 0.0f;   // log10 position: -1..+2
+
+    // Speed display widget
+    ofxDatGuiTextInput* mySpeedDisplay = nullptr;
 
     // Event-based optical flow (SAE + flow maps, private storage)
     std::vector<int64_t> saeTimestamp_;

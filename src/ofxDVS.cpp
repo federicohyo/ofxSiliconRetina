@@ -54,7 +54,7 @@ void ofxDVS::setup() {
         uint64_t t1 = ofGetElapsedTimeMicros();
         if( (t1-t0) > 50000){
             ofLog(OF_LOG_NOTICE, "starting in file mode.");
-            ofFileDialogResult result = ofSystemLoadDialog("Load aedat3.1 file");
+            ofFileDialogResult result = ofSystemLoadDialog("Load recording (.aedat / .aedat4)");
             if(result.bSuccess) {
                 path = result.getPath();
                 // load your file at `path`
@@ -146,8 +146,9 @@ void ofxDVS::setup() {
 
     // reset timestamp
     ofResetElapsedTimeCounter();
-    ofxLastTs = 0;
-    targetSpeed = 0.1; // real_time
+    playbackSpeed_ = 1.0f;
+    speedSliderPos_ = 0.0f;
+    timingInitialized_ = false;
     paused = false;
     started = 0;
     isStarted = false;
@@ -175,7 +176,8 @@ void ofxDVS::setup() {
     f1->addBreak();
     f1->addFRM();
     f1->addBreak();
-    f1->addSlider("1/speed", 0, 2, targetSpeed);
+    f1->addSlider("Playback Speed", -1, 2, speedSliderPos_);
+    mySpeedDisplay = f1->addTextInput("SPEED", "1.0x");
     myTextTimer = f1->addTextInput("TIME", timeString);
     myTempReader = f1->addTextInput("IMU TEMPERATURE", to_string((int)(imuTemp)));
     f1->addToggle("APS", true);
@@ -212,10 +214,6 @@ void ofxDVS::setup() {
     f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
     f1->addSlider("DVS Integration", 1, 100, fsint);
     f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
-    f1->addToggle("Recon Image", false);
-    f1->addSlider("Recon Decay", 0.90, 1.0, reconDecay);
-    f1->addSlider("Recon Contrib", 0.01, 0.5, reconContrib);
-    f1->addSlider("Recon Spread", 1, 8, reconSpread);
     f1->addToggle("ENABLE OPTICAL FLOW", false);
     f1->addToggle("ENABLE TRACKER", false);
     f1->addToggle("ENABLE NEURAL NETS", false);
@@ -388,6 +386,18 @@ void ofxDVS::changePath(){
     ofLog(OF_LOG_NOTICE, path);
     // update file path
     thread.path = path;
+
+    // Detect format from extension
+    {
+        std::string ext;
+        auto dotPos = path.rfind('.');
+        if (dotPos != std::string::npos) ext = path.substr(dotPos);
+        if (ext == ".aedat4")
+            thread.fileFormat = AedatFormat::AEDAT4;
+        else
+            thread.fileFormat = AedatFormat::AEDAT31;
+    }
+
     // clean memory
     vector<polarity>().swap(packetsPolarity);
     packetsPolarity.clear();
@@ -398,6 +408,7 @@ void ofxDVS::changePath(){
     vector<imu6>().swap(packetsImu6);
     packetsImu6.clear();
     packetsImu6.shrink_to_fit();
+    thread.aedat4Reader.reset();
     thread.istreamf.close();
     thread.header_skipped  = false;
     thread.fileInput = true;
@@ -411,60 +422,47 @@ void ofxDVS::changePath(){
     }
     liveInput = false;
     thread.unlock();
+
+    resetPlaybackTiming();
 }
 
 //--------------------------------------------------------------
 void ofxDVS::openRecordingFileDb(){
-    // File Recording Output
-    path = getUserHomeDir();
+    // File Recording Output — AEDAT4 via dv-processing (dataset subdirectory)
+    string dir = getUserHomeDir();
     if(orginal){
-        path = path+"/dataset/";
+        dir = dir+"/dataset/";
     }else{
-        path = path+"/dataset/selected/";
+        dir = dir+"/dataset/selected/";
     }
-    time_t t = time(0);   // get time now
+    time_t t = time(0);
     struct tm * now = localtime( & t );
     char buffer [80];
-    strftime (buffer,80,"ofxDVS_%Y-%m-%d-%I_%M_%S.aedat",now);
-    string filename = path + "/" + buffer;
-    myFile.open(filename, ios::out | ios::binary);
-    writeHeaderFile();
+    strftime(buffer, 80, "ofxDVS_%Y-%m-%d-%I_%M_%S.aedat4", now);
+    string filename = dir + "/" + buffer;
+
+    std::string camName = chipIDToName(chipId, false);
+    auto cfg = dv::io::MonoCameraWriter::EventOnlyConfig(camName,
+                   cv::Size(sizeX, sizeY));
+    aedat4Writer_ = std::make_unique<dv::io::MonoCameraWriter>(filename, cfg);
+    ofLogNotice() << "[Recording] Opened AEDAT4 file: " << filename;
 }
 
 //--------------------------------------------------------------
 void ofxDVS::openRecordingFile(){
-    // File Recording Output
-    path = getUserHomeDir();
-    time_t t = time(0);   // get time now
+    // File Recording Output — AEDAT4 via dv-processing
+    string dir = getUserHomeDir();
+    time_t t = time(0);
     struct tm * now = localtime( & t );
     char buffer [80];
-    strftime (buffer,80,"ofxDVS_%Y-%m-%d-%I_%M_%S.aedat",now);
-    string filename = path + "/" + buffer;
-    myFile.open(filename, ios::out | ios::binary);
-    writeHeaderFile();
-}
+    strftime(buffer, 80, "ofxDVS_%Y-%m-%d-%I_%M_%S.aedat4", now);
+    string filename = dir + "/" + buffer;
 
-//--------------------------------------------------------------
-void ofxDVS::writeHeaderFile(){
-    // Time
-    struct tm currentTime;
-    time_t currentTimeEpoch = time(NULL);
-    localtime_r(&currentTimeEpoch, &currentTime);
-    size_t currentTimeStringLength = 44;
-    char currentTimeString[currentTimeStringLength + 1]; // + 1 for terminating NUL byte.
-    strftime(currentTimeString, currentTimeStringLength + 1, "#Start-Time: %Y-%m-%d %H:%M:%S (TZ%z)\r\n", &currentTime);
-
-    // Select Chip Id
-    size_t sourceStringLength = (size_t) snprintf(NULL, 0, "#Source 0: %s\r\n",chipIDToName(chipId, false));
-    char sourceString[sourceStringLength + 1];
-    snprintf(sourceString, sourceStringLength + 1, "#Source 0: %s\r\n",chipIDToName(chipId, false));
-    sourceString[sourceStringLength] = '\0';
-    // Write Header
-    myFile << "#!AER-DAT3.1\r\n";
-    myFile << "#Format: RAW\r\n";
-    myFile << sourceString;
-    myFile << currentTimeString;
-    myFile << "#!END-HEADER\r\n";
+    std::string camName = chipIDToName(chipId, false);
+    auto cfg = dv::io::MonoCameraWriter::EventOnlyConfig(camName,
+                   cv::Size(sizeX, sizeY));
+    aedat4Writer_ = std::make_unique<dv::io::MonoCameraWriter>(filename, cfg);
+    ofLogNotice() << "[Recording] Opened AEDAT4 file: " << filename;
 }
 
 //--------------------------------------------------------------
@@ -474,16 +472,12 @@ void ofxDVS::changeRecordingStatusDb(){
     imuStatus = true; // yes IMU
     if(isRecording){
         isRecording = false;
-        //close file
-        myFile.close();
+        aedat4Writer_.reset();
         ofLog(OF_LOG_NOTICE, "Stop recording\n");
     }else{
-        //open file and write header
-        resetTs();
         openRecordingFileDb();
         isRecording = true;
         ofLog(OF_LOG_NOTICE, "Start recording\n");
-
     }
 }
 
@@ -492,16 +486,12 @@ void ofxDVS::changeRecordingStatusDb(){
 void ofxDVS::changeRecordingStatus(){
     if(isRecording){
         isRecording = false;
-        //close file
-        myFile.close();
+        aedat4Writer_.reset();
         ofLog(OF_LOG_NOTICE, "Stop recording\n");
     }else{
-        //open file and write header
-		resetTs();
         openRecordingFile();
         isRecording = true;
         ofLog(OF_LOG_NOTICE, "Start recording\n");
-
     }
 }
 
@@ -764,8 +754,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
         }
     }
 
-	//keep track of last commit
-    ofxLastTs = ofGetElapsedTimeMicros();
     return(true);
 
 }
@@ -791,53 +779,74 @@ void ofxDVS::update() {
         local.swap(thread.container);   // O(1) swap, clears producer queue
         thread.unlock();
 
+        // Check if the file looped (thread signalled a reset)
+        if (thread.resetTimingFlag.exchange(false)) {
+            timingInitialized_ = false;
+        }
+
+        // Prepend any deferred packets from last frame
+        if (!backlog_.empty()) {
+            std::vector<caerEventPacketContainer> merged;
+            merged.reserve(backlog_.size() + local.size());
+            for (auto &pc : backlog_) merged.push_back(pc);
+            backlog_.clear();
+            for (auto &pc : local) merged.push_back(pc);
+            local.swap(merged);
+        }
+
         // 2) process WITHOUT holding the lock
+        bool isFileMode = thread.fileInputReady;
         for (auto &packetContainer : local) {
             bool delpc = false;
 
-            long firstTs   = caerEventPacketContainerGetLowestEventTimestamp (packetContainer);
-            long highestTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
-            long current_file_dt = highestTs - firstTs;
-            long current_ofx_dt  = ofGetElapsedTimeMicros() - ofxLastTs;
+            long packetTs = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
 
-            if (targetSpeed <= 0) targetSpeed = 1e-7f;
-
-            if (current_file_dt < (float)current_ofx_dt / targetSpeed) {
-                delpc = organizeData(packetContainer);
-
-                long ts = caerEventPacketContainerGetHighestEventTimestamp(packetContainer);
-                if (ts != -1) {
-                    if (!isStarted || ts < started) { started = ts; isStarted = true; }
-                    unsigned long cur = ts - started;
-                    microseconds = cur - (minutes * 60) * 1e6 - seconds * 1e6;
-                    minutes      = (cur / 60e6);
-                    seconds      = (((int)cur % (int)60e6) / 1e6);
-                    hours        = 0;
-                    sprintf(timeString, " %02lu:%02lu:%02lu:%04lu", hours, minutes, seconds, microseconds);
-                } else {
-                    sprintf(timeString, "%02u", 0u);
+            // --- Timing gate for file playback ---
+            if (isFileMode && packetTs != -1) {
+                if (!timingInitialized_) {
+                    fileTimeOrigin_ = packetTs;
+                    wallTimeOrigin_ = ofGetElapsedTimeMicros();
+                    timingInitialized_ = true;
                 }
-
-                if (isRecording) {
-                    size_t n = (size_t)caerEventPacketContainerGetEventPacketsNumber(packetContainer);
-                    qsort(packetContainer->eventPackets, n, sizeof(caerEventPacketHeader),
-                        &packetsFirstTimestampThenTypeCmp);
-                    for (int32_t i = 0; i < (int32_t)n; i++) {
-                        auto ph = caerEventPacketContainerGetEventPacket(packetContainer, i);
-                        if (!ph) continue;
-                        caerEventPacketHeaderSetEventCapacity(ph, caerEventPacketHeaderGetEventNumber(ph));
-                        size_t sizePacket = caerEventPacketGetSize(ph);
-                        caerEventPacketHeaderSetEventSource(ph, caerEventPacketHeaderGetEventSource(ph));
-                        myFile.write((char*)ph, sizePacket);
+                int64_t fileOffset = packetTs - fileTimeOrigin_;
+                if (playbackSpeed_ <= 0.0f) playbackSpeed_ = 0.01f;
+                int64_t targetWallOffset = (int64_t)((double)fileOffset / (double)playbackSpeed_);
+                int64_t wallNow = ofGetElapsedTimeMicros();
+                if ((wallNow - wallTimeOrigin_) < targetWallOffset) {
+                    // Too early — defer this and all subsequent packets
+                    backlog_.push_back(packetContainer);
+                    // defer remaining packets
+                    for (size_t ri = (&packetContainer - &local[0]) + 1; ri < local.size(); ri++) {
+                        backlog_.push_back(local[ri]);
                     }
+                    break; // stop processing this frame
                 }
+            }
+
+            delpc = organizeData(packetContainer);
+
+            // Update time display
+            if (packetTs != -1) {
+                if (!isStarted || packetTs < started) { started = packetTs; isStarted = true; }
+                unsigned long cur = packetTs - started;
+                microseconds = cur - (minutes * 60) * 1e6 - seconds * 1e6;
+                minutes      = (cur / 60e6);
+                seconds      = (((int)cur % (int)60e6) / 1e6);
+                hours        = 0;
+                sprintf(timeString, " %02lu:%02lu:%02lu:%04lu", hours, minutes, seconds, microseconds);
             } else {
-                // too fast; defer this packet to the next GUI frame
-                if (backlog_.size() >= backlog_max_) {
-                    caerEventPacketContainerFree(backlog_.front());
-                    backlog_.pop_front();
+                sprintf(timeString, "%02u", 0u);
+            }
+
+            // AEDAT4 recording: write valid events from this packet
+            if (isRecording && aedat4Writer_) {
+                dv::EventStore store;
+                for (const auto& e : packetsPolarity) {
+                    if (!e.valid) continue;
+                    store.emplace_back(e.timestamp, (int16_t)e.pos.x,
+                                       (int16_t)e.pos.y, e.pol);
                 }
-                backlog_.push_back(packetContainer);
+                if (!store.isEmpty()) aedat4Writer_->writeEvents(store);
             }
         }
     } else {
@@ -1651,7 +1660,7 @@ void ofxDVS::changeLoadFile() {
     ofLog(OF_LOG_WARNING,"FileInput mode a");
     if(thread.fileInput){
     	ofLog(OF_LOG_WARNING,"FileInput mode");
-        ofFileDialogResult result = ofSystemLoadDialog("Load aedat file");
+        ofFileDialogResult result = ofSystemLoadDialog("Load recording (.aedat / .aedat4)");
         if(result.bSuccess) {
             path = result.getPath();
             // load your file at `path`
@@ -1681,7 +1690,7 @@ void ofxDVS::changeLoadFile() {
 //--------------------------------------------------------------
 void ofxDVS::loadFile() {
 	ofLog(OF_LOG_WARNING,"loadfiles");
-    ofFileDialogResult result = ofSystemLoadDialog("Load aedat file");
+    ofFileDialogResult result = ofSystemLoadDialog("Load recording (.aedat / .aedat4)");
     if(result.bSuccess) {
         path = result.getPath();
         // load your file at `path`
@@ -1730,8 +1739,9 @@ void ofxDVS::exit() {
     } catch (...) {}
 
     if (isRecording) {
-        myFile.close();
+        aedat4Writer_.reset();
     }
+    thread.aedat4Reader.reset();
 
     ofLogNotice() << "[ofxDVS] exit: done";
 }
@@ -2127,29 +2137,52 @@ float ofxDVS::getImuTemp(){
 }
 
 //--------------------------------------------------------------
-void ofxDVS::changeTargetSpeed(float val){
-    targetSpeed = targetSpeed + val;
-    ofLog(OF_LOG_NOTICE, "Target speed is now %f", targetSpeed);
+void ofxDVS::setPlaybackSpeed(float sliderPos){
+    float oldSpeed = playbackSpeed_;
+    speedSliderPos_ = sliderPos;
+    playbackSpeed_ = std::pow(10.0f, sliderPos);
+    if (playbackSpeed_ < 0.01f) playbackSpeed_ = 0.01f;
+
+    // Continuity: recalculate wallTimeOrigin_ so current file position stays put
+    if (timingInitialized_ && oldSpeed > 0.0f) {
+        int64_t now = ofGetElapsedTimeMicros();
+        double currentFileOffset = (double)(now - wallTimeOrigin_) * (double)oldSpeed;
+        wallTimeOrigin_ = now - (int64_t)(currentFileOffset / (double)playbackSpeed_);
+    }
+    ofLog(OF_LOG_NOTICE, "Playback speed: %.2fx (slider=%.2f)", playbackSpeed_, sliderPos);
 }
 
 //--------------------------------------------------------------
-void ofxDVS::setTargetSpeed(float val){
-	targetSpeed = val;
+float ofxDVS::getPlaybackSpeed(){
+    return playbackSpeed_;
 }
 
 //--------------------------------------------------------------
-float ofxDVS::getTargetSpeed(){
-    return(targetSpeed);
+void ofxDVS::resetPlaybackTiming(){
+    timingInitialized_ = false;
+    fileTimeOrigin_ = 0;
+    wallTimeOrigin_ = 0;
+    fileTimePaused_ = 0;
 }
 
 //--------------------------------------------------------------
 void ofxDVS::changePause(){
     if(paused){
+        // Resuming: recalculate wall origin so playback continues seamlessly
         paused = false;
+        if (timingInitialized_ && playbackSpeed_ > 0.0f) {
+            wallTimeOrigin_ = ofGetElapsedTimeMicros() -
+                              (int64_t)((double)fileTimePaused_ / (double)playbackSpeed_);
+        }
         thread.lock();
         thread.paused = paused;
         thread.unlock();
     }else{
+        // Pausing: save current file-time progress
+        if (timingInitialized_) {
+            int64_t wallElapsed = ofGetElapsedTimeMicros() - wallTimeOrigin_;
+            fileTimePaused_ = (int64_t)((double)wallElapsed * (double)playbackSpeed_);
+        }
         paused = true;
         thread.lock();
         thread.paused = paused;
@@ -2242,8 +2275,6 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
     	changeDvs();
     }else if(e.target->getLabel() == "IMU"){
     	changeImu();
-    }else if (e.target->getLabel() == "Recon Image") {
-        drawRecon = e.target->getChecked();
     }else if (e.target->is("ENABLE OPTICAL FLOW")) {
         bool checked = e.target->getChecked();
         if (this->optflow_panel) this->optflow_panel->setVisible(checked);
@@ -2280,9 +2311,14 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
 
 void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
 {
-    if(e.target->getLabel() == "1/speed"){
-        cout << "onSliderEvent speed is : " << e.value << endl;
-        setTargetSpeed(e.value);
+    if(e.target->getLabel() == "Playback Speed"){
+        setPlaybackSpeed(e.value);
+        float spd = std::pow(10.0f, e.value);
+        char buf[16];
+        if (spd < 1.0f) snprintf(buf, sizeof(buf), "%.2fx", spd);
+        else if (spd < 10.0f) snprintf(buf, sizeof(buf), "%.1fx", spd);
+        else snprintf(buf, sizeof(buf), "%dx", (int)spd);
+        if (mySpeedDisplay) mySpeedDisplay->setText(buf);
     }else if(e.target->getLabel() == "DVS Integration"){
         cout << "Integration fsint is : " << e.value << endl;
         changeFSInt(e.value);
@@ -2292,15 +2328,6 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
     }else if( e.target->getLabel() == "DVS Image Gen"){
         cout << "Accumulation value : " << e.value << endl;
         setImageAccumulatorSpikes(e.value);
-    }
-    else if (e.target->getLabel() == "Recon Decay") {
-        reconDecay = e.value;
-    }
-    else if (e.target->getLabel() == "Recon Contrib") {
-        reconContrib = e.value;
-    }
-    else if (e.target->getLabel() == "Recon Spread") {
-        reconSpread = (int)e.value;
     }
     else if (e.target->getLabel() == "YOLO Conf") {
         yolo_pipeline.cfg.conf_thresh = e.value;
