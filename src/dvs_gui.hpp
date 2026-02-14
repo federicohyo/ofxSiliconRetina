@@ -26,6 +26,9 @@ std::unique_ptr<ofxDatGui> createTrackerPanel(ofxDVS* dvs);
 std::unique_ptr<ofxDatGui> createOptFlowPanel(ofxDVS* dvs);
 
 // Event handler callbacks (bound to the panels)
+void onFilterSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);
+void onFilterButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs);
+
 void onNNToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs);
 void onNNSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);
 void onNNButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs);

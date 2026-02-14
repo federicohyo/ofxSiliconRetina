@@ -273,11 +273,8 @@ void ofxDVS::setupGUI() {
     f1->addToggle("Pointer", false);
     f1->addToggle("Raw Spikes", true);
     f1->addToggle("DVS Image Gen", false);
-    f1->addSlider("Refractory (us)", 0, 5000, hot_refrac_us);
-    f1->addSlider("Hot Rate Window (ms)", 10, 1000, hot_rate_window_us / 1000);
-    f1->addSlider("Hot Rate Threshold", 10, 5000, hot_rate_threshold);
-    f1->addButton("Recalibrate Hot Pixels");
-    f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
+    f1->addToggle("HOT PIXEL FILTER", hotPixelFilterEnabled_);
+    f1->addToggle("BA FILTER", baFilterEnabled_);
     f1->addSlider("DVS Integration", 1, 100, fsint);
     f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
     f1->addToggle("ENABLE OPTICAL FLOW", false);
@@ -795,12 +792,25 @@ void ofxDVS::update() {
         // Check if the file looped (thread signalled a reset)
         if (thread.resetTimingFlag.exchange(false)) {
             timingInitialized_ = false;
-            // Note: TSDT/YOLO histories are NOT cleared here.
-            // TSDT doesn't use timestamps in tensor building (only x,y,pol),
-            // so the timestamp jump on file loop is harmless.  Clearing would
-            // blank the label for ~1-2 s while 80 k events re-accumulate.
-            // However, time-based binning IS sensitive to timestamp jumps:
+            isStarted = false;
+
+            // Reset all timestamp-dependent filter state so that
+            // backward-jumping timestamps don't cause progressive
+            // event starvation across file loops.
+            std::fill(last_ts_map_.begin(), last_ts_map_.end(), 0);
+            std::fill(hot_rate_count_.begin(), hot_rate_count_.end(), 0);
+            hot_rate_window_start_ = 0;
+            for (int i = 0; i < sizeX; ++i)
+                for (int j = 0; j < sizeY; ++j)
+                    baFilterMap[i][j] = 0;
+
+            // Reset optical flow SAE timestamps
+            std::fill(saeTimestamp_.begin(), saeTimestamp_.end(), 0);
+
+            // Clear all NN pipeline histories for deterministic results
             tpdvs_gesture_pipeline.clearHistory();
+            tsdt_pipeline.clearHistory();
+            yolo_pipeline.clearHistory();
         }
 
         // Prepend any deferred packets from last frame
@@ -840,10 +850,27 @@ void ofxDVS::update() {
                     fileTimeOrigin_ = packetTs;
                     wallTimeOrigin_ = ofGetElapsedTimeMicros();
                     fileOffset = 0;
+                    isStarted = false;
                     // Discard stale deferred packets from previous loop
                     for (auto& bp : backlog_)
                         caerEventPacketContainerFree(bp);
                     backlog_.clear();
+                    // Discard old-loop events accumulated earlier in this batch
+                    packetsPolarity.clear();
+                    packetsImu6.clear();
+                    packetsFrames.clear();
+                    // Reset timestamp-dependent filter state
+                    std::fill(last_ts_map_.begin(), last_ts_map_.end(), 0);
+                    std::fill(hot_rate_count_.begin(), hot_rate_count_.end(), 0);
+                    hot_rate_window_start_ = 0;
+                    for (int fi = 0; fi < sizeX; ++fi)
+                        for (int fj = 0; fj < sizeY; ++fj)
+                            baFilterMap[fi][fj] = 0;
+                    std::fill(saeTimestamp_.begin(), saeTimestamp_.end(), 0);
+                    // Clear NN pipeline histories
+                    tpdvs_gesture_pipeline.clearHistory();
+                    tsdt_pipeline.clearHistory();
+                    yolo_pipeline.clearHistory();
                 }
 
                 if (playbackSpeed_ <= 0.0f) playbackSpeed_ = 0.01f;
@@ -1658,6 +1685,7 @@ void ofxDVS::initVisualizerMap(){
 //--------------------------
 // Background Activity Filter
 void ofxDVS::updateBAFilter(){
+    if (!baFilterEnabled_) return;
 
     for (int i = 0; i < packetsPolarity.size(); i++) {
         ofPoint pos = packetsPolarity[i].pos;
@@ -2297,14 +2325,6 @@ void ofxDVS::onButtonEvent(ofxDatGuiButtonEvent e)
         nnEnabled = !nnEnabled;
         e.target->setLabel(nnEnabled ? "Disable NN" : "Enable NN");
         ofLogNotice() << "NN execution " << (nnEnabled ? "enabled" : "disabled");
-    }else if (e.target->getLabel() == "Recalibrate Hot Pixels") {
-        const size_t npix = sizeX * sizeY;
-        hot_calib_done_ = false;
-        hot_calib_started_ = false;
-        hot_calib_start_ts_ = 0;
-        std::fill(hot_calib_count_.begin(), hot_calib_count_.end(), 0);
-        std::fill(hot_pixel_mask_.begin(), hot_pixel_mask_.end(), false);
-        ofLogNotice() << "[HotPixel] Calibration restarted";
     }
 }
 
@@ -2341,17 +2361,16 @@ void ofxDVS::onToggleEvent(ofxDatGuiToggleEvent e)
     	e.target->setChecked(false); // reset to false
     }else if (e.target->getLabel() == "Draw YOLO") {
         yolo_pipeline.cfg.draw = e.target->getChecked();
+    }else if (e.target->is("HOT PIXEL FILTER")) {
+        hotPixelFilterEnabled_ = e.target->getChecked();
+        ofLogNotice() << "Hot pixel filter " << (hotPixelFilterEnabled_ ? "enabled" : "disabled");
+    }else if (e.target->is("BA FILTER")) {
+        baFilterEnabled_ = e.target->getChecked();
+        ofLogNotice() << "BA filter " << (baFilterEnabled_ ? "enabled" : "disabled");
     }else if (e.target->is("ENABLE NEURAL NETS")) {
-        bool checked = e.target->getChecked();
-        // show/hide panel
-        if (this->nn_panel) this->nn_panel->setVisible(checked);
-        // actually enable/disable inference
-        nnEnabled = checked;
-        // make sure nothing keeps drawing when disabled
-        if (!checked) {
-            yolo_pipeline.clearHistory();
-        }
-        ofLog(OF_LOG_NOTICE, "Neural nets %s", checked ? "enabled" : "disabled");
+        nnEnabled = e.target->getChecked();
+        if (!nnEnabled) yolo_pipeline.clearHistory();
+        ofLog(OF_LOG_NOTICE, "Neural nets %s", nnEnabled ? "enabled" : "disabled");
     }
 
 }
@@ -2369,9 +2388,6 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
     }else if(e.target->getLabel() == "DVS Integration"){
         cout << "Integration fsint is : " << e.value << endl;
         changeFSInt(e.value);
-    }else if( e.target->getLabel() == "BA Filter dt"){
-        cout << "BackGround Filter dt : " << e.value << endl;
-        changeBAdeltat(e.value);
     }else if( e.target->getLabel() == "DVS Image Gen"){
         cout << "Accumulation value : " << e.value << endl;
         setImageAccumulatorSpikes(e.value);
@@ -2382,17 +2398,18 @@ void ofxDVS::onSliderEvent(ofxDatGuiSliderEvent e)
     else if (e.target->getLabel() == "VTEI Window (ms)") {
         yolo_pipeline.cfg.vtei_win_ms = e.value;
         ofLogNotice() << "VTEI window set to " << e.value << " ms";
-    }else if (e.target->getLabel() == "Refractory (us)") {
-        hot_refrac_us = (int)e.value;
-    }else if (e.target->getLabel() == "Hot Rate Window (ms)") {
-        hot_rate_window_us = (int)e.value * 1000;
-        ofLogNotice() << "[HotPixel] Rate window set to " << hot_rate_window_us << " us";
-    }else if (e.target->getLabel() == "Hot Rate Threshold") {
-        hot_rate_threshold = (int)e.value;
-        ofLogNotice() << "[HotPixel] Rate threshold set to " << hot_rate_threshold;
     }
 
     myCam.reset(); // no mesh turning when using GUI
+}
+
+void ofxDVS::recalibrateHotPixels() {
+    hot_calib_done_ = false;
+    hot_calib_started_ = false;
+    hot_calib_start_ts_ = 0;
+    std::fill(hot_calib_count_.begin(), hot_calib_count_.end(), 0);
+    std::fill(hot_pixel_mask_.begin(), hot_pixel_mask_.end(), false);
+    ofLogNotice() << "[HotPixel] Calibration restarted";
 }
 
 // hot pixel calibration finalization
@@ -2425,6 +2442,7 @@ void ofxDVS::finalizeCalibration_() {
 
 // hot pixel filter: calibration + refractory + rate-based
 void ofxDVS::applyHotPixelFilter_() {
+    if (!hotPixelFilterEnabled_) return;
     const int W = sizeX, H = sizeY;
 
     for (auto &e : packetsPolarity) {
@@ -2456,16 +2474,20 @@ void ofxDVS::applyHotPixelFilter_() {
         }
 
         // --- refractory check ---
+        // Only filter when timestamps move forward; backward jump (file loop)
+        // means new data that should be accepted.
         int64_t last = last_ts_map_[idx];
-        if (last != 0 && (e.timestamp - last) < hot_refrac_us) {
+        int64_t dt = e.timestamp - last;
+        if (last != 0 && dt >= 0 && dt < hot_refrac_us) {
             e.valid = false;
             continue;
         }
         last_ts_map_[idx] = e.timestamp;
 
         // --- rate-based check ---
-        // reset window if rolled over
-        if (hot_rate_window_start_ == 0) {
+        // reset window on rollover or backward timestamp jump (file loop)
+        if (hot_rate_window_start_ == 0 || e.timestamp < hot_rate_window_start_) {
+            std::fill(hot_rate_count_.begin(), hot_rate_count_.end(), 0);
             hot_rate_window_start_ = e.timestamp;
         }
         if (e.timestamp - hot_rate_window_start_ >= hot_rate_window_us) {

@@ -886,6 +886,17 @@ public:
     ofRectangle     cam_viewport;
     void updateViewports();
 
+    // --- Filter enable flags ---
+    bool hotPixelFilterEnabled_ = true;
+    bool baFilterEnabled_ = true;
+
+    // Hot pixel suppression — tunable parameters (GUI-accessible)
+    int hot_refrac_us = 200;
+    int hot_rate_window_us = 100000;   // 100 ms
+    int hot_rate_threshold = 500;
+
+    void recalibrateHotPixels();
+
     // --- Neural network pipelines ---
     bool nnEnabled = false;
     bool tsdtEnabled = false;
@@ -922,15 +933,12 @@ public:
     void drawRectangularClusterTracker();
 
 private:
-    // Hot pixel suppression — refractory
-    int hot_refrac_us = 200;
+    // Hot pixel suppression — refractory (internal storage)
     std::vector<int64_t> last_ts_map_;
 
-    // Hot pixel suppression — rate-based filter
+    // Hot pixel suppression — rate-based filter (internal storage)
     std::vector<uint16_t> hot_rate_count_;
     int64_t hot_rate_window_start_ = 0;
-    int hot_rate_window_us = 100000;   // 100 ms
-    int hot_rate_threshold = 500;
 
     // Hot pixel suppression — startup calibration
     std::vector<uint32_t> hot_calib_count_;

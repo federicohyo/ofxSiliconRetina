@@ -6,7 +6,14 @@ namespace dvs { namespace gui {
 // ---- NN Panel ----
 std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs) {
     auto panel = std::make_unique<ofxDatGui>(ofxDatGuiAnchor::TOP_RIGHT);
-    panel->setVisible(false);
+
+    // Filters folder (always visible, independent of NN enable)
+    auto filt = panel->addFolder(">> Filters");
+    filt->addSlider("Refractory (us)", 0, 5000, dvs->hot_refrac_us);
+    filt->addSlider("Hot Rate Window (ms)", 10, 1000, dvs->hot_rate_window_us / 1000);
+    filt->addSlider("Hot Rate Threshold", 10, 5000, dvs->hot_rate_threshold);
+    filt->addButton("Recalibrate Hot Pixels");
+    filt->addSlider("BA Filter dt", 1, 100000, dvs->BAdeltaT);
 
     // YOLO folder
     auto nn_folder = panel->addFolder(">> Neural Net (YOLO)");
@@ -44,8 +51,14 @@ std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs) {
 
     // Bind events using lambdas that capture `dvs`
     panel->onToggleEvent([dvs](ofxDatGuiToggleEvent e) { onNNToggleEvent(e, dvs); });
-    panel->onSliderEvent([dvs](ofxDatGuiSliderEvent e) { onNNSliderEvent(e, dvs); });
-    panel->onButtonEvent([dvs](ofxDatGuiButtonEvent e) { onNNButtonEvent(e, dvs); });
+    panel->onSliderEvent([dvs](ofxDatGuiSliderEvent e) {
+        onFilterSliderEvent(e, dvs);
+        onNNSliderEvent(e, dvs);
+    });
+    panel->onButtonEvent([dvs](ofxDatGuiButtonEvent e) {
+        onFilterButtonEvent(e, dvs);
+        onNNButtonEvent(e, dvs);
+    });
 
     return panel;
 }
@@ -112,6 +125,28 @@ std::unique_ptr<ofxDatGui> createTrackerPanel(ofxDVS* dvs) {
     panel->onSliderEvent([dvs](ofxDatGuiSliderEvent e) { onTrackerSliderEvent(e, dvs); });
 
     return panel;
+}
+
+// ---- Filter event handlers ----
+void onFilterSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
+    const std::string& n = e.target->getName();
+    if (n == "Refractory (us)") {
+        dvs->hot_refrac_us = (int)e.value;
+    } else if (n == "Hot Rate Window (ms)") {
+        dvs->hot_rate_window_us = (int)e.value * 1000;
+        ofLogNotice() << "[HotPixel] Rate window set to " << dvs->hot_rate_window_us << " us";
+    } else if (n == "Hot Rate Threshold") {
+        dvs->hot_rate_threshold = (int)e.value;
+        ofLogNotice() << "[HotPixel] Rate threshold set to " << dvs->hot_rate_threshold;
+    } else if (n == "BA Filter dt") {
+        dvs->changeBAdeltat(e.value);
+    }
+}
+
+void onFilterButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs) {
+    if (e.target->getName() == "Recalibrate Hot Pixels") {
+        dvs->recalibrateHotPixels();
+    }
 }
 
 // ---- NN event handlers ----
