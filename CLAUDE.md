@@ -2,7 +2,7 @@
 
 ## What is this?
 
-openFrameworks addon for neuromorphic (event-based) vision cameras. Interfaces with DVS128, DAVIS, and DVXplorer sensors via dv-processing/libcaer. Includes real-time neural network inference (YOLO object detection, TSDT gesture recognition), rectangular cluster tracking, and comprehensive visualization.
+openFrameworks addon for neuromorphic (event-based) vision cameras. Interfaces with DVS128, DAVIS, and DVXplorer sensors via dv-processing/libcaer. Includes real-time neural network inference (YOLO object detection, TSDT gesture recognition), rectangular cluster tracking, MP4 video recording, and comprehensive visualization.
 
 ## Project Layout
 
@@ -36,6 +36,7 @@ Uses openFrameworks 0.12.0 build system (`compile.project.mk`). Compiler: g++-13
 ### Dependencies
 - **openFrameworks 0.12.0** — windowing, GL, input
 - **ofxDatGui** — advanced GUI panels (external addon in OF addons dir)
+- **ofxFFmpegRecorder** — MP4 video recording (pipes to system ffmpeg)
 - **ofxPoco, ofxGui, ofxNetwork** — bundled OF addons
 - **dv-processing** — modern camera I/O (system library)
 - **libcaer** — low-level camera driver (bundled in libs/)
@@ -66,7 +67,7 @@ Uses openFrameworks 0.12.0 build system (`compile.project.mk`). Compiler: g++-13
 
 ### GUI
 - `f1` — main panel (ofxDatGui): toggles, sliders, buttons for DVS/APS/IMU, recording, filters, playback speed
-- `nn_panel` — NN controls: YOLO config, TSDT config, TP Detector
+- `nn_panel` — NN controls: YOLO config, TSDT config, TP Detector, Video Output
 - `optflow_panel` — optical flow + event reconstruction controls
 - `tracker_panel` — 50+ cluster tracker parameters
 - Event handlers: `onButtonEvent()`, `onToggleEvent()`, `onSliderEvent()`, `onMatrixEvent()`
@@ -82,6 +83,7 @@ Uses openFrameworks 0.12.0 build system (`compile.project.mk`). Compiler: g++-13
 - **Recording**: `dv::io::MonoCameraWriter` writes `.aedat4` files with event-only config
 - **Playback timing**: file-time-to-wall-time mapping via `fileTimeOrigin_`/`wallTimeOrigin_`/`playbackSpeed_`; backpressure on reader thread prevents packet loss at slow speeds
 - **Speed control**: log-scale slider (-1..+2 → 0.1x..100x); continuity on speed change and pause/resume
+- **Video recording**: `ofxFFmpegRecorder` pipes `grabScreen()` frames to ffmpeg; deferred start in `drawViewer()` (multi-window safe); BGR pixel format; even-dimension enforcement for libx264
 
 ## Git
 
@@ -115,3 +117,11 @@ Uses openFrameworks 0.12.0 build system (`compile.project.mk`). Compiler: g++-13
 - **Add a GUI control**: Add widget in `setup()` after line ~197, add handler in `onSliderEvent()`/`onButtonEvent()`/`onToggleEvent()`
 - **Add a new filter**: Add members to private section of `ofxDVS.hpp` (~line 735), implement in `.cpp`, call from `update()` between `updateBAFilter()` and `updateImageGenerator()`
 - **Add a new NN pipeline**: Create `dvs_*_pipeline.hpp/.cpp`, add `InferenceWorker<ResultT>` member, wire up in `update()` and `draw()`
+- **Add a GUI folder to nn_panel**: Add folder in `createNNPanel()` in `dvs_gui.cpp`, wire handlers in the existing `onButtonEvent`/`onSliderEvent` lambdas
+
+## Multi-Window Gotchas
+- GUI event handlers run in the **control window** GL context; `ofGetWidth()`/`ofGetHeight()` returns the control window size, NOT the viewer window
+- Size-dependent setup (FBOs, recorders) must be deferred to `drawViewer()` where dimensions are correct
+- `ofxDatGui::setName()` only changes the internal lookup key; use `setLabel()` to update the visible text
+- OpenGL `glReadPixels`/`grabScreen` returns **BGR** on this Linux system — set ffmpeg pixel format to `bgr24`
+- libx264 requires even width and height — round with `& ~1`
