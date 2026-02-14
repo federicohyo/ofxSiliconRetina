@@ -1,2 +1,3 @@
 ofxDVS
 ofxDatGui
+ofxFFmpegRecorder

@@ -58,6 +58,7 @@ enum class AedatFormat { UNKNOWN, AEDAT31, AEDAT4 };
 
 #include "ofMain.h"
 #include "ofxDatGui.h"
+#include "ofxFFmpegRecorder.h"
 
 // Pipeline headers
 #include "onnx_run.hpp"
@@ -916,6 +917,16 @@ public:
     // Optical Flow panel
     std::unique_ptr<ofxDatGui> optflow_panel;
 
+    // Video recording — public for GUI handler access
+    float videoRecFps_ = 30.0f;
+    ofxFFmpegRecorder videoRecorder_;
+    bool              videoRecPaused_ = false;
+    bool              videoRecPending_ = false;   // deferred start (from GUI thread)
+    std::string       videoRecPath_;
+    int      rec_w_ = 0, rec_h_ = 0;
+    void     startVideoRecording_();
+    void     stopVideoRecording_();
+
     // Event-based optical flow (local plane fitting on SAE)
     bool  drawOptFlow     = false;
     float optFlowDecay    = 0.95f;
@@ -987,6 +998,10 @@ private:
     // Packet queue management
     std::deque<caerEventPacketContainer> backlog_;
     size_t backlog_max_ = 15;
+
+    // MP4 video recording (internal)
+    ofImage  rec_grab_;
+    bool     videoRecording_ = false;
 };
 
 

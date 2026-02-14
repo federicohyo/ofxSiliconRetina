@@ -291,6 +291,7 @@ void ofxDVS::setupGUI() {
     f1->onTextInputEvent(this, &ofxDVS::onTextInputEvent);
 
     // --- NN / YOLO + TSDT panel (created by dvs::gui helpers) ---
+    // (Video Output folder is inside this panel, between Filters and YOLO)
     nn_panel = dvs::gui::createNNPanel(this);
 
     // --- Optical Flow panel ---
@@ -1324,6 +1325,40 @@ void ofxDVS::drawViewer() {
     }
 
     drawMouseDistanceToSpikes();
+
+    // Deferred recorder start: grab one frame first to get the true
+    // pixel dimensions (may differ from ofGetWidth due to HiDPI scaling),
+    // then configure ffmpeg to match exactly.
+    if (videoRecPending_) {
+        videoRecPending_ = false;
+        int reqW = ofGetWidth()  & ~1;
+        int reqH = ofGetHeight() & ~1;
+        rec_grab_.grabScreen(0, 0, reqW, reqH);
+        rec_w_ = (int)rec_grab_.getWidth()  & ~1;
+        rec_h_ = (int)rec_grab_.getHeight() & ~1;
+        int nCh = rec_grab_.getPixels().getNumChannels();
+        std::string pixFmt = (nCh == 4) ? "bgra" : "bgr24";
+        videoRecording_ = true;
+
+        videoRecorder_.setup(true, false,
+                             glm::vec2(rec_w_, rec_h_),
+                             videoRecFps_, 8000);
+        videoRecorder_.setOutputPath(videoRecPath_);
+        videoRecorder_.setVideoCodec("libx264");
+        videoRecorder_.setInputPixelFormat(pixFmt);
+        videoRecorder_.setOverWrite(true);
+        videoRecorder_.startCustomRecord();
+        ofLogNotice() << "[Video] Recording to " << videoRecPath_
+                      << " (" << rec_w_ << "x" << rec_h_
+                      << ", " << nCh << "ch, " << pixFmt << ")";
+        // First frame already grabbed — send it
+        videoRecorder_.addFrame(rec_grab_.getPixels());
+    }
+
+    if (videoRecording_ && !videoRecPaused_ && !videoRecPending_) {
+        rec_grab_.grabScreen(0, 0, rec_w_, rec_h_);
+        videoRecorder_.addFrame(rec_grab_.getPixels());
+    }
 }
 
 //--------------------------------------------------------------
@@ -1798,6 +1833,11 @@ void ofxDVS::exit() {
     if (exited_) return;
     exited_ = true;
 
+    if (videoRecorder_.isRecording()) {
+        videoRecorder_.stop();
+        videoRecording_ = false;
+    }
+
     ofLogNotice() << "[ofxDVS] exit: stopping workers...";
 
     // stop inference workers first (they may hold ONNX sessions)
@@ -1829,6 +1869,19 @@ void ofxDVS::exit() {
     thread.aedat4Reader.reset();
 
     ofLogNotice() << "[ofxDVS] exit: done";
+}
+
+//--------------------------------------------------------------
+void ofxDVS::startVideoRecording_() {
+    videoRecPending_ = true;
+}
+
+//--------------------------------------------------------------
+void ofxDVS::stopVideoRecording_() {
+    videoRecording_ = false;
+    videoRecPaused_ = false;
+    rec_w_ = 0;
+    rec_h_ = 0;
 }
 
 const char * ofxDVS::chipIDToName(int16_t chipID, bool withEndSlash) {

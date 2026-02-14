@@ -39,4 +39,7 @@ void onOptFlowSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);
 void onTrackerToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs);
 void onTrackerSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);
 
+void onVideoButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs);
+void onVideoSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs);
+
 }} // namespace dvs::gui

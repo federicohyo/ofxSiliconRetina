@@ -15,6 +15,12 @@ std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs) {
     filt->addButton("Recalibrate Hot Pixels");
     filt->addSlider("BA Filter dt", 1, 100000, dvs->BAdeltaT);
 
+    // Video recording folder
+    auto vid = panel->addFolder(">> Video Output");
+    vid->addButton("START RECORDING MP4");
+    vid->addButton("PAUSE RECORDING");
+    vid->addSlider("REC FPS", 10, 60, dvs->videoRecFps_);
+
     // YOLO folder
     auto nn_folder = panel->addFolder(">> Neural Net (YOLO)");
     nn_folder->addToggle("ENABLE NN", dvs->yolo_pipeline.cfg.draw);
@@ -54,10 +60,12 @@ std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs) {
     panel->onSliderEvent([dvs](ofxDatGuiSliderEvent e) {
         onFilterSliderEvent(e, dvs);
         onNNSliderEvent(e, dvs);
+        onVideoSliderEvent(e, dvs);
     });
     panel->onButtonEvent([dvs](ofxDatGuiButtonEvent e) {
         onFilterButtonEvent(e, dvs);
         onNNButtonEvent(e, dvs);
+        onVideoButtonEvent(e, dvs);
     });
 
     return panel;
@@ -332,6 +340,55 @@ void onTrackerToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs) {
     };
     auto it = vars.find(e.target->getName());
     if (it != vars.end()) *(it->second) = e.target->getChecked();
+}
+
+void onVideoButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs) {
+    const std::string& name = e.target->getName();
+
+    if (name == "START RECORDING MP4") {
+        // Generate timestamped output path — actual recorder setup is
+        // deferred to drawViewer() where ofGetWidth/Height return the
+        // viewer window dimensions (not the control window).
+        auto t = std::time(nullptr);
+        char ts[64];
+        std::strftime(ts, sizeof(ts), "%Y%m%d_%H%M%S", std::localtime(&t));
+        dvs->videoRecPath_ = ofToDataPath("dvs_video_" + std::string(ts) + ".mp4", true);
+        dvs->videoRecPending_ = true;
+
+        e.target->setLabel("STOP RECORDING MP4");
+        e.target->setName("STOP RECORDING MP4");
+        ofLogNotice() << "[Video] Recording will start on next frame...";
+
+    } else if (name == "STOP RECORDING MP4") {
+        dvs->videoRecorder_.stop();
+        dvs->stopVideoRecording_();
+        e.target->setLabel("START RECORDING MP4");
+        e.target->setName("START RECORDING MP4");
+        ofLogNotice() << "[Video] Recording stopped.";
+
+    } else if (name == "PAUSE RECORDING") {
+        if (dvs->videoRecorder_.isRecording()) {
+            dvs->videoRecorder_.setPaused(true);
+            dvs->videoRecPaused_ = true;
+            e.target->setLabel("RESUME RECORDING");
+            e.target->setName("RESUME RECORDING");
+            ofLogNotice() << "[Video] Recording paused.";
+        }
+    } else if (name == "RESUME RECORDING") {
+        if (dvs->videoRecorder_.isRecording()) {
+            dvs->videoRecorder_.setPaused(false);
+            dvs->videoRecPaused_ = false;
+            e.target->setLabel("PAUSE RECORDING");
+            e.target->setName("PAUSE RECORDING");
+            ofLogNotice() << "[Video] Recording resumed.";
+        }
+    }
+}
+
+void onVideoSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
+    if (e.target->getName() == "REC FPS") {
+        dvs->videoRecFps_ = e.value;
+    }
 }
 
 }} // namespace dvs::gui

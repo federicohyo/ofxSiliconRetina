@@ -10,9 +10,10 @@ An [openFrameworks](https://openframeworks.cc/) addon for interfacing Dynamic Vi
 - **Rectangular Cluster Tracker** for event-driven multi-object tracking
 - **ONNX Runtime** inference backend with multi-threaded execution and float16 support
 - **Event reconstruction** with per-pixel exponential decay, spatial spread, and ON/OFF color coding (yellow/blue)
+- **MP4 video recording** of the viewer output via [ofxFFmpegRecorder](https://github.com/nickhobbs94/ofxFFmpegRecorder) (pipes to system ffmpeg)
 - 2D and 3D event visualization, APS frame display, IMU overlay
-- AEDAT 3.1 file recording and playback
-- Hot-pixel suppression via configurable refractory period filter
+- AEDAT 3.1 and AEDAT4 file recording and playback with real-time speed control
+- Hot-pixel suppression via startup calibration mask, refractory period, and rate-based filtering
 - Full GUI controls via [ofxDatGui](https://github.com/braitsch/ofxDatGui)
 
 ## Supported Cameras
@@ -39,6 +40,7 @@ Select the camera family by setting the `#define` flags in `src/ofxDVS.hpp` (`DA
 | [openFrameworks 0.12.0](https://openframeworks.cc/) | Framework | Linux 64-bit tested |
 | [dv-processing](https://gitlab.com/inivation/dv/dv-processing) | System library | Camera I/O (`dv::io::camera`) |
 | [ofxDatGui](https://github.com/braitsch/ofxDatGui) | OF addon | GUI panels |
+| [ofxFFmpegRecorder](https://github.com/nickhobbs94/ofxFFmpegRecorder) | OF addon | MP4 video recording (requires system `ffmpeg`) |
 | ofxGui | OF addon (core) | Additional GUI elements |
 | ofxPoco | OF addon (core) | Networking utilities |
 | ofxNetwork | OF addon (core) | Network I/O |
@@ -48,7 +50,9 @@ Select the camera family by setting the `#define` flags in `src/ofxDVS.hpp` (`DA
 1. Clone or copy this addon into `openFrameworks/addons/ofxDVS/`.
 2. Install [dv-processing](https://gitlab.com/inivation/dv/dv-processing) system-wide (follow their build instructions).
 3. Install [ofxDatGui](https://github.com/braitsch/ofxDatGui) into `openFrameworks/addons/`.
-4. The bundled `libcaer` and `onnxruntime` libraries are in `libs/`. If they don't match your architecture, rebuild and copy them there.
+4. Install [ofxFFmpegRecorder](https://github.com/nickhobbs94/ofxFFmpegRecorder) into `openFrameworks/addons/`.
+5. Make sure `ffmpeg` is installed system-wide (`sudo apt install ffmpeg` on Ubuntu).
+6. The bundled `libcaer` and `onnxruntime` libraries are in `libs/`. If they don't match your architecture, rebuild and copy them there.
 
 ## Building the Example
 
@@ -95,6 +99,18 @@ The addon includes real-time event-driven image reconstruction. Since DVS camera
 
 Toggle **Recon Image** in the GUI to enable/disable.
 
+## Video Recording
+
+The addon can record the viewer output to MP4 video using ffmpeg. Controls are in the **>> Video Output** folder on the NN panel.
+
+| Button / Slider | Description |
+|----------------|-------------|
+| START / STOP RECORDING MP4 | Begin or end recording. Output: `bin/data/dvs_video_<timestamp>.mp4` |
+| PAUSE / RESUME RECORDING | Pause recording without starting a new file |
+| REC FPS | Frame rate for the output video (10 &ndash; 60, default 30) |
+
+Workflow for stitching multiple AEDAT files into one video: start recording, load the first file, pause, load the next file, resume, and so on. Click STOP when done.
+
 ## Hotkeys
 
 | Key | Action |
@@ -109,6 +125,7 @@ Place model files in `example_dvs/bin/data/`. The code loads:
 
 - **YOLO**: `ReYOLOv8m_PEDRO_352x288.onnx` (object detection)
 - **TSDT**: `spikevision_822128128_fixed.onnx` (gesture recognition)
+- **TPDVSGesture**: `tp_gesture_paper_32x32.onnx` (gesture classification)
 
 ## License
 
