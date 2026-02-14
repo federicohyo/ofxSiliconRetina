@@ -65,6 +65,11 @@ public:
     std::map<std::string, std::vector<float>>
     runRaw(const float* data, const std::vector<int64_t>& shape);
 
+    /// Run with multiple named float inputs and arbitrary shapes.
+    /// Each entry: (data pointer, shape).  Inputs matched by order to model input list.
+    std::map<std::string, std::vector<float>>
+    runRawMulti(const std::vector<std::pair<const float*, std::vector<int64_t>>>& inputs);
+
 
 private:
     void queryModelIO_();

@@ -220,6 +220,46 @@ OnnxRunner::runRaw(const float* data, const std::vector<int64_t>& shape)
     return outmap;
 }
 
+// ---- runRawMulti (multiple named float inputs) ----
+std::map<std::string, std::vector<float>>
+OnnxRunner::runRawMulti(const std::vector<std::pair<const float*, std::vector<int64_t>>>& inputs)
+{
+    using namespace Ort;
+
+    std::vector<Value> input_tensors;
+    input_tensors.reserve(inputs.size());
+
+    for (const auto& [data, shape] : inputs) {
+        size_t numel = std::accumulate(
+            shape.begin(), shape.end(), (size_t)1, std::multiplies<size_t>());
+        input_tensors.push_back(Value::CreateTensor<float>(
+            mem_info_,
+            const_cast<float*>(data),
+            numel,
+            shape.data(),
+            shape.size()));
+    }
+
+    RunOptions opts;
+    auto outputs = session_->Run(
+        opts,
+        in_names_c_.data(), input_tensors.data(), input_tensors.size(),
+        out_names_c_.data(), out_names_c_.size());
+
+    std::map<std::string, std::vector<float>> outmap;
+    for (size_t i = 0; i < outputs.size(); ++i) {
+        auto& v = outputs[i];
+        auto info = v.GetTensorTypeAndShapeInfo();
+        size_t n = info.GetElementCount();
+        float* ptr = v.GetTensorMutableData<float>();
+        std::vector<float> buf(ptr, ptr + n);
+
+        const std::string& key = (i < output_names_.size()) ? output_names_[i] : ("output"+std::to_string(i));
+        outmap[key] = std::move(buf);
+    }
+    return outmap;
+}
+
 // ---- runCHW (allocating) ----
 std::unordered_map<std::string, std::vector<float>>
 OnnxRunner::runCHW(const std::vector<float>& chw, int C, int H, int W)

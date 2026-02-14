@@ -1,6 +1,7 @@
 #include "dvs_tsdt_pipeline.hpp"
 #include "ofxDVS.hpp" // for struct polarity
 
+#include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -25,6 +26,25 @@ void TsdtPipeline::loadModel(const std::string& path, int threads) {
 
     cached_sW_ = 0;
     cached_sH_ = 0;
+
+    // Auto-detect stateful SNN model (has "state_in" input)
+    stateful_ = false;
+    state_size_ = 0;
+    snn_state_.clear();
+    for (const auto& inp : tsdt_->inputs()) {
+        if (inp.name == "state_in") {
+            stateful_ = true;
+            // Compute total state size from dims (e.g. [1, 409611])
+            int64_t sz = 1;
+            for (auto d : inp.dims) {
+                if (d > 0) sz *= d;
+            }
+            state_size_ = (int)sz;
+            snn_state_.assign(state_size_, 0.f);
+            ofLogNotice() << "[" << cfg.log_tag << "] stateful SNN model (state_size=" << state_size_ << ")";
+            break;
+        }
+    }
 
     ofLogNotice() << "[TsdtPipeline] loaded " << path;
 }
@@ -85,6 +105,55 @@ std::vector<float> TsdtPipeline::buildTensor(int sensorW, int sensorH) {
     const int T = cfg.T;
     const int Hd = cfg.inH, Wd = cfg.inW;
     const size_t plane = (size_t)Hd * Wd;
+
+    // --- Stateful SNN path: accumulate at sensor res, then anti-aliased resize ---
+    if (stateful_) {
+        if (hist_.empty()) return {};
+
+        // Check readiness (same as time-based)
+        if (cfg.time_based_binning) {
+            float winUs = cfg.bin_window_ms * 1000.f;
+            long span = hist_.back().ts - hist_.front().ts;
+            if (span < (long)winUs) return {};
+        }
+
+        // Accumulate event counts at full sensor resolution (2 channels)
+        const size_t sensorPlane = (size_t)sensorW * sensorH;
+        sensor_buf_.assign(2 * sensorPlane, 0.f);
+
+        if (cfg.time_based_binning) {
+            float winUs = cfg.bin_window_ms * 1000.f;
+            long windowStart = hist_.back().ts - (long)(T * winUs);
+            for (const auto& e : hist_) {
+                if (e.ts < windowStart) continue;
+                if ((unsigned)e.x >= (unsigned)sensorW || (unsigned)e.y >= (unsigned)sensorH) continue;
+                size_t hw = (size_t)e.y * sensorW + e.x;
+                sensor_buf_[0 * sensorPlane + hw] += (e.p ? 0.f : 1.f);  // OFF → ch0
+                sensor_buf_[1 * sensorPlane + hw] += (e.p ? 1.f : 0.f);  // ON  → ch1
+            }
+        } else {
+            const size_t need = (size_t)T * (size_t)cfg.ev_per_bin;
+            if (hist_.size() < need) return {};
+            size_t start = hist_.size() - need;
+            for (size_t i = start; i < hist_.size(); ++i) {
+                const auto& e = hist_[i];
+                if ((unsigned)e.x >= (unsigned)sensorW || (unsigned)e.y >= (unsigned)sensorH) continue;
+                size_t hw = (size_t)e.y * sensorW + e.x;
+                sensor_buf_[0 * sensorPlane + hw] += (e.p ? 0.f : 1.f);
+                sensor_buf_[1 * sensorPlane + hw] += (e.p ? 1.f : 0.f);
+            }
+        }
+
+        // Anti-aliased resize each channel from sensor res to model input res
+        tsdt_tensor_.resize(2 * plane);
+        for (int c = 0; c < 2; ++c) {
+            cv::Mat src(sensorH, sensorW, CV_32FC1, sensor_buf_.data() + c * sensorPlane);
+            cv::Mat dst(Hd, Wd, CV_32FC1, tsdt_tensor_.data() + c * plane);
+            cv::resize(src, dst, cv::Size(Wd, Hd), 0, 0, cv::INTER_AREA);
+        }
+
+        return tsdt_tensor_;
+    }
 
     if (cfg.time_based_binning) {
         // --- Time-based binning path ---
@@ -177,9 +246,28 @@ std::pair<int, float> TsdtPipeline::infer(int sensorW, int sensorH) {
     if (tensor.empty()) return {-1, 0.f};
 
     try {
-        // Shape: [1, T, 2, H, W]
-        std::vector<int64_t> shape = {1, (int64_t)cfg.T, 2, cfg.inH, cfg.inW};
-        auto outmap = tsdt_->runRaw(tensor.data(), shape);
+        std::map<std::string, std::vector<float>> outmap;
+
+        if (stateful_) {
+            // Stateful SNN: shape [1, 2, H, W], pass state_in alongside
+            std::vector<int64_t> frame_shape = {1, 2, (int64_t)cfg.inH, (int64_t)cfg.inW};
+            std::vector<int64_t> state_shape = {1, (int64_t)state_size_};
+            std::vector<std::pair<const float*, std::vector<int64_t>>> inputs = {
+                {tensor.data(), frame_shape},
+                {snn_state_.data(), state_shape}
+            };
+            outmap = tsdt_->runRawMulti(inputs);
+
+            // Update SNN membrane state from output
+            auto sit = outmap.find("state_out");
+            if (sit != outmap.end()) {
+                snn_state_ = sit->second;
+            }
+        } else {
+            // Non-stateful: shape [1, T, 2, H, W]
+            std::vector<int64_t> shape = {1, (int64_t)cfg.T, 2, cfg.inH, cfg.inW};
+            outmap = tsdt_->runRaw(tensor.data(), shape);
+        }
 
         // Pick logits
         const std::vector<float>* pv = nullptr;
@@ -187,7 +275,7 @@ std::pair<int, float> TsdtPipeline::infer(int sensorW, int sensorH) {
         pv = (it != outmap.end()) ? &it->second : &outmap.begin()->second;
         const auto& logits = *pv;
 
-        // EMA smoothing
+        // EMA smoothing (skipped when ema_alpha == 1.0; SNN state handles temporal integration)
         if (ema_logits_.size() != logits.size())
             ema_logits_.assign(logits.size(), 0.f);
         for (size_t i = 0; i < logits.size(); ++i)
@@ -420,6 +508,7 @@ void TsdtPipeline::clearHistory() {
     last_conf_ = 0.f;
     last_predict_time_ = 0.f;
     ema_logits_.clear();
+    std::fill(snn_state_.begin(), snn_state_.end(), 0.f);
 }
 
 } // namespace dvs

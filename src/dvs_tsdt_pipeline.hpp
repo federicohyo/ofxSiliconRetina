@@ -41,6 +41,8 @@ struct TsdtConfig {
     float display_timeout    = 2.0f;  ///< Seconds to keep showing last prediction
     float label_y_offset     = 0.f;   ///< Vertical offset to avoid label overlap with TSDT
 
+    bool  stateful           = false;   ///< true = model has state_in/state_out (SNN membrane state)
+
     std::string log_tag      = "TSDT"; ///< Log prefix to distinguish pipeline instances
 
     std::vector<std::string> labels = {
@@ -120,6 +122,14 @@ private:
     int   cached_sW_ = 0, cached_sH_ = 0;
 
     void ensureLetterboxParams_(int sensorW, int sensorH);
+
+    // SNN membrane state (stateful models only)
+    std::vector<float> snn_state_;
+    int state_size_ = 0;
+    bool stateful_ = false;
+
+    // Accumulate-then-resize buffer (for training-matched preprocessing)
+    std::vector<float> sensor_buf_;
 };
 
 } // namespace dvs

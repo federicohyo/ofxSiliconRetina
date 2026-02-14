@@ -212,7 +212,8 @@ void ofxDVS::setupCore() {
         tpdvs_gesture_pipeline.cfg.inW = 32;
         tpdvs_gesture_pipeline.cfg.time_based_binning = true;
         tpdvs_gesture_pipeline.cfg.bin_window_ms = 75.0f;
-        tpdvs_gesture_pipeline.cfg.ema_alpha = 0.7f;
+        tpdvs_gesture_pipeline.cfg.stateful = true;
+        tpdvs_gesture_pipeline.cfg.ema_alpha = 1.0f;  // SNN state handles temporal integration
         tpdvs_gesture_pipeline.cfg.label_y_offset = -80.f;
         tpdvs_gesture_pipeline.cfg.log_tag = "TPDVSGesture";
         tpdvs_gesture_pipeline.loadModel(ofToDataPath("tp_gesture_paper_32x32.onnx", true));
