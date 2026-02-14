@@ -35,7 +35,9 @@ ofxDVS::ofxDVS() {
 }
 
 //--------------------------------------------------------------
-void ofxDVS::setup() {
+// setupCore() — everything except GUI panel creation
+void ofxDVS::setupCore() {
+    splitGuiMode_ = true;
 
     //thread_alpha.startThread();   // start usb thread
     thread.startThread();   // start usb thread
@@ -167,76 +169,8 @@ void ofxDVS::setup() {
     drawDistanceMesh = false;
     doDrawImu6 = false;
 
-    //
-    //GUI
-    int x = 0;
-    int y = 0;
-    ofSetWindowPosition(0, 0);
-    f1 = new ofxDatGuiFolder("Control", ofColor::fromHex(0xFFD00B));
-    f1->addBreak();
-    f1->addFRM();
-    f1->addBreak();
-    f1->addSlider("Playback Speed", -1, 2, speedSliderPos_);
-    mySpeedDisplay = f1->addTextInput("SPEED", "1.0x");
-    myTextTimer = f1->addTextInput("TIME", timeString);
-    myTempReader = f1->addTextInput("IMU TEMPERATURE", to_string((int)(imuTemp)));
-    f1->addToggle("APS", true);
-    f1->addBreak();
-    f1->addToggle("DVS", true);
-    f1->addBreak();
-    f1->addToggle("IMU", true);
-    f1->addBreak();
-    f1->addMatrix("DVS Color", 7, true);
-    f1->addBreak();
-    f1->addButton("Clear");
-	f1->addBreak();
-    f1->addButton("Pause");
-	f1->addBreak();
-	f1->addToggle("Reset Timestamp", false);
-	f1->addBreak();
-    f1->addToggle("Ext Input Trigger", false);
-    f1->addBreak();
-    f1->addButton("Start Recording");
-	f1->addBreak();
-    f1->addButton("Load Recording");
-	f1->addBreak();
-    f1->addButton("Live");
-	f1->addBreak();
-	f1->addToggle("Draw IMU", false);
-    f1->addMatrix("3D Time", 4, true);
-    f1->addToggle("Pointer", false);
-    f1->addToggle("Raw Spikes", true);
-    f1->addToggle("DVS Image Gen", false);
-    f1->addSlider("Refractory (us)", 0, 5000, hot_refrac_us);
-    f1->addSlider("Hot Rate Window (ms)", 10, 1000, hot_rate_window_us / 1000);
-    f1->addSlider("Hot Rate Threshold", 10, 5000, hot_rate_threshold);
-    f1->addButton("Recalibrate Hot Pixels");
-    f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
-    f1->addSlider("DVS Integration", 1, 100, fsint);
-    f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
-    f1->addToggle("ENABLE OPTICAL FLOW", false);
-    f1->addToggle("ENABLE TRACKER", false);
-    f1->addToggle("ENABLE NEURAL NETS", false);
-
-    f1->setPosition(x, y);
-    f1->expand();
-    f1->onButtonEvent(this, &ofxDVS::onButtonEvent);
-    f1->onToggleEvent(this, &ofxDVS::onToggleEvent);
-    f1->onSliderEvent(this, &ofxDVS::onSliderEvent);
-    f1->onMatrixEvent(this, &ofxDVS::onMatrixEvent);
-    f1->onTextInputEvent(this, &ofxDVS::onTextInputEvent);
-
     numPaused = 0;
     numPausedRec = 0;
-
-    // --- NN / YOLO + TSDT panel (created by dvs::gui helpers) ---
-    nn_panel = dvs::gui::createNNPanel(this);
-
-    // --- Optical Flow panel ---
-    optflow_panel = dvs::gui::createOptFlowPanel(this);
-
-    // --- Tracker panel ---
-    tracker_panel = dvs::gui::createTrackerPanel(this);
 
     /* 2d visualisation primitives setup */
     this->next_polarities_pixbuf.allocate(this->sizeX, this->sizeY, OF_IMAGE_COLOR);
@@ -297,6 +231,83 @@ void ofxDVS::setup() {
     hot_pixel_mask_.assign(npix, false);
     hot_calib_done_ = false;
     hot_calib_started_ = false;
+}
+
+//--------------------------------------------------------------
+// setupGUI() — all GUI panel creation (call from control window context)
+void ofxDVS::setupGUI() {
+    int x = 0;
+    int y = 0;
+    f1 = new ofxDatGuiFolder("Control", ofColor::fromHex(0xFFD00B));
+    f1->addBreak();
+    f1->addFRM();
+    f1->addBreak();
+    f1->addSlider("Playback Speed", -1, 2, speedSliderPos_);
+    mySpeedDisplay = f1->addTextInput("SPEED", "1.0x");
+    myTextTimer = f1->addTextInput("TIME", timeString);
+    myTempReader = f1->addTextInput("IMU TEMPERATURE", to_string((int)(imuTemp)));
+    f1->addToggle("APS", true);
+    f1->addBreak();
+    f1->addToggle("DVS", true);
+    f1->addBreak();
+    f1->addToggle("IMU", true);
+    f1->addBreak();
+    f1->addMatrix("DVS Color", 7, true);
+    f1->addBreak();
+    f1->addButton("Clear");
+	f1->addBreak();
+    f1->addButton("Pause");
+	f1->addBreak();
+	f1->addToggle("Reset Timestamp", false);
+	f1->addBreak();
+    f1->addToggle("Ext Input Trigger", false);
+    f1->addBreak();
+    f1->addButton("Start Recording");
+	f1->addBreak();
+    f1->addButton("Load Recording");
+	f1->addBreak();
+    f1->addButton("Live");
+	f1->addBreak();
+	f1->addToggle("Draw IMU", false);
+    f1->addMatrix("3D Time", 4, true);
+    f1->addToggle("Pointer", false);
+    f1->addToggle("Raw Spikes", true);
+    f1->addToggle("DVS Image Gen", false);
+    f1->addSlider("Refractory (us)", 0, 5000, hot_refrac_us);
+    f1->addSlider("Hot Rate Window (ms)", 10, 1000, hot_rate_window_us / 1000);
+    f1->addSlider("Hot Rate Threshold", 10, 5000, hot_rate_threshold);
+    f1->addButton("Recalibrate Hot Pixels");
+    f1->addSlider("BA Filter dt", 1, 100000, BAdeltaT);
+    f1->addSlider("DVS Integration", 1, 100, fsint);
+    f1->addSlider("DVS Image Gen", 1, 20000, numSpikes);
+    f1->addToggle("ENABLE OPTICAL FLOW", false);
+    f1->addToggle("ENABLE TRACKER", false);
+    f1->addToggle("ENABLE NEURAL NETS", false);
+
+    f1->setPosition(x, y);
+    f1->expand();
+    f1->onButtonEvent(this, &ofxDVS::onButtonEvent);
+    f1->onToggleEvent(this, &ofxDVS::onToggleEvent);
+    f1->onSliderEvent(this, &ofxDVS::onSliderEvent);
+    f1->onMatrixEvent(this, &ofxDVS::onMatrixEvent);
+    f1->onTextInputEvent(this, &ofxDVS::onTextInputEvent);
+
+    // --- NN / YOLO + TSDT panel (created by dvs::gui helpers) ---
+    nn_panel = dvs::gui::createNNPanel(this);
+
+    // --- Optical Flow panel ---
+    optflow_panel = dvs::gui::createOptFlowPanel(this);
+
+    // --- Tracker panel ---
+    tracker_panel = dvs::gui::createTrackerPanel(this);
+}
+
+//--------------------------------------------------------------
+// setup() — backward-compatible single-window setup
+void ofxDVS::setup() {
+    setupCore();
+    splitGuiMode_ = false;
+    setupGUI();
 }
 
 
@@ -1107,9 +1118,7 @@ void ofxDVS::update() {
     }
 
     //GUI
-    f1->update();
-    myTextTimer->setText(timeString);
-    myTempReader->setText(to_string((int)(imuTemp)));
+    if (!splitGuiMode_) updateGUI();
 
 }
 
@@ -1232,7 +1241,16 @@ void ofxDVS::drawRectangularClusterTracker()
 
 
 //--------------------------------------------------------------
-void ofxDVS::draw() {
+// updateGUI() — update f1 panel and text widgets (call from control window)
+void ofxDVS::updateGUI() {
+    f1->update();
+    myTextTimer->setText(timeString);
+    myTempReader->setText(to_string((int)(imuTemp)));
+}
+
+//--------------------------------------------------------------
+// drawViewer() — visualization only (spikes, images, overlays, labels)
+void ofxDVS::drawViewer() {
 
     myCam.begin();
     ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
@@ -1277,12 +1295,22 @@ void ofxDVS::draw() {
                                     ofColor(0,0,0,180), ofColor(255,215,0));
     }
 
-    // Pointer + GUI
     drawMouseDistanceToSpikes();
-    if(drawGui){
+}
+
+//--------------------------------------------------------------
+// drawControls() — f1 panel (other panels auto-draw via ofEvents)
+void ofxDVS::drawControls() {
+    if (drawGui) {
         f1->draw();
     }
+}
 
+//--------------------------------------------------------------
+// draw() — backward-compatible single-window draw
+void ofxDVS::draw() {
+    drawViewer();
+    if (!splitGuiMode_) drawControls();
 }
 
 

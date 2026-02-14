@@ -684,6 +684,13 @@ public:
     void update();
     void draw();
     void drawFixed();
+
+    // Multi-window support
+    void setupCore();      // Camera, threads, buffers, models — no GUI
+    void setupGUI();       // All panel creation (call from control window context)
+    void drawViewer();     // Visualization only (spikes, images, overlays, labels)
+    void drawControls();   // f1 panel (other panels auto-draw via ofEvents)
+    void updateGUI();      // f1->update(), text widget refreshes
     void drawSpikes();
     void updateMeshSpikes();
     void drawFrames();
@@ -939,6 +946,9 @@ private:
 
     // Shutdown guard
     bool exited_ = false;
+
+    // Multi-window mode flag
+    bool splitGuiMode_ = false;
 
     // Point shader
     ofShader pointShader;
