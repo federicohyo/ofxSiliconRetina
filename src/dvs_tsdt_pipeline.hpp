@@ -33,6 +33,16 @@ struct TsdtConfig {
     int   ev_per_bin = 10000;    ///< Events per temporal bin (matches training)
     float ema_alpha  = 1.0f;     ///< EMA smoothing for logits (1.0 = no smoothing)
     bool  show_label = true;     ///< Draw overlay text
+
+    // Time-based binning (for TPDVSGesture and similar models)
+    bool  time_based_binning = false; ///< true = bin by time window, false = by event count
+    float bin_window_ms      = 75.0f; ///< Time window per bin in ms (when time_based_binning)
+    float conf_threshold     = 0.0f;  ///< Min confidence to display label
+    float display_timeout    = 2.0f;  ///< Seconds to keep showing last prediction
+    float label_y_offset     = 0.f;   ///< Vertical offset to avoid label overlap with TSDT
+
+    std::string log_tag      = "TSDT"; ///< Log prefix to distinguish pipeline instances
+
     std::vector<std::string> labels = {
         "hand_clapping", "right_hand_wave", "left_hand_wave",
         "right_hand_clockwise", "right_hand_counter_clockwise",
@@ -97,6 +107,7 @@ private:
     // Prediction state
     int   last_idx_  = -1;
     float last_conf_ = 0.f;
+    float last_predict_time_ = 0.f;
 
     // Pre-allocated buffers
     std::vector<float> tsdt_tensor_;

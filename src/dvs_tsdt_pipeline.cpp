@@ -48,33 +48,89 @@ void TsdtPipeline::pushEvents(const std::vector<polarity>& events,
         int x = (int)p.pos.x, y = (int)p.pos.y;
         if ((unsigned)x >= (unsigned)sensorW || (unsigned)y >= (unsigned)sensorH)
             continue;
+
+        // Detect timestamp backward jump (file loop): auto-clear history
+        if (cfg.time_based_binning && !hist_.empty() &&
+            p.timestamp < hist_.back().ts - 1000000) {
+            hist_.clear();
+            ema_logits_.clear();
+        }
+
         hist_.push_back({x, y, (bool)p.pol, p.timestamp});
     }
 
-    // Cap history: keep ~2x what we need + slack
-    const size_t need = (size_t)cfg.T * (size_t)cfg.ev_per_bin;
-    const size_t cap  = need * 2 + 2000;
-    if (hist_.size() > cap) {
-        hist_.erase(hist_.begin(), hist_.begin() + (std::ptrdiff_t)(hist_.size() - cap));
+    if (cfg.time_based_binning) {
+        // Time-based cap: keep events within 3x the total window span
+        if (!hist_.empty()) {
+            long latest = hist_.back().ts;
+            long horizon = (long)(3.0f * cfg.T * cfg.bin_window_ms * 1000.f); // us
+            long cutoff = latest - horizon;
+            while (!hist_.empty() && hist_.front().ts < cutoff)
+                hist_.pop_front();
+        }
+    } else {
+        // Event-count cap: keep ~2x what we need + slack
+        const size_t need = (size_t)cfg.T * (size_t)cfg.ev_per_bin;
+        const size_t cap  = need * 2 + 2000;
+        if (hist_.size() > cap) {
+            hist_.erase(hist_.begin(), hist_.begin() + (std::ptrdiff_t)(hist_.size() - cap));
+        }
     }
 }
 
-// ---- buildTensor (consolidated single builder: letterbox-fixed, event-count bins) ----
+// ---- buildTensor (supports event-count bins and time-based bins) ----
 std::vector<float> TsdtPipeline::buildTensor(int sensorW, int sensorH) {
     ensureLetterboxParams_(sensorW, sensorH);
 
     const int T = cfg.T;
     const int Hd = cfg.inH, Wd = cfg.inW;
-    const int evPerBin = cfg.ev_per_bin;
     const size_t plane = (size_t)Hd * Wd;
+
+    if (cfg.time_based_binning) {
+        // --- Time-based binning path ---
+        if (hist_.empty()) return {};
+
+        long latest = hist_.back().ts;
+        float winUs = cfg.bin_window_ms * 1000.f;
+        long totalSpan = (long)(T * winUs);
+
+        // Require history to span at least one full window
+        long earliest = hist_.front().ts;
+        if ((latest - earliest) < (long)winUs) return {};
+
+        tsdt_tensor_.assign((size_t)T * 2 * plane, 0.f);
+
+        long windowStart = latest - totalSpan;
+
+        for (const auto& e : hist_) {
+            if (e.ts < windowStart) continue;
+
+            // Determine which temporal bin this event belongs to
+            int t = (int)((e.ts - windowStart) / winUs);
+            if (t < 0) continue;
+            if (t >= T) t = T - 1;
+
+            int dx = (int)std::round(e.x * lb_scale_) + lb_padx_;
+            int dy = (int)std::round(e.y * lb_scale_) + lb_pady_;
+            if ((unsigned)dx >= (unsigned)Wd || (unsigned)dy >= (unsigned)Hd) continue;
+
+            size_t hw = (size_t)dy * Wd + dx;
+            size_t base = ((size_t)t * 2) * plane;
+            tsdt_tensor_[base + 0 * plane + hw] += (e.p ? 0.f : 1.f);
+            tsdt_tensor_[base + 1 * plane + hw] += (e.p ? 1.f : 0.f);
+        }
+
+        return tsdt_tensor_;
+    }
+
+    // --- Event-count binning path (original) ---
+    const int evPerBin = cfg.ev_per_bin;
     const size_t need = (size_t)T * (size_t)evPerBin;
 
     if (hist_.size() < need) return {};
 
-    // Reuse pre-allocated tensor buffer
     tsdt_tensor_.assign((size_t)T * 2 * plane, 0.f);
 
-    // Take the last `need` events
     const size_t start = hist_.size() - need;
     size_t idxEv = start;
 
@@ -83,14 +139,12 @@ std::vector<float> TsdtPipeline::buildTensor(int sensorW, int sensorH) {
             const auto& e = hist_[idxEv];
             int x = e.x, y = e.y;
 
-            // Letterbox map sensor(x,y) -> model(dx,dy)
             int dx = (int)std::round(x * lb_scale_) + lb_padx_;
             int dy = (int)std::round(y * lb_scale_) + lb_pady_;
             if ((unsigned)dx >= (unsigned)Wd || (unsigned)dy >= (unsigned)Hd) continue;
 
             size_t hw = (size_t)dy * Wd + dx;
             size_t base = ((size_t)t * 2) * plane;
-            // ch0=neg, ch1=pos (matches training)
             tsdt_tensor_[base + 0 * plane + hw] += (e.p ? 0.f : 1.f);
             tsdt_tensor_[base + 1 * plane + hw] += (e.p ? 1.f : 0.f);
         }
@@ -103,8 +157,21 @@ std::vector<float> TsdtPipeline::buildTensor(int sensorW, int sensorH) {
 std::pair<int, float> TsdtPipeline::infer(int sensorW, int sensorH) {
     if (!tsdt_ || !tsdt_->isLoaded()) return {-1, 0.f};
 
-    const size_t need = (size_t)cfg.T * (size_t)cfg.ev_per_bin;
-    if (hist_.size() < need) return {-1, 0.f};
+    if (cfg.time_based_binning) {
+        // Rate-limit: don't run more often than the window period
+        if (last_predict_time_ > 0.f) {
+            float elapsed = ofGetElapsedTimef() - last_predict_time_;
+            if (elapsed < cfg.bin_window_ms / 1000.f) return {last_idx_, last_conf_};
+        }
+        // Time-based readiness: need events spanning at least one window
+        if (hist_.empty()) return {-1, 0.f};
+        float winUs = cfg.bin_window_ms * 1000.f;
+        long span = hist_.back().ts - hist_.front().ts;
+        if (span < (long)winUs) return {-1, 0.f};
+    } else {
+        const size_t need = (size_t)cfg.T * (size_t)cfg.ev_per_bin;
+        if (hist_.size() < need) return {-1, 0.f};
+    }
 
     auto tensor = buildTensor(sensorW, sensorH);
     if (tensor.empty()) return {-1, 0.f};
@@ -143,24 +210,41 @@ std::pair<int, float> TsdtPipeline::infer(int sensorW, int sensorH) {
         }
         last_idx_  = besti;
         last_conf_ = bestp;
+        last_predict_time_ = ofGetElapsedTimef();
 
-        // Verbose logits
+        // Tensor diagnostics + logits (verbose, rate-limited by inference rate)
         {
+            float tsum = 0.f; int tnz = 0;
+            for (float v : tensor) { tsum += v; if (v != 0.f) ++tnz; }
+
             std::ostringstream oss; oss.setf(std::ios::fixed); oss.precision(4);
             for (size_t i = 0; i < logits.size(); ++i) {
                 if (i) oss << ", ";
                 oss << logits[i];
             }
-            ofLogNotice() << "[TSDT] logits: " << oss.str();
-            ofLogNotice() << "[TSDT] argmax=" << last_idx_
-                          << " conf=" << last_conf_;
+            ofLogVerbose() << "[" << cfg.log_tag << "] tensor: sum=" << tsum
+                           << " nonzero=" << tnz << "/" << tensor.size()
+                           << " hist=" << hist_.size();
+            ofLogVerbose() << "[" << cfg.log_tag << "] logits: " << oss.str();
+            ofLogNotice()  << "[" << cfg.log_tag << "] argmax=" << last_idx_
+                           << " conf=" << last_conf_;
         }
 
         // Consume the events we used
-        hist_.erase(hist_.begin(), hist_.begin() + (std::ptrdiff_t)need);
+        if (cfg.time_based_binning) {
+            // Erase events older than the consumed window
+            float winUs = cfg.bin_window_ms * 1000.f;
+            long totalSpan = (long)(cfg.T * winUs);
+            long cutoff = hist_.back().ts - totalSpan;
+            while (!hist_.empty() && hist_.front().ts < cutoff)
+                hist_.pop_front();
+        } else {
+            const size_t need = (size_t)cfg.T * (size_t)cfg.ev_per_bin;
+            hist_.erase(hist_.begin(), hist_.begin() + (std::ptrdiff_t)need);
+        }
 
     } catch (const std::exception& e) {
-        ofLogError() << "[TSDT] inference error: " << e.what();
+        ofLogError() << "[" << cfg.log_tag << "] inference error: " << e.what();
         return {-1, 0.f};
     }
 
@@ -170,6 +254,11 @@ std::pair<int, float> TsdtPipeline::infer(int sensorW, int sensorH) {
 // ---- drawLabel ----
 void TsdtPipeline::drawLabel() const {
     if (!(cfg.show_label && last_idx_ >= 0)) return;
+    if (last_conf_ < cfg.conf_threshold) return;
+    if (cfg.display_timeout > 0.f) {
+        float elapsed = ofGetElapsedTimef() - last_predict_time_;
+        if (elapsed > cfg.display_timeout) return;
+    }
 
     std::string name = (last_idx_ < (int)cfg.labels.size())
         ? cfg.labels[last_idx_]
@@ -199,7 +288,7 @@ void TsdtPipeline::drawLabel() const {
 
     const float cx = ofGetWidth() * 0.5f;
     const float marginBottom = 650.0f;
-    const float yBottom = ofGetHeight() - marginBottom;
+    const float yBottom = ofGetHeight() - marginBottom + cfg.label_y_offset;
 
     ofPushStyle();
     if (fontOk) {
@@ -329,6 +418,7 @@ void TsdtPipeline::clearHistory() {
     hist_.clear();
     last_idx_  = -1;
     last_conf_ = 0.f;
+    last_predict_time_ = 0.f;
     ema_logits_.clear();
 }
 

@@ -75,7 +75,7 @@ void ofxDVS::setup() {
 
 	// init framebuffer
     ofSetVerticalSync(true);
-    ofSetBackgroundColor(255);
+    ofSetBackgroundColor(0);
 
     // allocate fbo , mesh and imagePol
     fbo.allocate(sizeX, sizeY, GL_RGBA32F);
@@ -262,7 +262,7 @@ void ofxDVS::setup() {
 
     // --- Load TSDT model via pipeline ---
     try {
-        tsdt_pipeline.loadModel(ofToDataPath("tp_gesture_128x128.onnx", true)); //spikevision_822128128_fixed.onnx", true));
+        tsdt_pipeline.loadModel(ofToDataPath("sew_resnet_dvs_gesture.onnx",true));//tp_gesture_128x128.onnx", true));
         tsdt_pipeline.selfTest();
         if (ofFile::doesFileExist(ofToDataPath("tsdt_input_fp32.bin", true))) {
             tsdt_pipeline.debugFromFile(ofToDataPath("tsdt_input_fp32.bin", true));
@@ -271,19 +271,23 @@ void ofxDVS::setup() {
         ofLogError() << "Failed to load TSDT: " << e.what();
     }
 
-    // --- Load TP Detector model via pipeline ---
+    // --- Load TPDVSGesture model via pipeline ---
     try {
-        tpdet_pipeline.cfg.num_classes = 0;
-        tpdet_pipeline.cfg.normalized_coords = true;
-        tpdet_pipeline.cfg.conf_thresh = 0.5f;
-        tpdet_pipeline.loadModel(ofToDataPath("tp_det_pedro_352x288.onnx", true));
+        tpdvs_gesture_pipeline.cfg.T = 1;
+        tpdvs_gesture_pipeline.cfg.inH = 32;
+        tpdvs_gesture_pipeline.cfg.inW = 32;
+        tpdvs_gesture_pipeline.cfg.time_based_binning = true;
+        tpdvs_gesture_pipeline.cfg.bin_window_ms = 75.0f;
+        tpdvs_gesture_pipeline.cfg.ema_alpha = 0.7f;
+        tpdvs_gesture_pipeline.cfg.label_y_offset = -80.f;
+        tpdvs_gesture_pipeline.cfg.log_tag = "TPDVSGesture";
+        tpdvs_gesture_pipeline.loadModel(ofToDataPath("tp_gesture_paper_32x32.onnx", true));
     } catch (const std::exception& e) {
-        ofLogError() << "Failed to load TP Det: " << e.what();
+        ofLogError() << "Failed to load TPDVSGesture: " << e.what();
     }
 
     // Start async inference workers
     yolo_worker.start();
-    tpdet_worker.start();
 
     // hot pixels
     const size_t npix = this->sizeX * this->sizeY;
@@ -377,6 +381,10 @@ void ofxDVS::tryLive(){
     thread.liveInput = true;
     liveInput = thread.liveInput;
     thread.unlock();
+
+    tsdt_pipeline.clearHistory();
+    yolo_pipeline.clearHistory();
+    tpdvs_gesture_pipeline.clearHistory();
 }
 
 //--------------------------------------------------------------
@@ -423,6 +431,9 @@ void ofxDVS::changePath(){
     liveInput = false;
     thread.unlock();
 
+    tsdt_pipeline.clearHistory();
+    yolo_pipeline.clearHistory();
+    tpdvs_gesture_pipeline.clearHistory();
     resetPlaybackTiming();
 }
 
@@ -626,9 +637,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
 
         if (type == IMU6_EVENT && imuStatus) {
 
-            packetsImu6.clear();
-            packetsImu6.shrink_to_fit();
-
             caerIMU6EventPacket imu6 = (caerIMU6EventPacket) packetHeader;
 
             float accelX = 0, accelY = 0, accelZ = 0;
@@ -661,9 +669,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
         }
         if (type == POLARITY_EVENT  && dvsStatus) {
 
-            packetsPolarity.clear();
-            packetsPolarity.shrink_to_fit();
-
             caerPolarityEventPacket polarity = (caerPolarityEventPacket) packetHeader;
 
             CAER_POLARITY_ITERATOR_VALID_START(polarity)
@@ -684,9 +689,6 @@ bool ofxDVS::organizeData(caerEventPacketContainer packetContainer){
             CAER_POLARITY_ITERATOR_VALID_END
         }
         if (type == FRAME_EVENT && apsStatus){
-
-            packetsFrames.clear();
-            packetsFrames.shrink_to_fit();
 
             caerFrameEventPacket frame = (caerFrameEventPacket) packetHeader;
 
@@ -782,6 +784,12 @@ void ofxDVS::update() {
         // Check if the file looped (thread signalled a reset)
         if (thread.resetTimingFlag.exchange(false)) {
             timingInitialized_ = false;
+            // Note: TSDT/YOLO histories are NOT cleared here.
+            // TSDT doesn't use timestamps in tensor building (only x,y,pol),
+            // so the timestamp jump on file loop is harmless.  Clearing would
+            // blank the label for ~1-2 s while 80 k events re-accumulate.
+            // However, time-based binning IS sensitive to timestamp jumps:
+            tpdvs_gesture_pipeline.clearHistory();
         }
 
         // Prepend any deferred packets from last frame
@@ -795,6 +803,11 @@ void ofxDVS::update() {
         }
 
         // 2) process WITHOUT holding the lock
+        // Clear per-frame event buffers once (organizeData appends into them)
+        packetsPolarity.clear();
+        packetsImu6.clear();
+        packetsFrames.clear();
+
         bool isFileMode = thread.fileInputReady;
         for (auto &packetContainer : local) {
             bool delpc = false;
@@ -809,6 +822,19 @@ void ofxDVS::update() {
                     timingInitialized_ = true;
                 }
                 int64_t fileOffset = packetTs - fileTimeOrigin_;
+
+                // Detect timestamp backward jump (file looped mid-batch):
+                // re-sync timing origin from this packet
+                if (fileOffset < -1000000) {
+                    fileTimeOrigin_ = packetTs;
+                    wallTimeOrigin_ = ofGetElapsedTimeMicros();
+                    fileOffset = 0;
+                    // Discard stale deferred packets from previous loop
+                    for (auto& bp : backlog_)
+                        caerEventPacketContainerFree(bp);
+                    backlog_.clear();
+                }
+
                 if (playbackSpeed_ <= 0.0f) playbackSpeed_ = 0.01f;
                 int64_t targetWallOffset = (int64_t)((double)fileOffset / (double)playbackSpeed_);
                 int64_t wallNow = ofGetElapsedTimeMicros();
@@ -1070,9 +1096,13 @@ void ofxDVS::update() {
     // ---- TSDT: push events and run inference (synchronous) ----
     if (!packetsPolarity.empty()) {
         tsdt_pipeline.pushEvents(packetsPolarity, sizeX, sizeY);
+        tpdvs_gesture_pipeline.pushEvents(packetsPolarity, sizeX, sizeY);
 
         if (tsdtEnabled && tsdt_pipeline.isLoaded()) {
             tsdt_pipeline.infer(sizeX, sizeY);
+        }
+        if (tpdvsGestureEnabled && tpdvs_gesture_pipeline.isLoaded()) {
+            tpdvs_gesture_pipeline.infer(sizeX, sizeY);
         }
     }
 
@@ -1226,11 +1256,10 @@ void ofxDVS::draw() {
     }
     yolo_pipeline.drawDetections(sizeX, sizeY);
 
-    // TP Det detections from async worker
-    if (tpdetEnabled && tpdet_worker.hasResult()) {
-        tpdet_pipeline.detections() = tpdet_worker.lastResult();
+    // TPDVSGesture label
+    if (tpdvsGestureEnabled) {
+        tpdvs_gesture_pipeline.drawLabel();
     }
-    if (tpdetEnabled) tpdet_pipeline.drawDetections(sizeX, sizeY);
 
     // TSDT label
     if (tsdtEnabled) {
@@ -1716,7 +1745,6 @@ void ofxDVS::exit() {
 
     // stop inference workers first (they may hold ONNX sessions)
     yolo_worker.stop();
-    tpdet_worker.stop();
     tsdt_worker.stop();
 
     ofLogNotice() << "[ofxDVS] exit: stopping USB thread...";
@@ -2099,8 +2127,7 @@ void ofxDVS::updateImageGenerator(){
         newImageGen = true;
 
         // --- VTEI-based inference via async workers ---
-        bool needVTEI = (nnEnabled && yolo_pipeline.isLoaded()) ||
-                        (tpdetEnabled && tpdet_pipeline.isLoaded());
+        bool needVTEI = (nnEnabled && yolo_pipeline.isLoaded());
         if (needVTEI && newImageGen) {
             // Build VTEI tensor on main thread (fast, uses pipeline pre-allocated buffers)
             auto vtei = yolo_pipeline.buildVTEI(
@@ -2114,14 +2141,6 @@ void ofxDVS::updateImageGenerator(){
                 yolo_worker.submit([this, vtei, sw, sh]() -> std::vector<dvs::YoloDet> {
                     yolo_pipeline.infer(vtei, sw, sh);
                     return yolo_pipeline.detections();
-                });
-            }
-
-            // Submit TP Det inference (non-blocking; dropped if worker is busy)
-            if (tpdetEnabled && tpdet_pipeline.isLoaded()) {
-                tpdet_worker.submit([this, vtei, sw, sh]() -> std::vector<dvs::YoloDet> {
-                    tpdet_pipeline.infer(vtei, sw, sh);
-                    return tpdet_pipeline.detections();
                 });
             }
         }

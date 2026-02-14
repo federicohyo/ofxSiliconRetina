@@ -26,16 +26,19 @@ std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs) {
     tsdt_folder->addSlider("TIMESTEPS (T)", 1, 16, dvs->tsdt_pipeline.cfg.T);
     tsdt_folder->addSlider("BIN (ms)",      1, 50,  dvs->tsdt_pipeline.cfg.bin_ms);
     tsdt_folder->addSlider("EMA alpha",     0.0, 1.0, dvs->tsdt_pipeline.cfg.ema_alpha);
+    tsdt_folder->addSlider("Confidence %", 0, 100, dvs->tsdt_pipeline.cfg.conf_threshold * 100.f);
+    tsdt_folder->addSlider("Display (s)",  0.1, 5.0, dvs->tsdt_pipeline.cfg.display_timeout);
     tsdt_folder->addButton("SELFTEST (from file)");
 
-    // TP Detector folder
-    auto tpdet_folder = panel->addFolder(">> TP Detector");
-    tpdet_folder->addToggle("ENABLE TPDET", false);
-    tpdet_folder->addToggle("DRAW TPDET", dvs->tpdet_pipeline.cfg.draw);
-    tpdet_folder->addSlider("TPDET CONF", 0.0, 1.0, dvs->tpdet_pipeline.cfg.conf_thresh);
-    tpdet_folder->addSlider("TPDET IOU",  0.0, 1.0, dvs->tpdet_pipeline.cfg.iou_thresh);
-    tpdet_folder->addSlider("TPDET SMOOTH", 1, 5, dvs->tpdet_pipeline.cfg.smooth_frames);
-    tpdet_folder->addButton("TPDET CLEAR HISTORY");
+    // TPDVSGesture folder
+    auto tpg_folder = panel->addFolder(">> TPDVSGesture");
+    tpg_folder->addToggle("ENABLE TPDVSGesture", dvs->tpdvsGestureEnabled);
+    tpg_folder->addToggle("TPDVSGesture SHOW LABEL", dvs->tpdvs_gesture_pipeline.cfg.show_label);
+    tpg_folder->addSlider("TPDVSGesture EMA", 0.0, 1.0, dvs->tpdvs_gesture_pipeline.cfg.ema_alpha);
+    tpg_folder->addSlider("TPDVSGesture Window (ms)", 10, 200, dvs->tpdvs_gesture_pipeline.cfg.bin_window_ms);
+    tpg_folder->addSlider("TPDVSGesture Confidence %", 0, 100, dvs->tpdvs_gesture_pipeline.cfg.conf_threshold * 100.f);
+    tpg_folder->addSlider("TPDVSGesture Display (s)", 0.1, 5.0, dvs->tpdvs_gesture_pipeline.cfg.display_timeout);
+    tpg_folder->addButton("TPDVSGesture CLEAR HISTORY");
 
     panel->setPosition(270, 0);
 
@@ -129,12 +132,12 @@ void onNNToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs) {
         ofLogNotice() << "TSDT execution " << (checked ? "enabled" : "disabled");
     } else if (name == "SHOW LABEL") {
         dvs->tsdt_pipeline.cfg.show_label = checked;
-    } else if (name == "ENABLE TPDET") {
-        dvs->tpdetEnabled = checked;
-        if (!checked) dvs->tpdet_pipeline.clearHistory();
-        ofLogNotice() << "TP Detector " << (checked ? "enabled" : "disabled");
-    } else if (name == "DRAW TPDET") {
-        dvs->tpdet_pipeline.cfg.draw = checked;
+    } else if (name == "ENABLE TPDVSGesture") {
+        dvs->tpdvsGestureEnabled = checked;
+        if (!checked) dvs->tpdvs_gesture_pipeline.clearHistory();
+        ofLogNotice() << "TPDVSGesture " << (checked ? "enabled" : "disabled");
+    } else if (name == "TPDVSGesture SHOW LABEL") {
+        dvs->tpdvs_gesture_pipeline.cfg.show_label = checked;
     }
 }
 
@@ -156,12 +159,18 @@ void onNNSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
         dvs->tsdt_pipeline.cfg.bin_ms = std::max(1, (int)std::round(e.value));
     } else if (n == "EMA alpha") {
         dvs->tsdt_pipeline.cfg.ema_alpha = ofClamp((float)e.value, 0.f, 1.f);
-    } else if (n == "TPDET CONF") {
-        dvs->tpdet_pipeline.cfg.conf_thresh = e.value;
-    } else if (n == "TPDET IOU") {
-        dvs->tpdet_pipeline.cfg.iou_thresh = e.value;
-    } else if (n == "TPDET SMOOTH") {
-        dvs->tpdet_pipeline.cfg.smooth_frames = std::max(1, (int)std::round(e.value));
+    } else if (n == "Confidence %") {
+        dvs->tsdt_pipeline.cfg.conf_threshold = (float)e.value / 100.f;
+    } else if (n == "Display (s)") {
+        dvs->tsdt_pipeline.cfg.display_timeout = (float)e.value;
+    } else if (n == "TPDVSGesture EMA") {
+        dvs->tpdvs_gesture_pipeline.cfg.ema_alpha = ofClamp((float)e.value, 0.f, 1.f);
+    } else if (n == "TPDVSGesture Window (ms)") {
+        dvs->tpdvs_gesture_pipeline.cfg.bin_window_ms = (float)e.value;
+    } else if (n == "TPDVSGesture Confidence %") {
+        dvs->tpdvs_gesture_pipeline.cfg.conf_threshold = (float)e.value / 100.f;
+    } else if (n == "TPDVSGesture Display (s)") {
+        dvs->tpdvs_gesture_pipeline.cfg.display_timeout = (float)e.value;
     }
 }
 
@@ -171,9 +180,9 @@ void onNNButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs) {
         ofLogNotice() << "YOLO temporal history cleared.";
     } else if (e.target->getName() == "SELFTEST (from file)") {
         dvs->tsdt_pipeline.debugFromFile(ofToDataPath("tsdt_input_fp32.bin", true));
-    } else if (e.target->getName() == "TPDET CLEAR HISTORY") {
-        dvs->tpdet_pipeline.clearHistory();
-        ofLogNotice() << "TP Det temporal history cleared.";
+    } else if (e.target->getName() == "TPDVSGesture CLEAR HISTORY") {
+        dvs->tpdvs_gesture_pipeline.clearHistory();
+        ofLogNotice() << "TPDVSGesture history cleared.";
     }
 }
 

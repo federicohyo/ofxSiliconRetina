@@ -598,6 +598,14 @@ public:
                     caerEventPacketContainerSetEventPacketsNumber(packetContainerT, 1);
                 }
                 if (packetContainerT != NULL){
+                    // Backpressure: wait if queue is full
+                    constexpr size_t MAX_QUEUE = 64;
+                    while (container.size() >= MAX_QUEUE &&
+                           isThreadRunning() && !liveInput && !doChangePath && !paused) {
+                        unlock();
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                        lock();
+                    }
                     container.push_back(packetContainerT);
                 }
                 if(doChangePath){
@@ -874,16 +882,15 @@ public:
     // --- Neural network pipelines ---
     bool nnEnabled = false;
     bool tsdtEnabled = false;
-    bool tpdetEnabled = false;
+    bool tpdvsGestureEnabled = false;
 
     dvs::YoloPipeline  yolo_pipeline;
     dvs::TsdtPipeline  tsdt_pipeline;
-    dvs::YoloPipeline  tpdet_pipeline;
+    dvs::TsdtPipeline  tpdvs_gesture_pipeline;
 
     // Async inference workers
     dvs::InferenceWorker<std::vector<dvs::YoloDet>> yolo_worker;
     dvs::InferenceWorker<std::pair<int,float>>      tsdt_worker;
-    dvs::InferenceWorker<std::vector<dvs::YoloDet>> tpdet_worker;
 
     // NN / YOLO panel
     std::unique_ptr<ofxDatGui> nn_panel;
