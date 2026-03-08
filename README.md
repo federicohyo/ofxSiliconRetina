@@ -127,6 +127,58 @@ Place model files in `example_dvs/bin/data/`. The code loads:
 - **TSDT**: `spikevision_822128128_fixed.onnx` (gesture recognition)
 - **TPDVSGesture**: `tp_gesture_paper_32x32.onnx` (gesture classification)
 
+## Build Notes for Ubuntu 20.04 + OF 0.12.1
+
+Building on Ubuntu 20.04 requires several adjustments due to toolchain and library version differences.
+
+### Prerequisites
+
+```bash
+# g++-13 (dv-processing 2.0.3 requires C++20)
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+sudo apt-get install -y g++-13
+
+# Inivation PPA for dv-processing and boost-inivation
+sudo add-apt-repository ppa:inivation-ppa/inivation -y
+sudo apt-get install -y dv-processing boost-inivation
+
+# OF dependency fix: libssl3 does not exist on 20.04
+# In scripts/linux/ubuntu/install_dependencies.sh, replace libssl3 with libssl1.1
+
+# Install onnxruntime (bundled in libs/onnxruntime/)
+sudo cp libs/onnxruntime/libonnxruntime*.so* /usr/local/lib/
+sudo rm /usr/local/lib/libonnxruntime.so /usr/local/lib/libonnxruntime.so.1
+sudo ln -s libonnxruntime.so.1.20.0 /usr/local/lib/libonnxruntime.so.1
+sudo ln -s libonnxruntime.so.1 /usr/local/lib/libonnxruntime.so
+sudo ldconfig
+```
+
+### C++ Standard Conflict
+
+OF 0.12.1 detects the system gcc (v9) and sets `-std=c++17`, but dv-processing requires C++20.
+The `example_dvs/Makefile` appends `CXXFLAGS += -std=gnu++20` after including the OF build system
+so the last `-std=` flag wins.
+
+### fmt Version Mismatch
+
+OF 0.12.1 bundles fmt v11 headers but Ubuntu 20.04 only has `libfmt.so.9`. This causes linker
+errors for `fmt::v11::*` symbols. Fixed by adding `-DFMT_HEADER_ONLY` to `PROJECT_CFLAGS` in
+`example_dvs/config.make`.
+
+### Inivation Boost
+
+dv-processing depends on `boost-inivation` (>= 1.80) installed at `/opt/inivation/boost/include`.
+The system boost 1.71 lacks required headers (`boost/endian.hpp`, `boost/nowide/`). Added
+`-I/opt/inivation/boost/include` to `PROJECT_CFLAGS`.
+
+### C++20 Namespace Fixes
+
+g++-13 with C++20 is stricter about unqualified names from `std::`. The following were fixed:
+- `ofxDVS.hpp`: `ios::` → `std::ios::`, `ifstream` → `std::ifstream`, `fstream` → `std::fstream`
+- `ofxDatGui`: `unique_ptr` → `std::unique_ptr`, `make_unique` → `std::make_unique`, `min` → `std::min`
+- `ofTypes.h`: added `#include <memory>`
+- `ofxFFmpegRecorder.h`: added `#include <list>`, added `setInputPixelFormat(const std::string&)` method
+
 ## License
 
 [MIT License](license.md) &mdash; Copyright (c) 2017 Federico Corradi

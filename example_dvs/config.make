@@ -6,7 +6,7 @@
 ################################################################################
 # OF ROOT
 #   The location of your root openFrameworks installation
-#       (default) OF_ROOT = ../../.. 
+#       (default) OF_ROOT = ../../..
 ################################################################################
 OF_ROOT = ../../..
 
@@ -80,7 +80,7 @@ OF_ROOT = ../../..
 #PROJECT_LDFLAGS=-Wl,-rpath=./libs,-lcaer
 PROJECT_LDFLAGS += -Wl,-rpath=./libs,-lcaer,-L/usr/lib/x86_64-linux-gnu,-lonnxruntime
 PROJECT_LDFLAGS += -lfmt
-PROJECT_LDFLAGS += -L/home/federico/tue/of_v0.12.0_linux64gcc6_release/addons/ofxDVS/libs/onnxruntime/
+PROJECT_LDFLAGS += -L/home/federico/tue/of_v0.12.1_linux64_gcc6_release/addons/ofxDVS/libs/onnxruntime/
 PROJECT_LDFLAGS += $(shell pkg-config --libs   dv-processing opencv4 libusb-1.0)
 
 ################################################################################
@@ -110,7 +110,9 @@ PROJECT_LDFLAGS += $(shell pkg-config --libs   dv-processing opencv4 libusb-1.0)
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
 # PROJECT_CFLAGS = 
-PROJECT_CFLAGS += -I/home/federico/tue/of_v0.12.0_linux64gcc6_release/addons/ofxDVS/libs/onnxruntime
+PROJECT_CFLAGS += -DFMT_HEADER_ONLY
+PROJECT_CFLAGS += -I/opt/inivation/boost/include
+PROJECT_CFLAGS += -I/home/federico/tue/of_v0.12.1_linux64_gcc6_release/addons/ofxDVS/libs/onnxruntime
 PROJECT_CFLAGS += -I/usr/include/opencv4/
 PROJECT_CFLAGS += -I/usr/include/eigen3/
 PROJECT_CFLAGS += -I/usr/include/libusb-1.0/

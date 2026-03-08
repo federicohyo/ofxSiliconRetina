@@ -11,3 +11,6 @@ endif
 
 # call the project makefile!
 include $(OF_ROOT)/libs/openFrameworksCompiled/project/makefileCommon/compile.project.mk
+
+# Override: ensure gnu++20 is the final -std= flag (dv-processing requires C++20)
+CXXFLAGS += -std=gnu++20

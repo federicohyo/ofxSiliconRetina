@@ -252,12 +252,12 @@ public:
             // AEDAT 3.1 files — parse header for version check
             if(ext == "aedat") {
                 string string_path = path + "/" + files[i];
-                fstream file(files[i], ios::in | ios::out | ios::binary);
+                std::fstream file(files[i], std::ios::in | std::ios::out | std::ios::binary);
                 files_id = i;
                 string input_file = string_path;
                 string line;
-                ifstream istream;
-                istream.open(input_file.c_str(),ios::binary|ios::in);
+                std::ifstream istream;
+                istream.open(input_file.c_str(),std::ios::binary|std::ios::in);
 
                 while(getline(istream,line,'\n')){
                     if(line.empty()) continue;
@@ -523,7 +523,7 @@ public:
             }
             // =============== AEDAT 3.1 reading path (backward compatible) ===============
             else {
-            istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
+            istreamf.open(filename_to_open.c_str(),std::ios::binary|std::ios::in);
             istreamf.seekg(0,istreamf.beg);
             if (!istreamf.is_open()){
                 ofLog(OF_LOG_ERROR, "Error opening file %s", filename_to_open.c_str());
@@ -580,7 +580,7 @@ public:
                     if( istreamf.eof() ){
                         ofLog(OF_LOG_NOTICE,"Reached the end of the file. Restarting...");
                         istreamf.close();
-                        istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
+                        istreamf.open(filename_to_open.c_str(),std::ios::binary|std::ios::in);
                         header_skipped = false;
                         resetTimingFlag.store(true);
                         goto HEADERPARSE;
@@ -623,7 +623,7 @@ public:
                         fileInputReady = false;
                         goto SELECTFORMAT;
                     }
-                    istreamf.open(filename_to_open.c_str(),ios::binary|ios::in);
+                    istreamf.open(filename_to_open.c_str(),std::ios::binary|std::ios::in);
                     header_skipped = false;
                     doChangePath = false;
                     fileIndexReady = false;
@@ -661,7 +661,7 @@ public:
     string path;
     bool doChangePath;
     bool header_skipped;
-    ifstream istreamf;
+    std::ifstream istreamf;
     bool fileIndexReady;
     bool paused;
     bool doLoad;
