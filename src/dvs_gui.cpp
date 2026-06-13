@@ -26,11 +26,27 @@ std::unique_ptr<ofxDatGui> createNNPanel(ofxDVS* dvs) {
     nn_folder->addToggle("ENABLE NN", dvs->yolo_pipeline.cfg.draw);
     nn_folder->addToggle("DRAW DETECTIONS", dvs->yolo_pipeline.cfg.draw);
     nn_folder->addToggle("SHOW LABELS", dvs->yolo_pipeline.cfg.show_labels);
+    nn_folder->addToggle("SHOW VTEI INPUT", dvs->showVteiChannels_);
+    nn_folder->addToggle("SHOW LAYER ACTS", dvs->showProbeActivations_);
+    nn_folder->addToggle("SHOW SNN SPIKES", dvs->showSnnSpikes_);
+    nn_folder->addSlider("SPIKE THRESH", 0.0, 1.0, dvs->snnSpikeThreshold_);
     nn_folder->addSlider("CONF THRESH", 0.0, 1.0, dvs->yolo_pipeline.cfg.conf_thresh);
     nn_folder->addSlider("IOU THRESH",  0.0, 1.0, dvs->yolo_pipeline.cfg.iou_thresh);
     nn_folder->addSlider("SMOOTH FRAMES", 1, 5, dvs->yolo_pipeline.cfg.smooth_frames);
     nn_folder->addSlider("VTEI Window (ms)", 5, 200, dvs->yolo_pipeline.cfg.vtei_win_ms);
+    nn_folder->addSlider("Encoding (0=VTEI 1=TBins)", 0, 1, dvs->yolo_pipeline.cfg.encoding);
     nn_folder->addButton("CLEAR HISTORY");
+
+    // SNN YOLO folder
+    auto snn_folder = panel->addFolder(">> SNN YOLO (yolo8n-gen1)");
+    snn_folder->addToggle("ENABLE SNN YOLO",   dvs->snnYoloEnabled);
+    snn_folder->addToggle("SNN DRAW BOXES",    dvs->snn_yolo_pipeline.cfg.draw);
+    snn_folder->addToggle("SNN SHOW LABELS",   dvs->snn_yolo_pipeline.cfg.show_labels);
+    snn_folder->addSlider("SNN CONF THRESH",   0.0, 1.0, dvs->snn_yolo_pipeline.cfg.conf_thresh);
+    snn_folder->addSlider("SNN IOU THRESH",    0.0, 1.0, dvs->snn_yolo_pipeline.cfg.iou_thresh);
+    snn_folder->addSlider("SNN BIN (ms)",      1, 32,    dvs->snn_yolo_pipeline.cfg.bin_ms);
+    snn_folder->addSlider("SNN SMOOTH",        1, 5,     dvs->snn_yolo_pipeline.cfg.smooth_frames);
+    snn_folder->addButton("SNN CLEAR HISTORY");
 
     // TSDT folder
     auto tsdt_folder = panel->addFolder(">> Neural Net (TSDT)");
@@ -169,6 +185,20 @@ void onNNToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs) {
         dvs->yolo_pipeline.cfg.draw = checked;
     } else if (name == "SHOW LABELS") {
         dvs->yolo_pipeline.cfg.show_labels = checked;
+    } else if (name == "SHOW VTEI INPUT") {
+        dvs->showVteiChannels_ = checked;
+    } else if (name == "SHOW LAYER ACTS") {
+        dvs->showProbeActivations_ = checked;
+    } else if (name == "SHOW SNN SPIKES") {
+        dvs->showSnnSpikes_ = checked;
+    } else if (name == "ENABLE SNN YOLO") {
+        dvs->snnYoloEnabled = checked;
+        if (!checked) dvs->snn_yolo_pipeline.clearHistory();
+        ofLogNotice() << "SNN YOLO " << (checked ? "enabled" : "disabled");
+    } else if (name == "SNN DRAW BOXES") {
+        dvs->snn_yolo_pipeline.cfg.draw = checked;
+    } else if (name == "SNN SHOW LABELS") {
+        dvs->snn_yolo_pipeline.cfg.show_labels = checked;
     } else if (name == "ENABLE TSDT") {
         dvs->tsdtEnabled = checked;
         if (!checked) dvs->tsdt_pipeline.clearHistory();
@@ -187,7 +217,9 @@ void onNNToggleEvent(ofxDatGuiToggleEvent e, ofxDVS* dvs) {
 void onNNSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
     const std::string& n = e.target->getName();
 
-    if (n == "CONF THRESH") {
+    if (n == "SPIKE THRESH") {
+        dvs->snnSpikeThreshold_ = ofClamp((float)e.value, 0.f, 1.f);
+    } else if (n == "CONF THRESH") {
         dvs->yolo_pipeline.cfg.conf_thresh = e.value;
     } else if (n == "IOU THRESH") {
         dvs->yolo_pipeline.cfg.iou_thresh = e.value;
@@ -196,6 +228,19 @@ void onNNSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
     } else if (n == "VTEI Window (ms)") {
         dvs->yolo_pipeline.cfg.vtei_win_ms = e.value;
         ofLogNotice() << "VTEI window: " << e.value << " ms";
+    } else if (n == "Encoding (0=VTEI 1=TBins)") {
+        dvs->yolo_pipeline.cfg.encoding = (int)std::round(e.value);
+        dvs->yolo_pipeline.clearHistory();
+        ofLogNotice() << "Encoding: " << (dvs->yolo_pipeline.cfg.encoding == 0 ? "VTEI" : "Temporal Bins");
+    } else if (n == "SNN CONF THRESH") {
+        dvs->snn_yolo_pipeline.cfg.conf_thresh = (float)e.value;
+    } else if (n == "SNN IOU THRESH") {
+        dvs->snn_yolo_pipeline.cfg.iou_thresh = (float)e.value;
+    } else if (n == "SNN BIN (ms)") {
+        dvs->snn_yolo_pipeline.cfg.bin_ms = (float)e.value;
+        dvs->snn_yolo_pipeline.clearHistory();
+    } else if (n == "SNN SMOOTH") {
+        dvs->snn_yolo_pipeline.cfg.smooth_frames = std::max(1, (int)std::round(e.value));
     } else if (n == "TIMESTEPS (T)") {
         dvs->tsdt_pipeline.cfg.T = std::max(1, (int)std::round(e.value));
     } else if (n == "BIN (ms)") {
@@ -218,12 +263,16 @@ void onNNSliderEvent(ofxDatGuiSliderEvent e, ofxDVS* dvs) {
 }
 
 void onNNButtonEvent(ofxDatGuiButtonEvent e, ofxDVS* dvs) {
-    if (e.target->getName() == "CLEAR HISTORY") {
+    const std::string& n = e.target->getName();
+    if (n == "CLEAR HISTORY") {
         dvs->yolo_pipeline.clearHistory();
         ofLogNotice() << "YOLO temporal history cleared.";
-    } else if (e.target->getName() == "SELFTEST (from file)") {
+    } else if (n == "SNN CLEAR HISTORY") {
+        dvs->snn_yolo_pipeline.clearHistory();
+        ofLogNotice() << "SNN YOLO history cleared.";
+    } else if (n == "SELFTEST (from file)") {
         dvs->tsdt_pipeline.debugFromFile(ofToDataPath("tsdt_input_fp32.bin", true));
-    } else if (e.target->getName() == "TPDVSGesture CLEAR HISTORY") {
+    } else if (n == "TPDVSGesture CLEAR HISTORY") {
         dvs->tpdvs_gesture_pipeline.clearHistory();
         ofLogNotice() << "TPDVSGesture history cleared.";
     }

@@ -9,12 +9,14 @@
 
 #include <vector>
 #include <deque>
+#include <array>
 #include <string>
 #include <memory>
 #include <map>
 
 #include "ofMain.h"
 #include "onnx_run.hpp"
+#include "dvs_nn_utils.hpp"
 
 // Forward-declare the polarity struct
 struct polarity;
@@ -94,6 +96,24 @@ public:
     int   lastIndex()      const { return last_idx_; }
     float lastConfidence() const { return last_conf_; }
 
+    // ---- Probe + rasterplot API ----------------------------------------------
+    static constexpr int NUM_PROBES        = 8;   ///< One per SNN layer
+    static constexpr int NUM_RASTER_NEURONS = 10;  ///< Neurons sampled per layer
+    static constexpr int RASTER_HISTORY    = 100;  ///< Time steps kept in raster
+
+    /// Load the _probed.onnx model variant that exposes Conv + Cast outputs.
+    void setupProbes();
+
+    bool probesEnabled() const { return probesEnabled_; }
+    const std::array<ProbeMap, NUM_PROBES>& probeResults() const { return probeResults_; }
+
+    // Rasterplot access: [layer][time_slot][neuron_index], circular buffer
+    using RasterRow = std::array<float, NUM_RASTER_NEURONS>;
+    using RasterLayer = std::array<RasterRow, RASTER_HISTORY>;
+    const std::array<RasterLayer, NUM_PROBES>& rasterData()      const { return spike_raster_; }
+    const std::array<std::vector<int>, NUM_PROBES>& rasterNeuronIdx() const { return raster_neuron_idx_; }
+    int  rasterPos() const { return raster_pos_; }
+
     /// Mutable config for GUI binding.
     TsdtConfig cfg;
 
@@ -130,6 +150,22 @@ private:
 
     // Accumulate-then-resize buffer (for training-matched preprocessing)
     std::vector<float> sensor_buf_;
+
+    // ---- Probe state --------------------------------------------------------
+    static const char* const PROBE_NAMES[NUM_PROBES];   // Conv outputs
+    static const char* const SPIKE_NAMES[NUM_PROBES];   // Cast outputs (binary spikes)
+    static const char* const PROBE_LABELS[NUM_PROBES];
+    static const int         LAYER_NEURON_COUNT[NUM_PROBES]; // flat spike count per layer
+    std::array<ProbeMap, NUM_PROBES> probeResults_;
+    bool probesEnabled_ = false;
+    std::map<std::string, std::vector<float>> outmap_;  // reused each infer()
+    void extractProbes_();
+
+    // ---- Rasterplot state ---------------------------------------------------
+    std::array<std::vector<int>, NUM_PROBES>   raster_neuron_idx_; // sampled neuron indices
+    std::array<RasterLayer, NUM_PROBES>        spike_raster_{};    // circular spike buffer
+    int                                        raster_pos_ = 0;    // next write column
+    void extractSpikes_();
 };
 
 } // namespace dvs

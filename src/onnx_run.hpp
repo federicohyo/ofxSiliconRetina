@@ -51,10 +51,19 @@ public:
     // Load / unload
     void load();
     bool isLoaded() const { return loaded_; }
+    const std::string& modelPath() const { return cfg_.model_path; }
 
     // Introspect model I/O
     const std::vector<IOInfo>& inputs()  const { return inputs_;  }
     const std::vector<IOInfo>& outputs() const { return outputs_; }
+
+    /// Append an intermediate node output name to be captured on every Run().
+    /// Call after load(). Rebuilds internal name-pointer cache.
+    void addProbeOutput(const std::string& name);
+
+    /// Shape of a named output from the most recent run ([1,C,H,W] for conv layers).
+    /// Returns nullptr if the name was not captured in the last run.
+    const std::vector<int64_t>* getLastOutputShape(const std::string& name) const;
 
     // Run inference on an ofImage. If the model size differs, the image is resized.
     std::unordered_map<std::string, std::vector<float>> run(const ofImage& img);
@@ -105,4 +114,7 @@ private:
 
     // Pre-allocated FP16 conversion buffer (reused across calls)
     mutable std::vector<uint16_t> chw_f16_buf_;
+
+    // Shapes of all outputs (including probes) from the most recent run
+    std::unordered_map<std::string, std::vector<int64_t>> lastOutputShapes_;
 };

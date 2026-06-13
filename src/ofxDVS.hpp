@@ -20,6 +20,7 @@
 #include <dv-processing/io/mono_camera_recording.hpp>
 
 #include <atomic>
+#include <array>
 
 enum class AedatFormat { UNKNOWN, AEDAT31, AEDAT4 };
 
@@ -65,6 +66,7 @@ enum class AedatFormat { UNKNOWN, AEDAT31, AEDAT4 };
 #include "dvs_nn_utils.hpp"
 #include "dvs_yolo_pipeline.hpp"
 #include "dvs_tsdt_pipeline.hpp"
+#include "dvs_snn_yolo_pipeline.hpp"
 #include "dvs_inference_worker.hpp"
 
 struct polarity {
@@ -690,6 +692,7 @@ public:
     void setupCore();      // Camera, threads, buffers, models — no GUI
     void setupGUI();       // All panel creation (call from control window context)
     void drawViewer();     // Visualization only (spikes, images, overlays, labels)
+    void drawNNViz();      // NN visualization window: VTEI + probe activations + SNN spikes
     void drawControls();   // f1 panel (other panels auto-draw via ofEvents)
     void updateGUI();      // f1->update(), text widget refreshes
     void drawSpikes();
@@ -900,12 +903,37 @@ public:
 
     // --- Neural network pipelines ---
     bool nnEnabled = false;
+    bool showVteiChannels_ = true;
+    std::array<ofTexture, 5> vteiTextures_;
+    void updateVteiTextures_(const std::vector<float>& chw5, int W, int H);
+    void drawVteiChannels_();
+
+    bool showProbeActivations_ = true;
+    std::array<ofTexture, dvs::YoloPipeline::NUM_PROBES> probeTextures_;
+    void updateProbeTextures_();
+    void drawProbeActivations_();
+
+    // SNN spike-map visualization: binarized probe activations
+    bool showSnnSpikes_ = true;
+    float snnSpikeThreshold_ = 0.5f;
+    std::array<ofTexture, dvs::YoloPipeline::NUM_PROBES> spikeTextures_;
+    std::array<float, dvs::YoloPipeline::NUM_PROBES> spikeRates_{};
+    void updateSpikeTextures_();
+    void drawSnnSpikes_();
+
+    // TPDVSGesture probe + rasterplot textures (all 8 SNN layers)
+    std::array<ofTexture, dvs::TsdtPipeline::NUM_PROBES> gestureProbeTextures_;
+    std::array<ofTexture, dvs::TsdtPipeline::NUM_PROBES> gestureRasterTextures_;
+    void updateGestureTextures_();   // updates both probe and raster textures
+
     bool tsdtEnabled = false;
     bool tpdvsGestureEnabled = false;
 
-    dvs::YoloPipeline  yolo_pipeline;
-    dvs::TsdtPipeline  tsdt_pipeline;
-    dvs::TsdtPipeline  tpdvs_gesture_pipeline;
+    dvs::YoloPipeline     yolo_pipeline;
+    dvs::TsdtPipeline     tsdt_pipeline;
+    dvs::TsdtPipeline     tpdvs_gesture_pipeline;
+    dvs::SnnYoloPipeline  snn_yolo_pipeline;
+    bool                  snnYoloEnabled = false;
 
     // Async inference workers
     dvs::InferenceWorker<std::vector<dvs::YoloDet>> yolo_worker;

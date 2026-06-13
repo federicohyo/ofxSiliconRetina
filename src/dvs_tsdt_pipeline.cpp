@@ -246,8 +246,6 @@ std::pair<int, float> TsdtPipeline::infer(int sensorW, int sensorH) {
     if (tensor.empty()) return {-1, 0.f};
 
     try {
-        std::map<std::string, std::vector<float>> outmap;
-
         if (stateful_) {
             // Stateful SNN: shape [1, 2, H, W], pass state_in alongside
             std::vector<int64_t> frame_shape = {1, 2, (int64_t)cfg.inH, (int64_t)cfg.inW};
@@ -256,23 +254,25 @@ std::pair<int, float> TsdtPipeline::infer(int sensorW, int sensorH) {
                 {tensor.data(), frame_shape},
                 {snn_state_.data(), state_shape}
             };
-            outmap = tsdt_->runRawMulti(inputs);
+            outmap_ = tsdt_->runRawMulti(inputs);
 
             // Update SNN membrane state from output
-            auto sit = outmap.find("state_out");
-            if (sit != outmap.end()) {
+            auto sit = outmap_.find("state_out");
+            if (sit != outmap_.end()) {
                 snn_state_ = sit->second;
             }
         } else {
             // Non-stateful: shape [1, T, 2, H, W]
             std::vector<int64_t> shape = {1, (int64_t)cfg.T, 2, cfg.inH, cfg.inW};
-            outmap = tsdt_->runRaw(tensor.data(), shape);
+            outmap_ = tsdt_->runRaw(tensor.data(), shape);
         }
+
+        if (probesEnabled_) { extractProbes_(); extractSpikes_(); }
 
         // Pick logits
         const std::vector<float>* pv = nullptr;
-        auto it = outmap.find("logits");
-        pv = (it != outmap.end()) ? &it->second : &outmap.begin()->second;
+        auto it = outmap_.find("logits");
+        pv = (it != outmap_.end()) ? &it->second : &outmap_.begin()->second;
         const auto& logits = *pv;
 
         // EMA smoothing (skipped when ema_alpha == 1.0; SNN state handles temporal integration)
@@ -509,6 +509,155 @@ void TsdtPipeline::clearHistory() {
     last_predict_time_ = 0.f;
     ema_logits_.clear();
     std::fill(snn_state_.begin(), snn_state_.end(), 0.f);
+}
+
+// ---- Probe constants (all 8 SNN layers) ----
+const char* const TsdtPipeline::PROBE_NAMES[NUM_PROBES] = {
+    "/network.0/Conv_output_0",   // [1,  64, 32, 32]
+    "/network.1/Conv_output_0",   // [1, 128, 32, 32]
+    "/network.2/Conv_output_0",   // [1, 256, 16, 16]
+    "/network.3/Conv_output_0",   // [1, 256, 16, 16]
+    "/network.4/Conv_output_0",   // [1, 512,  8,  8]
+    "/network.5/Conv_output_0",   // [1, 512,  8,  8]
+    "/network.6/Conv_output_0",   // [1, 512,  4,  4]
+    "/network.7/Conv_output_0",   // [1, 512,  4,  4]
+};
+const char* const TsdtPipeline::SPIKE_NAMES[NUM_PROBES] = {
+    "/network.0/activation/Cast_output_0",   // 65536 spikes
+    "/network.1/activation/Cast_output_0",   // 131072 spikes
+    "/network.2/activation/Cast_output_0",   // 65536 spikes
+    "/network.3/activation/Cast_output_0",   // 65536 spikes
+    "/network.4/activation/Cast_output_0",   // 32768 spikes
+    "/network.5/activation/Cast_output_0",   // 32768 spikes
+    "/network.6/activation/Cast_output_0",   // 8192 spikes
+    "/network.7/activation/Cast_output_0",   // 8192 spikes
+};
+const char* const TsdtPipeline::PROBE_LABELS[NUM_PROBES] = {
+    "L0 (64ch 32²)", "L1 (128ch 32²)",
+    "L2 (256ch 16²)", "L3 (256ch 16²)",
+    "L4 (512ch 8²)", "L5 (512ch 8²)",
+    "L6 (512ch 4²)", "L7 (512ch 4²)",
+};
+const int TsdtPipeline::LAYER_NEURON_COUNT[NUM_PROBES] = {
+    65536, 131072, 65536, 65536, 32768, 32768, 8192, 8192
+};
+
+// ---- setupProbes ----
+void TsdtPipeline::setupProbes() {
+    if (!tsdt_ || !tsdt_->isLoaded()) return;
+
+    std::string base = tsdt_->modelPath();
+    const std::string suffix = ".onnx";
+    auto pos = base.rfind(suffix);
+    if (pos == std::string::npos || pos + suffix.size() != base.size()) {
+        ofLogWarning() << "[TsdtPipeline] cannot derive probe model path from: " << base;
+        return;
+    }
+    std::string probe_path = base.substr(0, pos) + "_probed.onnx";
+
+    {
+        std::ifstream f(probe_path);
+        if (!f.good()) {
+            ofLogWarning() << "[TsdtPipeline] probe model not found: " << probe_path;
+            return;
+        }
+    }
+
+    try {
+        OnnxRunner::Config nncfg;
+        nncfg.model_path   = probe_path;
+        nncfg.normalize_01 = false;
+        nncfg.verbose      = false;
+
+        auto probe_nn = std::make_unique<OnnxRunner>(nncfg);
+        probe_nn->load();
+
+        // Validate: dummy run with correct inputs
+        std::vector<int64_t> frame_shape = {1, 2, (int64_t)cfg.inH, (int64_t)cfg.inW};
+        std::vector<int64_t> state_shape  = {1, (int64_t)state_size_};
+        std::vector<float> dummy_frame((size_t)2 * cfg.inH * cfg.inW, 0.f);
+        std::vector<float> dummy_state(state_size_, 0.f);
+        probe_nn->runRawMulti({
+            {dummy_frame.data(), frame_shape},
+            {dummy_state.data(), state_shape}
+        });
+
+        tsdt_ = std::move(probe_nn);
+        outmap_.clear();
+
+        for (int i = 0; i < NUM_PROBES; ++i)
+            probeResults_[i].label = PROBE_LABELS[i];
+
+        // Initialise rasterplot: evenly-spaced neuron indices, zero history
+        for (int p = 0; p < NUM_PROBES; ++p) {
+            int N = LAYER_NEURON_COUNT[p];
+            auto& idx = raster_neuron_idx_[p];
+            idx.resize(NUM_RASTER_NEURONS);
+            for (int n = 0; n < NUM_RASTER_NEURONS; ++n)
+                idx[n] = (int)(((int64_t)n * N) / NUM_RASTER_NEURONS);
+            for (auto& row : spike_raster_[p]) row.fill(0.f);
+        }
+        raster_pos_ = 0;
+
+        probesEnabled_ = true;
+        ofLogNotice() << "[TsdtPipeline] probes + rasterplot enabled (" << probe_path << ")";
+    } catch (const std::exception& e) {
+        probesEnabled_ = false;
+        ofLogWarning() << "[TsdtPipeline] probes disabled: " << e.what();
+    }
+}
+
+// ---- extractProbes_ ----
+void TsdtPipeline::extractProbes_() {
+    for (int p = 0; p < NUM_PROBES; ++p) {
+        auto it = outmap_.find(PROBE_NAMES[p]);
+        if (it == outmap_.end()) { probeResults_[p].W = 0; probeResults_[p].H = 0; continue; }
+
+        const auto* shape = tsdt_->getLastOutputShape(PROBE_NAMES[p]);
+        if (!shape || shape->size() < 4) { probeResults_[p].W = 0; continue; }
+
+        const int64_t C = (*shape)[1], H = (*shape)[2], W = (*shape)[3];
+        if (C <= 0 || H <= 0 || W <= 0) { probeResults_[p].W = 0; continue; }
+
+        const std::vector<float>& raw = it->second;
+        const size_t plane = (size_t)H * W;
+        std::vector<float>& avg = probeResults_[p].avg;
+        avg.assign(plane, 0.f);
+
+        // Max absolute value across channels per pixel
+        for (int64_t c = 0; c < C; ++c) {
+            const float* ch = raw.data() + c * plane;
+            for (size_t i = 0; i < plane; ++i) {
+                float a = std::abs(ch[i]);
+                if (a > avg[i]) avg[i] = a;
+            }
+        }
+        float vmax = *std::max_element(avg.begin(), avg.end());
+        const float scale = vmax > 1e-6f ? (1.f / vmax) : 1.f;
+        for (size_t i = 0; i < plane; ++i) avg[i] *= scale;
+
+        probeResults_[p].W = (int)W;
+        probeResults_[p].H = (int)H;
+    }
+}
+
+// ---- extractSpikes_ ----
+// Reads the flat binary Cast outputs, samples NUM_RASTER_NEURONS per layer,
+// and writes one column into the circular spike_raster_ buffer.
+void TsdtPipeline::extractSpikes_() {
+    for (int p = 0; p < NUM_PROBES; ++p) {
+        auto it = outmap_.find(SPIKE_NAMES[p]);
+        auto& row = spike_raster_[p][raster_pos_];
+        if (it == outmap_.end()) { row.fill(0.f); continue; }
+
+        const auto& flat = it->second;
+        const auto& idx  = raster_neuron_idx_[p];
+        for (int n = 0; n < NUM_RASTER_NEURONS; ++n) {
+            int ni = idx[n];
+            row[n] = (ni < (int)flat.size()) ? flat[ni] : 0.f;
+        }
+    }
+    raster_pos_ = (raster_pos_ + 1) % RASTER_HISTORY;
 }
 
 } // namespace dvs

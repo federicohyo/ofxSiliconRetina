@@ -124,6 +124,20 @@ void OnnxRunner::dumpModelIO_() const {
     }
 }
 
+void OnnxRunner::addProbeOutput(const std::string& name) {
+    // Note: prefer loading a _probed.onnx model (explicit outputs) over this method.
+    // ORT_DISABLE_ALL disables graph optimisations but does not guarantee access to
+    // arbitrary intermediate tensors in ORT 1.20.  This method is kept for
+    // possible future use but is not called by YoloPipeline::setupProbes() anymore.
+    ofLogWarning() << "[OnnxRunner] addProbeOutput(" << name
+                   << ") called — use a _probed.onnx model instead";
+}
+
+const std::vector<int64_t>* OnnxRunner::getLastOutputShape(const std::string& name) const {
+    auto it = lastOutputShapes_.find(name);
+    return it != lastOutputShapes_.end() ? &it->second : nullptr;
+}
+
 std::pair<int,int> OnnxRunner::getInputHW() const {
     if (inputs_.empty()) return { -1, -1 };
     const auto& in0 = inputs_.front();
@@ -215,6 +229,7 @@ OnnxRunner::runRaw(const float* data, const std::vector<int64_t>& shape)
         std::vector<float> buf(ptr, ptr + n);
 
         const std::string& key = (i < output_names_.size()) ? output_names_[i] : ("output"+std::to_string(i));
+        lastOutputShapes_[key] = info.GetShape();
         outmap[key] = std::move(buf);
     }
     return outmap;
@@ -255,6 +270,7 @@ OnnxRunner::runRawMulti(const std::vector<std::pair<const float*, std::vector<in
         std::vector<float> buf(ptr, ptr + n);
 
         const std::string& key = (i < output_names_.size()) ? output_names_[i] : ("output"+std::to_string(i));
+        lastOutputShapes_[key] = info.GetShape();
         outmap[key] = std::move(buf);
     }
     return outmap;
@@ -335,6 +351,8 @@ void OnnxRunner::runCHW_impl_(const std::vector<float>& chw, int C, int H, int W
         const auto et = tinf.GetElementType();
         const size_t count = tinf.GetElementCount();
         const std::string& key = output_names_[i];
+
+        lastOutputShapes_[key] = tinf.GetShape();
 
         // Reuse existing vector in map if possible
         auto& dst = results[key];

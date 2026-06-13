@@ -78,10 +78,11 @@ OF_ROOT = ../../..
 # incorporated directly into the final executable application binary.
 # TODO: should this be a default setting?
 #PROJECT_LDFLAGS=-Wl,-rpath=./libs,-lcaer
-PROJECT_LDFLAGS += -Wl,-rpath=./libs,-lcaer,-L/usr/lib/x86_64-linux-gnu,-lonnxruntime
+PROJECT_LDFLAGS += -Wl,-rpath=./libs
+PROJECT_LDFLAGS += -Wl,-rpath,'$$ORIGIN/libs'
+PROJECT_LDFLAGS += -L$(OF_ROOT)/addons/ofxDVS/libs/onnxruntime -lonnxruntime
 PROJECT_LDFLAGS += -lfmt
-PROJECT_LDFLAGS += -L$(OF_ROOT)/addons/ofxDVS/libs/onnxruntime/
-PROJECT_LDFLAGS += $(shell pkg-config --libs   dv-processing opencv4 libusb-1.0)
+PROJECT_LDFLAGS += $(shell pkg-config --libs dv-processing opencv4 libusb-1.0)
 
 ################################################################################
 # PROJECT DEFINES
@@ -117,7 +118,7 @@ PROJECT_CFLAGS += -I/usr/include/opencv4/
 PROJECT_CFLAGS += -I/usr/include/eigen3/
 PROJECT_CFLAGS += -I/usr/include/libusb-1.0/
 PROJECT_CFLAGS += -I/usr/include/libcaer/
-PROJECT_CFLAGS += -std=gnu++20 -I/usr/local/include/onnxruntime/core/session/ -Wno-volatile
+PROJECT_CFLAGS += -std=gnu++20 -Wno-volatile
 PROJECT_CFLAGS += $(shell pkg-config --cflags dv-processing opencv4 libusb-1.0)
 
 
@@ -153,5 +154,5 @@ PROJECT_CFLAGS += $(shell pkg-config --cflags dv-processing opencv4 libusb-1.0)
 #		(default) PROJECT_CC = (blank)
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
-PROJECT_CXX = g++-13 -std=gnu++20 
+PROJECT_CXX = g++-15 -std=gnu++20
 # PROJECT_CC = 

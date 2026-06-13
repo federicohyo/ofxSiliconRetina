@@ -9,6 +9,7 @@
 #include <deque>
 #include <string>
 #include <memory>
+#include <map>
 #include <unordered_map>
 
 #include "ofMain.h"
@@ -25,13 +26,14 @@ struct YoloDet { ofRectangle box; float score; int cls; };
 
 /// Runtime-tunable YOLO configuration.
 struct YoloConfig {
-    float conf_thresh   = 0.8f;
-    float iou_thresh    = 0.45f;
+    float conf_thresh   = 0.63f;    ///< Display threshold (eval uses 0.01 for mAP)
+    float iou_thresh    = 0.7f;    ///< NMS IoU threshold (matches eval protocol)
     int   smooth_frames = 2;      ///< Temporal smoothing history length (1..5)
     bool  draw          = true;   ///< Draw overlay when true
     bool  show_labels   = true;
     float vtei_win_ms   = 50.0f;  ///< VTEI accumulation window in milliseconds
-    int   num_classes   = 1;
+    int   encoding = 1;  ///< 0=VTEI (5ch), 1=temporal_bins (5 ternary bins)
+    int   num_classes   = 2;
     bool  normalized_coords = false; ///< Model outputs coords in [0,1] (scale by model dims)
     std::vector<std::string> class_names = {"person"};
 };
@@ -49,11 +51,11 @@ public:
 
     bool isLoaded() const { return nn_ && nn_->isLoaded(); }
 
-    /// Build the 5-channel VTEI tensor (pos, neg, time-surface, edge, intensity)
-    /// from the current event packet and image generator state.
-    /// Single-pass over packetsPolarity to find latest_ts and accumulate counts.
+    /// Build the 5-channel input tensor from events.
+    /// When cfg.encoding == 0 (VTEI): pos_count, neg_count, time_surface, ch3, ch4.
+    /// When cfg.encoding == 1 (temporal_bins): 5 ternary bins {-1,0,+1}.
     /// Returns CHW float buffer of size 5 * sensorH * sensorW.
-    std::vector<float> buildVTEI(
+    const std::vector<float>& buildVTEI(
         const std::vector<polarity>& events,
         float** surfaceMapLastTs,
         const ofPixels& intensityPixels,
@@ -76,6 +78,20 @@ public:
     const std::vector<YoloDet>& detections() const { return dets_; }
     std::vector<YoloDet>& detections() { return dets_; }
 
+    /// Last built VTEI/temporal-bins sensor-resolution tensor [5 * H * W].
+    const std::vector<float>& lastVteiSensor() const { return chw5_sensor_; }
+    int lastVteiW() const { return lastVteiW_; }
+    int lastVteiH() const { return lastVteiH_; }
+
+    /// Register 3 intermediate layer probes for activation visualization.
+    /// Call once after loadModel(). Silently skips on failure.
+    void setupProbes();
+
+    /// Channel-averaged activation maps from the last inference.
+    static constexpr int NUM_PROBES = 12;
+    const std::array<ProbeMap, NUM_PROBES>& probeResults() const { return probeResults_; }
+    bool probesEnabled() const { return probesEnabled_; }
+
     /// Mutable config for GUI binding.
     YoloConfig cfg;
 
@@ -95,9 +111,21 @@ private:
 
     void ensureLetterboxParams_(int sensorW, int sensorH);
 
+    /// Build 5 ternary temporal bins from events (encoding=1).
+    const std::vector<float>& buildTemporalBins_(
+        const std::vector<polarity>& events, int sW, int sH);
+
+    // ConvLSTM stateful inference (auto-detected from ONNX model)
+    bool stateful_ = false;
+    int  state_size_ = 0;
+    std::vector<float> lstm_state_;
+
     // Pre-allocated buffers (avoid per-frame allocation)
     std::vector<float> pos_buf_, neg_buf_, T_buf_, E_buf_;
     std::vector<float> chw5_sensor_, chw5_model_;
+
+    // Last sensor dimensions (for external VTEI visualization)
+    int lastVteiW_ = 0, lastVteiH_ = 0;
 
     // Reusable output map for runCHW_into
     std::unordered_map<std::string, std::vector<float>> outmap_;
@@ -110,6 +138,13 @@ private:
 
     // VTEI window in microseconds (derived from cfg.vtei_win_ms)
     long vtei_win_us() const { return static_cast<long>(cfg.vtei_win_ms * 1000.f); }
+
+    // Intermediate layer probes (channel-average activation maps)
+    static const char* const PROBE_NAMES[NUM_PROBES];
+    static const char* const PROBE_LABELS[NUM_PROBES];
+    std::array<ProbeMap, NUM_PROBES> probeResults_;
+    bool probesEnabled_ = false;
+    void extractProbes_();
 };
 
 } // namespace dvs

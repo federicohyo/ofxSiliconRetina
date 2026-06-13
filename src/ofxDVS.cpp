@@ -190,8 +190,18 @@ void ofxDVS::setupCore() {
     // --- Load YOLO model via pipeline ---
     try {
         yolo_pipeline.loadModel(ofToDataPath("ReYOLOv8m_PEDRO_352x288.onnx", true));
+        yolo_pipeline.setupProbes();
     } catch (const std::exception& e) {
         ofLogError() << "Failed to load YOLO: " << e.what();
+    }
+
+    // --- Load SNN YOLO model (twl_spike_yolo / yolo8n_gen1) ---
+    try {
+        snn_yolo_pipeline.loadModel(
+            ofToDataPath("yolo8n_gen1_stateful.onnx", true),
+            ofToDataPath("yolo8n_gen1_stateful_anchors.npy", true));
+    } catch (const std::exception& e) {
+        ofLogWarning() << "[SnnYolo] load failed: " << e.what();
     }
 
     // --- Load TSDT model via pipeline ---
@@ -217,6 +227,7 @@ void ofxDVS::setupCore() {
         tpdvs_gesture_pipeline.cfg.label_y_offset = -80.f;
         tpdvs_gesture_pipeline.cfg.log_tag = "TPDVSGesture";
         tpdvs_gesture_pipeline.loadModel(ofToDataPath("tp_gesture_paper_32x32.onnx", true));
+        tpdvs_gesture_pipeline.setupProbes();
     } catch (const std::exception& e) {
         ofLogError() << "Failed to load TPDVSGesture: " << e.what();
     }
@@ -232,6 +243,9 @@ void ofxDVS::setupCore() {
     hot_pixel_mask_.assign(npix, false);
     hot_calib_done_ = false;
     hot_calib_started_ = false;
+
+    // Reset camera to default so image generator fills the viewer at startup
+    myCam.reset();
 }
 
 //--------------------------------------------------------------
@@ -780,16 +794,91 @@ void ofxDVS::update() {
         std::vector<caerEventPacketContainer> local;
         thread.lock();
 
+        int newSizeX = -1, newSizeY = -1;
         if ((thread.deviceReady || thread.fileInputReady) &&
             (thread.sizeX != sizeX || thread.sizeY != sizeY)) {
-            sizeX = thread.sizeX;
-            sizeY = thread.sizeY;
+            newSizeX = thread.sizeX;
+            newSizeY = thread.sizeY;
+        }
+
+        // Only pull new packets from the USB thread when the backlog is empty.
+        // This prevents the backlog from growing unboundedly: the USB thread
+        // reads ahead at disk speed (filling MAX_QUEUE=64 packets = 3.2 s of
+        // data) while the timing gate only releases ~1 packet per 50 ms.
+        // Without this guard every frame adds 63 future packets to the backlog.
+        if (backlog_.empty()) {
+            local.swap(thread.container);   // O(1) swap, clears producer queue
+        }
+        thread.unlock();
+
+        // Drain the backlog before touching USB packets.
+        if (!backlog_.empty()) {
+            local.assign(backlog_.begin(), backlog_.end());
+            backlog_.clear();
+            // Packets still too early will be re-deferred into backlog_ below.
+        }
+
+        if (newSizeX > 0) {
+            int oldSizeX = sizeX;
+            sizeX = newSizeX;
+            sizeY = newSizeY;
+
+            // Free and re-allocate raw 2D sensor arrays
+            auto free2d_long = [](long**& arr, int W) {
+                if (arr) { for (int i = 0; i < W; ++i) delete[] arr[i]; delete[] arr; arr = nullptr; }
+            };
+            auto free2d_float = [](float**& arr, int W) {
+                if (arr) { for (int i = 0; i < W; ++i) delete[] arr[i]; delete[] arr; arr = nullptr; }
+            };
+
+            free2d_long(baFilterMap, oldSizeX);
+            baFilterMap = new long*[sizeX];
+            for (int i = 0; i < sizeX; ++i) baFilterMap[i] = new long[sizeY]();
+
+            free2d_float(visualizerMap, oldSizeX);
+            visualizerMap = new float*[sizeX];
+            for (int i = 0; i < sizeX; ++i) visualizerMap[i] = new float[sizeY]();
+
+            free2d_float(spikeFeatures, oldSizeX);
+            spikeFeatures = new float*[sizeX];
+            for (int i = 0; i < sizeX; ++i) spikeFeatures[i] = new float[sizeY]();
+
+            free2d_float(surfaceMapLastTs, oldSizeX);
+            surfaceMapLastTs = new float*[sizeX];
+            for (int i = 0; i < sizeX; ++i) surfaceMapLastTs[i] = new float[sizeY]();
+
+            free2d_float(spikeCountMap, oldSizeX);
+            spikeCountMap = new float*[sizeX];
+            for (int i = 0; i < sizeX; ++i) spikeCountMap[i] = new float[sizeY]();
+
+            // Re-allocate flat vectors
+            const size_t npix = (size_t)sizeX * sizeY;
+            reconMap_.assign(npix, 0.0f);
+            saeTimestamp_.assign(npix, 0);
+            flowX_.assign(npix, 0.0f);
+            flowY_.assign(npix, 0.0f);
+            last_ts_map_.assign(npix, 0);
+            hot_rate_count_.assign(npix, 0);
+            hot_calib_count_.assign(npix, 0);
+            hot_pixel_mask_.assign(npix, false);
+            hot_calib_done_ = false;
+            hot_calib_started_ = false;
+
+            // Re-allocate ofImages and FBO
+            imageGenerator.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+            imagePolarity.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+            reconImage_.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+            flowImage_.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+            meanRateImage.allocate(sizeX, sizeY, OF_IMAGE_COLOR_ALPHA);
+            next_polarities_pixbuf.allocate(sizeX, sizeY, OF_IMAGE_COLOR);
+            next_polarities.allocate(next_polarities_pixbuf);
+            next_frame.allocate(next_polarities_pixbuf);
+            fbo.allocate(sizeX, sizeY, GL_RGBA32F);
+            tex = &fbo.getTexture();
+
             if (rectangularClusterTrackerEnabled) createRectangularClusterTracker();
             updateViewports();
         }
-
-        local.swap(thread.container);   // O(1) swap, clears producer queue
-        thread.unlock();
 
         // Check if the file looped (thread signalled a reset)
         if (thread.resetTimingFlag.exchange(false)) {
@@ -815,14 +904,14 @@ void ofxDVS::update() {
             yolo_pipeline.clearHistory();
         }
 
-        // Prepend any deferred packets from last frame
-        if (!backlog_.empty()) {
-            std::vector<caerEventPacketContainer> merged;
-            merged.reserve(backlog_.size() + local.size());
-            for (auto &pc : backlog_) merged.push_back(pc);
+        // Safety valve: backlog should never exceed MAX_QUEUE-1 with the
+        // drain-first approach above, but guard against any edge case.
+        if (backlog_.size() > 256) {
+            ofLogWarning("ofxDVS") << "Backlog unexpectedly large ("
+                << backlog_.size() << ") — clearing";
+            for (auto &bp : backlog_) caerEventPacketContainerFree(bp);
             backlog_.clear();
-            for (auto &pc : local) merged.push_back(pc);
-            local.swap(merged);
+            timingInitialized_ = false;
         }
 
         // 2) process WITHOUT holding the lock
@@ -889,6 +978,7 @@ void ofxDVS::update() {
                 }
             }
 
+            size_t polarityOffset = packetsPolarity.size();
             delpc = organizeData(packetContainer);
 
             // Update time display
@@ -904,16 +994,20 @@ void ofxDVS::update() {
                 sprintf(timeString, "%02u", 0u);
             }
 
-            // AEDAT4 recording: write valid events from this packet
+            // AEDAT4 recording: write only events added by this packet
             if (isRecording && aedat4Writer_) {
                 dv::EventStore store;
-                for (const auto& e : packetsPolarity) {
+                for (size_t ei = polarityOffset; ei < packetsPolarity.size(); ++ei) {
+                    const auto& e = packetsPolarity[ei];
                     if (!e.valid) continue;
                     store.emplace_back(e.timestamp, (int16_t)e.pos.x,
                                        (int16_t)e.pos.y, e.pol);
                 }
                 if (!store.isEmpty()) aedat4Writer_->writeEvents(store);
             }
+
+            // Free the libcaer container now that we've copied all data out
+            caerEventPacketContainerFree(packetContainer);
         }
     } else {
         // paused: just drop producer data
@@ -1284,8 +1378,7 @@ void ofxDVS::drawViewer() {
     myCam.begin();
     ofTranslate(ofPoint(-ofGetWidth()/2,-ofGetHeight()/2));
     drawFrames();
-    drawImageGenerator(); // if dvs.drawImageGen
-    // Event-driven reconstruction image
+    drawImageGenerator();
     if (drawRecon) {
         reconImage_.draw(0, 0, ofGetWidth(), ofGetHeight());
     }
@@ -1300,11 +1393,21 @@ void ofxDVS::drawViewer() {
     // YOLO detections from async worker
     if (nnEnabled && yolo_worker.hasResult()) {
         yolo_pipeline.detections() = yolo_worker.lastResult();
+        if (yolo_pipeline.probesEnabled()) {
+            updateProbeTextures_();
+            updateSpikeTextures_();
+        }
     }
     yolo_pipeline.drawDetections(sizeX, sizeY);
 
-    // TPDVSGesture label
+    // SNN YOLO detections (cyan boxes)
+    if (snnYoloEnabled)
+        snn_yolo_pipeline.drawDetections(sizeX, sizeY);
+
+    // TPDVSGesture label + probe textures
     if (tpdvsGestureEnabled) {
+        if (tpdvs_gesture_pipeline.probesEnabled())
+            updateGestureTextures_();
         tpdvs_gesture_pipeline.drawLabel();
     }
 
@@ -1314,6 +1417,8 @@ void ofxDVS::drawViewer() {
     }
 
     myCam.end();
+
+    // NN visualizations (VTEI, probes, SNN spikes) are shown in the dedicated NNViz window.
 
     // Debug: draw cluster count outside camera transform (reliable 2D text)
     if (rectangularClusterTrackerEnabled && rectangularClusterTracker) {
@@ -1337,7 +1442,7 @@ void ofxDVS::drawViewer() {
         rec_w_ = (int)rec_grab_.getWidth()  & ~1;
         rec_h_ = (int)rec_grab_.getHeight() & ~1;
         int nCh = rec_grab_.getPixels().getNumChannels();
-        std::string pixFmt = (nCh == 4) ? "bgra" : "bgr24";
+        ofImageType imgType = (nCh == 4) ? OF_IMAGE_COLOR_ALPHA : OF_IMAGE_COLOR;
         videoRecording_ = true;
 
         videoRecorder_.setup(true, false,
@@ -1345,12 +1450,12 @@ void ofxDVS::drawViewer() {
                              videoRecFps_, 8000);
         videoRecorder_.setOutputPath(videoRecPath_);
         videoRecorder_.setVideoCodec("libx264");
-        videoRecorder_.setInputPixelFormat(pixFmt);
+        videoRecorder_.setInputPixelFormat(imgType);
         videoRecorder_.setOverWrite(true);
         videoRecorder_.startCustomRecord();
         ofLogNotice() << "[Video] Recording to " << videoRecPath_
                       << " (" << rec_w_ << "x" << rec_h_
-                      << ", " << nCh << "ch, " << pixFmt << ")";
+                      << ", " << nCh << "ch)";
         // First frame already grabbed — send it
         videoRecorder_.addFrame(rec_grab_.getPixels());
     }
@@ -2053,7 +2158,7 @@ void ofxDVS::initImageGenerator(){
 void ofxDVS::drawImageGenerator() {
 
     if(drawImageGen){
-        imageGenerator.draw(0,0,ofGetWidth(),ofGetHeight());
+        imageGenerator.draw(0, 0, ofGetWidth(), ofGetHeight());
     }
 }
 
@@ -2240,25 +2345,537 @@ void ofxDVS::updateImageGenerator(){
         bool needVTEI = (nnEnabled && yolo_pipeline.isLoaded());
         if (needVTEI && newImageGen) {
             // Build VTEI tensor on main thread (fast, uses pipeline pre-allocated buffers)
-            auto vtei = yolo_pipeline.buildVTEI(
+            // buildVTEI returns a const ref to internal buffer; copy once for the worker
+            auto vtei = std::vector<float>(yolo_pipeline.buildVTEI(
                 packetsPolarity, surfaceMapLastTs,
-                imageGenerator.getPixels(), sizeX, sizeY);
+                imageGenerator.getPixels(), sizeX, sizeY));
 
             int sw = sizeX, sh = sizeY;
 
             // Submit YOLO inference (non-blocking; dropped if worker is busy)
+            // Move vtei into the lambda to avoid a second copy
             if (nnEnabled && yolo_pipeline.isLoaded()) {
-                yolo_worker.submit([this, vtei, sw, sh]() -> std::vector<dvs::YoloDet> {
+                yolo_worker.submit([this, vtei = std::move(vtei), sw, sh]() -> std::vector<dvs::YoloDet> {
                     yolo_pipeline.infer(vtei, sw, sh);
                     return yolo_pipeline.detections();
                 });
             }
+
+            // Always upload VTEI textures — NNViz window reads them regardless of show flag
+            updateVteiTextures_(yolo_pipeline.lastVteiSensor(),
+                                yolo_pipeline.lastVteiW(),
+                                yolo_pipeline.lastVteiH());
+        }
+
+        // --- SNN YOLO (twl_spike_yolo / yolo8n_gen1): one 8-ms bin per update ---
+        if (snnYoloEnabled && snn_yolo_pipeline.isLoaded()) {
+            snn_yolo_pipeline.pushEvents(packetsPolarity, sizeX, sizeY);
+            snn_yolo_pipeline.maybeInfer(sizeX, sizeY);
         }
     }
 }
 
+// ---- updateProbeTextures_ (hot colormap: black→red→yellow→white) ----
+static void hotColor(float v, float& r, float& g, float& b) {
+    r = std::clamp(v * 3.f,        0.f, 1.f);
+    g = std::clamp(v * 3.f - 1.f,  0.f, 1.f);
+    b = std::clamp(v * 3.f - 2.f,  0.f, 1.f);
+}
+
+void ofxDVS::updateProbeTextures_() {
+    const auto& probes = yolo_pipeline.probeResults();
+    ofFloatPixels pix;
+    for (int p = 0; p < dvs::YoloPipeline::NUM_PROBES; ++p) {
+        const auto& pm = probes[p];
+        if (pm.W == 0 || pm.H == 0 || pm.avg.empty()) continue;
+        pix.allocate(pm.W, pm.H, OF_IMAGE_COLOR);
+        float* dst = pix.getData();
+        for (int i = 0; i < pm.W * pm.H; ++i) {
+            hotColor(pm.avg[i], dst[i*3+0], dst[i*3+1], dst[i*3+2]);
+        }
+        probeTextures_[p].loadData(pix);
+    }
+}
+
+void ofxDVS::updateGestureTextures_() {
+    constexpr int NP = dvs::TsdtPipeline::NUM_PROBES;
+    constexpr int NN = dvs::TsdtPipeline::NUM_RASTER_NEURONS;
+    constexpr int NH = dvs::TsdtPipeline::RASTER_HISTORY;
+
+    // ---- Probe activation maps (hot colormap) ----
+    const auto& probes = tpdvs_gesture_pipeline.probeResults();
+    ofFloatPixels pix;
+    for (int p = 0; p < NP; ++p) {
+        const auto& pm = probes[p];
+        if (pm.W == 0 || pm.H == 0 || pm.avg.empty()) continue;
+        pix.allocate(pm.W, pm.H, OF_IMAGE_COLOR);
+        float* dst = pix.getData();
+        for (int i = 0; i < pm.W * pm.H; ++i)
+            hotColor(pm.avg[i], dst[i*3+0], dst[i*3+1], dst[i*3+2]);
+        gestureProbeTextures_[p].loadData(pix);
+    }
+
+    // ---- Spike rasterplot textures (green-on-black, NH×NN pixels) ----
+    // Each pixel column = one time step, each row = one neuron.
+    const auto& raster = tpdvs_gesture_pipeline.rasterData();
+    int pos = tpdvs_gesture_pipeline.rasterPos();  // next write position = oldest slot
+    ofFloatPixels rpix;
+    rpix.allocate(NH, NN, OF_IMAGE_COLOR);
+    float* rd = rpix.getData();
+    for (int p = 0; p < NP; ++p) {
+        for (int t = 0; t < NH; ++t) {
+            int slot = (pos + t) % NH;  // oldest first → leftmost
+            const auto& row = raster[p][slot];
+            for (int n = 0; n < NN; ++n) {
+                int pi = (n * NH + t) * 3;
+                float s = row[n];
+                rd[pi+0] = 0.f;
+                rd[pi+1] = s;          // green channel for spikes
+                rd[pi+2] = s * 0.3f;  // slight teal tint
+            }
+        }
+        gestureRasterTextures_[p].loadData(rpix);
+    }
+}
+
+// ---- drawProbeActivations_ ----
+void ofxDVS::drawProbeActivations_() {
+    const auto& probes = yolo_pipeline.probeResults();
+
+    const int tileH  = 88;
+    const int gap    = 5;
+    const int labelH = 14;
+    const int padX   = 8, padY = 6;
+
+    // Compute strip width based on first valid probe aspect ratio
+    int tileW = tileH;  // default square
+    for (int p = 0; p < dvs::YoloPipeline::NUM_PROBES; ++p) {
+        if (probes[p].W > 0 && probes[p].H > 0) {
+            tileW = (int)((float)probes[p].W / probes[p].H * tileH);
+            break;
+        }
+    }
+
+    const int N      = dvs::YoloPipeline::NUM_PROBES;
+    const int totalW = N * tileW + (N-1) * gap + 2 * padX;
+    const int totalH = tileH + labelH + 2 * padY;
+
+    int vw = ofGetWidth(), vh = ofGetHeight();
+    int ox = (vw - totalW) / 2;
+    // Place above VTEI strip if both visible, otherwise at bottom
+    int oy = showVteiChannels_
+        ? vh - (tileH + labelH + 2*padY + 4) - totalH - 8
+        : vh - totalH - 4;
+
+    ofPushStyle();
+    ofDisableDepthTest();
+
+    ofSetColor(10, 10, 10, 180);
+    ofDrawRectRounded(ox, oy, totalW, totalH, 4);
+
+    for (int p = 0; p < N; ++p) {
+        const auto& pm = probes[p];
+        float tx = ox + padX + p * (tileW + gap);
+        float ty = oy + padY;
+        if (pm.W > 0 && pm.H > 0 && probeTextures_[p].isAllocated()) {
+            ofSetColor(255);
+            probeTextures_[p].draw(tx, ty, tileW, tileH);
+        } else {
+            ofSetColor(40, 40, 40);
+            ofDrawRectangle(tx, ty, tileW, tileH);
+        }
+        ofSetColor(220, 220, 220);
+        ofDrawBitmapString(pm.label, tx + 2, ty + tileH + labelH - 2);
+    }
+
+    ofPopStyle();
+}
+
+// ---- drawNNViz ----
+// Draws VTEI + 3 groups of 4 analog probe rows + 3 groups of 4 SNN spike rows.
+//
+// Groups (4 probes each):
+//   0: LSTM hidden state h_t (P2/P3/P4/P5 gate Concat)
+//   1: LSTM cell state c_t = f*c_prev + i*g (c2/c3/c4/c5)
+//   2: Feedforward conv features (Stem/SPPF/NkP3/NkP5)
+void ofxDVS::drawNNViz() {
+    static bool logged = false;
+    if (!logged) {
+        logged = true;
+        ofLogNotice() << "[NNViz] probesEnabled=" << yolo_pipeline.probesEnabled()
+                      << " showProbeActivations=" << showProbeActivations_
+                      << " showSnnSpikes=" << showSnnSpikes_
+                      << " showVteiChannels=" << showVteiChannels_
+                      << " nnEnabled=" << nnEnabled;
+    }
+
+    ofBackground(18, 18, 22);
+    ofDisableDepthTest();
+
+    static const char* GROUP_HEADERS[3] = {
+        "LSTM hidden (h_t)",
+        "LSTM cell state (c_t = f*c_prev + i*g)",
+        "Conv features",
+    };
+    static const char* vlabels[5]  = {"Pos","Neg","TimeSurf","Early","Late"};
+    static const ofColor vtints[5] = {
+        {60,220,80},{220,60,60},{60,180,255},{255,200,0},{255,120,0}
+    };
+
+    constexpr int PG        = 4;     // probes per group
+    constexpr int NGROUPS   = dvs::YoloPipeline::NUM_PROBES / PG;  // 3
+    const int tileH_probe   = 80;
+    const int tileH_spike   = 64;
+    const int tileH_vtei    = 80;
+    const int labelH        = 14;
+    const int padX = 8, padY = 6;
+    const int gap           = 5;
+    const int headerH       = 14;
+    const int groupGap      = 8;
+    const int stripGap      = 14;
+
+    int vw = ofGetWidth();
+    int cy = 10;
+
+    const auto& probes = yolo_pipeline.probeResults();
+
+    // Probe tile dimensions (aspect from first valid probe)
+    int probeTileW = tileH_probe;
+    for (int p = 0; p < dvs::YoloPipeline::NUM_PROBES; ++p)
+        if (probes[p].W > 0 && probes[p].H > 0)
+            { probeTileW = (int)((float)probes[p].W / probes[p].H * tileH_probe); break; }
+    int spikeTileW = (int)((float)probeTileW / tileH_probe * tileH_spike);
+    int probeRowH  = tileH_probe + labelH + 2*padY;
+    int spikeRowH  = tileH_spike + labelH + 2*padY;
+
+    // Lambda: draw one row of PG tiles from a probe group
+    auto drawRow = [&](int groupIdx, int tileH, int tileW, int rowH, auto& texArr, bool isSpike) {
+        int rowW = PG*(tileW+gap) - gap + 2*padX;
+        int ox   = std::max(2, (vw - rowW) / 2);
+        ofSetColor(isSpike ? ofColor(8,12,28,200) : ofColor(10,10,10,200));
+        ofDrawRectRounded(ox, cy, rowW, rowH, 4);
+        for (int p = 0; p < PG; ++p) {
+            int pi = groupIdx*PG + p;
+            const auto& pm = probes[pi];
+            int tx = ox + padX + p*(tileW+gap);
+            int ty = cy + padY;
+            if (pm.W > 0 && pm.H > 0 && texArr[pi].isAllocated()) {
+                ofSetColor(255);
+                texArr[pi].draw(tx, ty, tileW, tileH);
+            } else {
+                ofSetColor(isSpike ? ofColor(20,22,50) : ofColor(40,40,40));
+                ofDrawRectangle(tx, ty, tileW, tileH);
+            }
+            if (isSpike) {
+                char buf[32];
+                std::snprintf(buf, sizeof(buf), "%s %.1f%%", pm.label.c_str(), spikeRates_[pi]*100.f);
+                ofSetColor(0, 220, 100);
+                ofDrawBitmapString(buf, tx+2, ty+tileH+labelH-2);
+            } else {
+                ofSetColor(220, 220, 220);
+                ofDrawBitmapString(pm.label, tx+2, ty+tileH+labelH-2);
+            }
+        }
+        cy += rowH;
+    };
+
+    // ---- VTEI input channels ----
+    if (showVteiChannels_) {
+        int W = yolo_pipeline.lastVteiW(), H = yolo_pipeline.lastVteiH();
+        if (W > 0 && H > 0) {
+            int tileW  = (int)((float)W / H * tileH_vtei);
+            int totalW = 5*tileW + 4*gap + 2*padX;
+            int totalH = tileH_vtei + labelH + 2*padY;
+            int ox = std::max(2, (vw - totalW) / 2);
+            ofSetColor(10, 10, 10, 200);
+            ofDrawRectRounded(ox, cy, totalW, totalH, 4);
+            for (int c = 0; c < 5; ++c) {
+                int tx = ox + padX + c*(tileW+gap), ty = cy + padY;
+                ofSetColor(vtints[c]);
+                if (vteiTextures_[c].isAllocated())
+                    vteiTextures_[c].draw(tx, ty, tileW, tileH_vtei);
+                ofDrawBitmapString(vlabels[c], tx+2, ty+tileH_vtei+labelH-2);
+            }
+            cy += totalH + stripGap;
+        }
+    }
+
+    // ---- Analog probe activations (hot colormap), 3 groups of 4 ----
+    if (showProbeActivations_ && yolo_pipeline.probesEnabled()) {
+        for (int g = 0; g < NGROUPS; ++g) {
+            int rowW = PG*(probeTileW+gap) - gap + 2*padX;
+            ofSetColor(160, 160, 160);
+            ofDrawBitmapString(GROUP_HEADERS[g], std::max(2, (vw-rowW)/2), cy+headerH-2);
+            cy += headerH;
+            drawRow(g, tileH_probe, probeTileW, probeRowH, probeTextures_, false);
+            cy += (g < NGROUPS-1) ? groupGap : stripGap;
+        }
+    }
+
+    // ---- SNN spike maps (binarized, green-on-black), 3 groups of 4 ----
+    if (showSnnSpikes_ && yolo_pipeline.probesEnabled()) {
+        for (int g = 0; g < NGROUPS; ++g) {
+            int rowW = PG*(spikeTileW+gap) - gap + 2*padX;
+            char hdr[64];
+            std::snprintf(hdr, sizeof(hdr), "SNN: %s", GROUP_HEADERS[g]);
+            ofSetColor(0, 160, 80);
+            ofDrawBitmapString(hdr, std::max(2, (vw-rowW)/2), cy+headerH-2);
+            cy += headerH;
+            drawRow(g, tileH_spike, spikeTileW, spikeRowH, spikeTextures_, true);
+            cy += (g < NGROUPS-1) ? groupGap : stripGap;
+        }
+    }
+
+    // ---- TPDVSGesture: 8 membrane probe tiles + 8 spike rasterplots ----
+    if (tpdvs_gesture_pipeline.probesEnabled()) {
+        constexpr int GP   = dvs::TsdtPipeline::NUM_PROBES;        // 8
+        constexpr int NH   = dvs::TsdtPipeline::RASTER_HISTORY;    // 100
+        constexpr int NN   = dvs::TsdtPipeline::NUM_RASTER_NEURONS; // 10
+        constexpr int GCOLS = 4;  // tiles per row
+
+        const auto& gprobes = tpdvs_gesture_pipeline.probeResults();
+
+        const int gtileH  = 56;
+        const int gtileW  = gtileH;   // all layers are square feature maps
+        const int rasterW = 120;      // display width for rasterplot (NH columns scaled)
+        const int rasterH = NN * 6;   // 6px per neuron row
+
+        // Row width is set by 4 probe tiles
+        int growW = GCOLS*(gtileW+gap) - gap + 2*padX;
+        int ox    = std::max(2, (vw - growW) / 2);
+
+        // Section header
+        cy += groupGap;
+        ofSetColor(255, 180, 60);
+        ofDrawBitmapString("Gesture SNN — membrane potential (L0-L7, all 8 layers)",
+                           ox, cy + headerH - 2);
+        cy += headerH;
+
+        // 2 rows of 4 probe tiles
+        for (int row = 0; row < 2; ++row) {
+            int rowH = gtileH + labelH + 2*padY;
+            ofSetColor(10, 10, 10, 200);
+            ofDrawRectRounded(ox, cy, growW, rowH, 4);
+            for (int col = 0; col < GCOLS; ++col) {
+                int p  = row * GCOLS + col;
+                const auto& pm = gprobes[p];
+                int tx = ox + padX + col*(gtileW+gap);
+                int ty = cy + padY;
+                if (pm.W > 0 && pm.H > 0 && gestureProbeTextures_[p].isAllocated()) {
+                    ofSetColor(255);
+                    gestureProbeTextures_[p].draw(tx, ty, gtileW, gtileH);
+                } else {
+                    ofSetColor(40, 40, 40);
+                    ofDrawRectangle(tx, ty, gtileW, gtileH);
+                }
+                ofSetColor(220, 220, 220);
+                ofDrawBitmapString(pm.label, tx+2, ty+gtileH+labelH-2);
+            }
+            cy += rowH + (row == 0 ? groupGap : 0);
+        }
+
+        // Section header for rasterplot
+        cy += groupGap;
+        ofSetColor(80, 220, 120);
+        ofDrawBitmapString("Gesture SNN — spike rasterplot (10 neurons/layer, last 100 steps)",
+                           ox, cy + headerH - 2);
+        cy += headerH;
+
+        // 2 rows of 4 rasterplot panels
+        int rrW = GCOLS * (rasterW+gap) - gap + 2*padX;
+        int rrox = std::max(2, (vw - rrW) / 2);
+
+        for (int row = 0; row < 2; ++row) {
+            int rowH = rasterH + labelH + 2*padY;
+            ofSetColor(8, 12, 20, 220);
+            ofDrawRectRounded(rrox, cy, rrW, rowH, 4);
+            for (int col = 0; col < GCOLS; ++col) {
+                int p  = row * GCOLS + col;
+                int tx = rrox + padX + col*(rasterW+gap);
+                int ty = cy + padY;
+                if (gestureRasterTextures_[p].isAllocated()) {
+                    ofSetColor(255);
+                    gestureRasterTextures_[p].draw(tx, ty, rasterW, rasterH);
+                } else {
+                    ofSetColor(20, 30, 20);
+                    ofDrawRectangle(tx, ty, rasterW, rasterH);
+                }
+                // Neuron-index axis: draw faint horizontal lines between neurons
+                ofSetColor(40, 60, 40, 120);
+                for (int n = 1; n < NN; ++n) {
+                    int ry = ty + n * rasterH / NN;
+                    ofDrawLine(tx, ry, tx + rasterW, ry);
+                }
+                // Label
+                ofSetColor(80, 220, 120);
+                const auto& pm = gprobes[p];
+                ofDrawBitmapString(pm.label, tx+2, ty+rasterH+labelH-2);
+            }
+            cy += rowH + (row == 0 ? groupGap : 0);
+        }
+        (void)NH; (void)NN;
+    }
+
+    (void)cy;
+}
+
+// ---- updateVteiTextures_ ----
+void ofxDVS::updateVteiTextures_(const std::vector<float>& chw5, int W, int H) {
+    if (W == 0 || H == 0 || chw5.size() < (size_t)5 * W * H) return;
+    const size_t plane = (size_t)W * H;
+    ofFloatPixels pix;
+    pix.allocate(W, H, OF_IMAGE_GRAYSCALE);
+    float* dst = pix.getData();
+    for (int c = 0; c < 5; ++c) {
+        const float* src = chw5.data() + c * plane;
+        if (c < 3) {
+            // Channels 0-2 are already 0..1
+            std::copy(src, src + plane, dst);
+        } else {
+            // Channels 3-4 are ternary {-1, 0, +1} — shift to 0..1 for display
+            for (size_t i = 0; i < plane; ++i)
+                dst[i] = src[i] * 0.5f + 0.5f;
+        }
+        vteiTextures_[c].loadData(pix);
+    }
+}
+
+// ---- drawVteiChannels_ ----
+void ofxDVS::drawVteiChannels_() {
+    int W = yolo_pipeline.lastVteiW();
+    int H = yolo_pipeline.lastVteiH();
+    if (W == 0 || H == 0) return;
+
+    static const char* labels[5] = {"Pos", "Neg", "TimeSurf", "Early", "Late"};
+    static const ofColor tints[5] = {
+        ofColor(60,  220, 80),   // pos  — green
+        ofColor(220, 60,  60),   // neg  — red
+        ofColor(60,  180, 255),  // time — cyan-blue
+        ofColor(255, 200, 0),    // early bin — yellow
+        ofColor(255, 120, 0),    // late bin  — orange
+    };
+
+    const int tileH  = 88;
+    const int tileW  = (int)((float)W / H * tileH);
+    const int gap    = 5;
+    const int labelH = 14;
+    const int padX   = 8, padY = 6;
+    const int totalW = 5 * tileW + 4 * gap + 2 * padX;
+    const int totalH = tileH + labelH + 2 * padY;
+
+    int vw = ofGetWidth(), vh = ofGetHeight();
+    int ox = (vw - totalW) / 2;
+    int oy = vh - totalH - 4;
+
+    ofPushStyle();
+    ofDisableDepthTest();
+
+    // Semi-transparent background
+    ofSetColor(10, 10, 10, 180);
+    ofDrawRectRounded(ox, oy, totalW, totalH, 4);
+
+    for (int c = 0; c < 5; ++c) {
+        float tx = ox + padX + c * (tileW + gap);
+        float ty = oy + padY;
+        ofSetColor(tints[c]);
+        vteiTextures_[c].draw(tx, ty, tileW, tileH);
+        ofSetColor(tints[c]);
+        ofDrawBitmapString(labels[c], tx + 2, ty + tileH + labelH - 2);
+    }
+
+    ofPopStyle();
+}
 
 
+// ---- updateSpikeTextures_ ----
+// Threshold probe activations (already normalized [0,1]) → binary green/black textures.
+// Also computes spike rate (fraction of pixels above threshold) per probe.
+void ofxDVS::updateSpikeTextures_() {
+    const auto& probes = yolo_pipeline.probeResults();
+    ofFloatPixels pix;
+    for (int p = 0; p < dvs::YoloPipeline::NUM_PROBES; ++p) {
+        const auto& pm = probes[p];
+        if (pm.W == 0 || pm.H == 0 || pm.avg.empty()) {
+            spikeRates_[p] = 0.f;
+            continue;
+        }
+        const size_t n = pm.avg.size();
+        pix.allocate(pm.W, pm.H, OF_IMAGE_COLOR);
+        float* dst = pix.getData();
+        int fired = 0;
+        for (size_t i = 0; i < n; ++i) {
+            if (pm.avg[i] >= snnSpikeThreshold_) {
+                dst[i*3+0] = 0.0f;  dst[i*3+1] = 1.0f;  dst[i*3+2] = 0.5f;  // green
+                ++fired;
+            } else {
+                dst[i*3+0] = 0.06f; dst[i*3+1] = 0.06f; dst[i*3+2] = 0.06f; // near-black
+            }
+        }
+        spikeRates_[p] = (float)fired / (float)n;
+        spikeTextures_[p].loadData(pix);
+    }
+}
+
+// ---- drawSnnSpikes_ ----
+// Draws binary spike maps stacked above the analog probe strip (and above VTEI if visible).
+// Green pixels = neuron fired (activation ≥ threshold); dark = silent.
+void ofxDVS::drawSnnSpikes_() {
+    const auto& probes = yolo_pipeline.probeResults();
+
+    const int tileH  = 72;
+    const int gap    = 5;
+    const int labelH = 14;
+    const int padX   = 8, padY = 6;
+
+    int tileW = tileH;
+    for (int p = 0; p < dvs::YoloPipeline::NUM_PROBES; ++p) {
+        if (probes[p].W > 0 && probes[p].H > 0) {
+            tileW = (int)((float)probes[p].W / probes[p].H * tileH);
+            break;
+        }
+    }
+
+    const int N      = dvs::YoloPipeline::NUM_PROBES;
+    const int totalW = N * tileW + (N-1) * gap + 2 * padX;
+    const int totalH = tileH + labelH + 2 * padY;
+
+    int vw = ofGetWidth(), vh = ofGetHeight();
+    int ox = (vw - totalW) / 2;
+
+    // Stack above any already-visible strips (VTEI=88px strip, probe=88px strip)
+    int from_bottom = 4;
+    if (showVteiChannels_)     from_bottom += (88 + 14 + 12) + 8;
+    if (showProbeActivations_) from_bottom += (88 + 14 + 12) + 8;
+    int oy = vh - from_bottom - totalH;
+
+    ofPushStyle();
+    ofDisableDepthTest();
+
+    // Dark blue-tinted background — visually distinct from the hot-colormap probe strip
+    ofSetColor(8, 12, 28, 200);
+    ofDrawRectRounded(ox, oy, totalW, totalH, 4);
+
+    for (int p = 0; p < N; ++p) {
+        const auto& pm = probes[p];
+        float tx = ox + padX + p * (tileW + gap);
+        float ty = oy + padY;
+
+        if (pm.W > 0 && pm.H > 0 && spikeTextures_[p].isAllocated()) {
+            ofSetColor(255);
+            spikeTextures_[p].draw(tx, ty, tileW, tileH);
+        } else {
+            ofSetColor(20, 22, 50);
+            ofDrawRectangle(tx, ty, tileW, tileH);
+        }
+
+        char buf[32];
+        std::snprintf(buf, sizeof(buf), "P%d %.1f%%", p + 2, spikeRates_[p] * 100.f);
+        ofSetColor(0, 220, 100);
+        ofDrawBitmapString(buf, tx + 2, ty + tileH + labelH - 2);
+    }
+
+    ofPopStyle();
+}
 
 //--------------------------------------------------------------
 float ofxDVS::getImuTemp(){

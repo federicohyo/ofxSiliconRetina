@@ -7,8 +7,20 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 #include "ofMain.h"
+
+namespace dvs {
+
+/// Channel-aggregated 2-D activation map extracted from an intermediate layer.
+struct ProbeMap {
+    std::vector<float> avg;  ///< max-abs-over-channels, normalized to [0,1]
+    int W = 0, H = 0;
+    std::string label;
+};
+
+} // namespace dvs
 
 namespace dvs { namespace nn {
 

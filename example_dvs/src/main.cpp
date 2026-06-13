@@ -1,6 +1,7 @@
 #include "ofMain.h"
 #include "ofApp.h"
 #include "ControlApp.h"
+#include "NNVizApp.h"
 #include "ofAppGLFWWindow.h"
 
 int main() {
@@ -19,11 +20,23 @@ int main() {
     controlSettings.shareContextWith = viewerWindow;
     auto controlWindow = ofCreateWindow(controlSettings);
 
-    auto viewerApp = make_shared<ofApp>();
-    auto controlApp = make_shared<ControlApp>();
-    controlApp->dvs = &viewerApp->dvs;
+    // NN Viz window — VTEI inputs, analog probe activations, SNN spike maps
+    // 3 groups of 4 probes each; sized to fit all strips on a 1080p display.
+    ofGLFWWindowSettings nnvizSettings;
+    nnvizSettings.setSize(600, 840);
+    nnvizSettings.setPosition(glm::vec2(1350, 0));
+    nnvizSettings.title = "NN Visualization";
+    nnvizSettings.shareContextWith = viewerWindow;
+    auto nnvizWindow = ofCreateWindow(nnvizSettings);
 
-    ofRunApp(viewerWindow, viewerApp);    // setup() → dvs.setupCore()
+    auto viewerApp  = make_shared<ofApp>();
+    auto controlApp = make_shared<ControlApp>();
+    auto nnvizApp   = make_shared<NNVizApp>();
+    controlApp->dvs = &viewerApp->dvs;
+    nnvizApp->dvs   = &viewerApp->dvs;
+
+    ofRunApp(viewerWindow,  viewerApp);   // setup() → dvs.setupCore()
     ofRunApp(controlWindow, controlApp);  // setup() → dvs->setupGUI()
+    ofRunApp(nnvizWindow,   nnvizApp);    // draw()  → dvs->drawNNViz()
     ofRunMainLoop();
 }
